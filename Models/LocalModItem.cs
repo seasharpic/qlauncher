@@ -42,14 +42,6 @@ namespace MinecraftLauncher.Models
         public string ActionText => IsEnabled ? "Отключить" : "Включить";
     }
 
-    public class WorldItem
-    {
-        public string WorldName { get; set; } = "";
-        public string FullPath { get; set; } = "";
-        public string LastPlayedText { get; set; } = "";
-        public string IconPath { get; set; } = "/logo.png";
-    }
-
     public class ModpackCardItem : ObservableObject
     {
         private string _name = "";

@@ -301,7 +301,16 @@ namespace MinecraftLauncher.ViewModels
 
         public bool IsPortableMode => LauncherPathHelper.IsPortableMode;
 
+        public string PortableModeStatusText => IsPortableMode
+            ? (IsRussianLanguage ? "Портативный режим активен (хранилище ./data)" : "Portable mode is active (storage ./data)")
+            : (IsRussianLanguage ? "Стандартный режим (хранилище %APPDATA%/.qlauncher)" : "Standard mode (storage %APPDATA%/.qlauncher)");
+
         public string CurrentVersionText => $"{UpdateService.CurrentVersion}{(IsPortableMode ? " (Портативный режим)" : "")}";
+
+        public string CurrentLanguage => LocalizationService.Instance.CurrentLanguage;
+        public bool IsRussianLanguage => CurrentLanguage == "ru";
+        public bool IsEnglishLanguage => CurrentLanguage == "en";
+        public string DataDirectoryPath => LauncherPathHelper.GetDefaultDataDirectory();
 
         public RelayCommand BrowseJavaCommand { get; }
         public RelayCommand ResetJavaCommand { get; }
@@ -314,6 +323,10 @@ namespace MinecraftLauncher.ViewModels
         public RelayCommand<string> SelectAccentPresetCommand { get; }
         public RelayCommand<string> SelectThemeCommand { get; }
         public RelayCommand RefreshGpuCommand { get; }
+        public RelayCommand AutoTuneHardwareCommand { get; }
+        public AsyncRelayCommand ExportPortableCommand { get; }
+        public RelayCommand OpenDataFolderCommand { get; }
+        public RelayCommand<string> ChangeLanguageCommand { get; }
         public AsyncRelayCommand CheckUpdatesManualCommand { get; }
         public AsyncRelayCommand ExportDiagnosticReportCommand { get; }
 
@@ -363,6 +376,11 @@ namespace MinecraftLauncher.ViewModels
                 PopulateGpuOptions();
                 _toastService.ShowSuccess("Список видеокарт обновлен");
             });
+
+            AutoTuneHardwareCommand = new RelayCommand(ExecuteAutoTuneHardware);
+            ExportPortableCommand = new AsyncRelayCommand(ExecuteExportPortableAsync);
+            OpenDataFolderCommand = new RelayCommand(ExecuteOpenDataFolder);
+            ChangeLanguageCommand = new RelayCommand<string>(ExecuteChangeLanguage);
 
             CheckUpdatesManualCommand = new AsyncRelayCommand(ExecuteCheckUpdatesManualAsync);
             ExportDiagnosticReportCommand = new AsyncRelayCommand(ExecuteExportDiagnosticReportAsync);
@@ -753,6 +771,100 @@ namespace MinecraftLauncher.ViewModels
             catch (Exception ex)
             {
                 _toastService.ShowError($"Ошибка при создании отчёта: {ex.Message}", "Диагностика");
+            }
+        }
+
+        private void ExecuteAutoTuneHardware()
+        {
+            try
+            {
+                long totalRamBytes = 0;
+                try
+                {
+                    var gcMemoryInfo = GC.GetGCMemoryInfo();
+                    totalRamBytes = gcMemoryInfo.TotalAvailableMemoryBytes;
+                }
+                catch { }
+
+                long totalRamMb = totalRamBytes > 0 ? (totalRamBytes / (1024 * 1024)) : 8192;
+
+                int optimalRam;
+                if (totalRamMb <= 4096)
+                    optimalRam = 2048;
+                else if (totalRamMb <= 8192)
+                    optimalRam = 3584;
+                else if (totalRamMb <= 16384)
+                    optimalRam = 5120;
+                else
+                    optimalRam = 6144;
+
+                RamMb = optimalRam;
+                JvmPreset = "aikar";
+
+                var discreteGpu = GpuOptions.FirstOrDefault(g => g.Id == "HighPerformance" || g.Subtitle.Contains("Дискретная"));
+                if (discreteGpu != null)
+                {
+                    SelectedGpuOption = discreteGpu;
+                }
+
+                SaveSettings();
+                _toastService.ShowSuccess($"Настройки оптимизированы: RAM {optimalRam} МБ, профиль Aikar G1GC, приоритет дискретного GPU.", "Авто-оптимизация");
+            }
+            catch (Exception ex)
+            {
+                _toastService.ShowError($"Не удалось выполнить авто-оптимизацию: {ex.Message}", "Ошибка");
+            }
+        }
+
+        private async Task ExecuteExportPortableAsync()
+        {
+            try
+            {
+                var sfd = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Сохранить портативный пакет QLauncher",
+                    Filter = "ZIP-архив (*.zip)|*.zip",
+                    FileName = "QLauncher-Portable.zip"
+                };
+
+                if (sfd.ShowDialog() == true)
+                {
+                    _toastService.ShowInfo("Упаковка портативной версии...", "Портативный режим");
+                    string path = await LauncherPathHelper.ExportPortablePackageAsync(sfd.FileName);
+                    _toastService.ShowSuccess($"Портативная версия успешно экспортирована:\n{Path.GetFileName(path)}", "Портативный режим");
+                }
+            }
+            catch (Exception ex)
+            {
+                _toastService.ShowError($"Ошибка экспорта портативной версии: {ex.Message}", "Ошибка");
+            }
+        }
+
+        private void ExecuteOpenDataFolder()
+        {
+            try
+            {
+                string dir = LauncherPathHelper.GetDefaultDataDirectory();
+                Directory.CreateDirectory(dir);
+                Process.Start("explorer.exe", dir);
+            }
+            catch { }
+        }
+
+        private void ExecuteChangeLanguage(string? lang)
+        {
+            if (!string.IsNullOrEmpty(lang))
+            {
+                LocalizationService.Instance.SetLanguage(lang);
+                var s = _settingsService.Settings;
+                s.Language = lang;
+                _settingsService.Save(s);
+                OnPropertyChanged(nameof(CurrentLanguage));
+                OnPropertyChanged(nameof(IsRussianLanguage));
+                OnPropertyChanged(nameof(IsEnglishLanguage));
+                OnPropertyChanged(nameof(PortableModeStatusText));
+                OnPropertyChanged(nameof(CurrentVersionText));
+                _toastService.ShowSuccess(lang == "en" ? "Language changed to English" : "Язык интерфейса изменён на Русский", "Language");
             }
         }
     }

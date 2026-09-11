@@ -54,6 +54,11 @@ namespace MinecraftLauncher
             try
             {
                 var settings = SettingsService.Instance.Load();
+                if (!string.IsNullOrEmpty(settings.Language))
+                {
+                    LocalizationService.Instance.SetLanguage(settings.Language);
+                }
+
                 if (!settings.IsDarkTheme)
                 {
                     ThemeService.Instance.SetTheme(false);
@@ -62,6 +67,8 @@ namespace MinecraftLauncher
                 if (noSplashArg || !settings.ShowSplashOnStartup)
                 {
                     var mainWindow = new MainWindow();
+                    MainWindow = mainWindow;
+                    mainWindow.Closed += (_, _) => Shutdown();
                     mainWindow.Show();
                     return;
                 }

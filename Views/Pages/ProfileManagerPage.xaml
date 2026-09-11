@@ -227,9 +227,12 @@
                     </StackPanel>
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <Grid>
-                            <TextBlock Text="Сохранения миров не найдены. Запустите игру, чтобы создать свой первый мир!" 
-                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="14" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
+                        <StackPanel Margin="0,0,10,0">
+                            <!-- Active Worlds Heading -->
+                            <TextBlock Text="{DynamicResource Str_Worlds_ActiveWorlds}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" FontWeight="SemiBold" Margin="4,0,0,8"/>
+
+                            <TextBlock Text="{DynamicResource Str_Worlds_NoWorlds}" 
+                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" TextWrapping="Wrap" HorizontalAlignment="Center" Margin="20,10,20,20">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -263,10 +266,10 @@
                                                 </StackPanel>
 
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <Button Content="Создать Zip-бэкап" 
+                                                    <Button Content="{DynamicResource Str_Worlds_CreateBackup}" 
                                                             Command="{Binding DataContext.BackupWorldCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                             CommandParameter="{Binding}" Height="32" Padding="12,0" Margin="0,0,8,0" Style="{DynamicResource DarkButtonStyle}" FontSize="13"/>
-                                                    <Button Content="Удалить" 
+                                                    <Button Content="{DynamicResource Str_Action_Delete}" 
                                                             Command="{Binding DataContext.DeleteWorldCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                             CommandParameter="{Binding}" Height="32" Padding="12,0" Foreground="#FF6363" Style="{DynamicResource DarkButtonStyle}" FontSize="13"/>
                                                 </StackPanel>
@@ -275,7 +278,64 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                        </Grid>
+
+                            <!-- Backups Heading -->
+                            <TextBlock Text="{DynamicResource Str_Worlds_Backups}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" FontWeight="SemiBold" Margin="4,16,0,8"/>
+
+                            <TextBlock Text="{DynamicResource Str_Worlds_NoBackups}" 
+                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" TextWrapping="Wrap" HorizontalAlignment="Center" Margin="20,10,20,20">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Backups.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <ItemsControl ItemsSource="{Binding Backups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="10" Margin="0,0,0,10" Padding="14,12">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8" Margin="0,0,12,0" Background="#1B2230">
+                                                    <TextBlock Text="&#xE8F1;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding WorldName}" Foreground="{DynamicResource PrimaryTextBrush}" FontWeight="Bold" FontSize="14"/>
+                                                    <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,2,0,0">
+                                                        <Run Text="{Binding DisplayDate, Mode=OneWay}"/>
+                                                        <Run Text=" • "/>
+                                                        <Run Text="{Binding DisplaySize, Mode=OneWay}"/>
+                                                        <Run Text=" • "/>
+                                                        <Run Text="{Binding FileName, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Button Content="{DynamicResource Str_Action_Restore}" 
+                                                            Command="{Binding DataContext.RestoreBackupCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                            CommandParameter="{Binding}" Height="32" Padding="12,0" Margin="0,0,8,0" Style="{DynamicResource DarkButtonStyle}" FontSize="13"/>
+                                                    <Button Content="{DynamicResource Str_Action_Delete}" 
+                                                            Command="{Binding DataContext.DeleteBackupCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                            CommandParameter="{Binding}" Height="32" Padding="12,0" Foreground="#FF6363" Style="{DynamicResource DarkButtonStyle}" FontSize="13"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </ScrollViewer>
                 </Grid>
             </Grid>

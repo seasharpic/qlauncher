@@ -11,7 +11,7 @@
         Title="QLauncher" Height="700" Width="1100"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterScreen" ResizeMode="CanResizeWithGrip"
-        AllowDrop="True" DragOver="Window_DragOver" Drop="Window_Drop"
+        AllowDrop="True" DragEnter="Window_DragEnter" DragLeave="Window_DragLeave" DragOver="Window_DragOver" Drop="Window_Drop"
         FontFamily="Inter">
 
     <Window.Resources>
@@ -89,6 +89,9 @@
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
                             <Image Source="/logo.png" Width="20" Height="20" RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,8,0"/>
                             <TextBlock Text="QLauncher" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <Border x:Name="PortableBadge" Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="PORTABLE" Foreground="Black" FontSize="9" FontWeight="Bold"/>
+                            </Border>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -108,38 +111,38 @@
                             <Button Style="{StaticResource NavTabButtonStyle}" Click="NavHome_Click" Margin="0,0,4,0">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Главная" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_Nav_Home}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Style="{StaticResource NavTabButtonStyle}" Click="NavModpacks_Click" Margin="0,0,4,0" ToolTip="Управление и выбор сборок">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Сборки" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_Nav_Modpacks}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Style="{StaticResource NavTabButtonStyle}" Click="NavMods_Click" Margin="0,0,4,0" ToolTip="Каталог модов, ресурс-паков и шейдеров">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="&#xE74C;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Моды" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_Nav_Mods}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Style="{StaticResource NavTabButtonStyle}" Click="NavScreenshots_Click" Margin="0,0,4,0" ToolTip="Галерея скриншотов">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Скриншоты" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_Nav_Screenshots}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Style="{StaticResource NavTabButtonStyle}" Click="NavConsole_Click" Margin="0,0,4,0" ToolTip="Консоль отладки и журналы">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="&#xE756;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Консоль" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_Nav_Console}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Grid>
                                 <Button x:Name="QuickFolderBtn" Style="{StaticResource NavTabButtonStyle}" Click="QuickFolderButton_Click" ToolTip="Быстрый доступ к папкам игры">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Папки ▾" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource Str_Nav_QuickFolder}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
                                 <Popup x:Name="FoldersPopup" Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
@@ -261,10 +264,20 @@
                         <!-- Servers Panel -->
                         <Border Grid.Column="1" Background="{DynamicResource PanelBrush}" CornerRadius="20" ClipToBounds="True">
                             <Grid>
-                                <TextBlock Text="Ваши сервера" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Top" FontFamily="Inter" Height="30" TextAlignment="Center" Margin="0,16,0,0"/>
+                                <Grid VerticalAlignment="Top" Margin="20,14,20,0" Height="36">
+                                    <TextBlock Text="Серверы" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="22" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Bold" FontFamily="Inter"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Command="{Binding RefreshServersCommand}" Style="{StaticResource DarkButtonStyle}" Width="32" Height="32" Padding="0" Margin="0,0,6,0" ToolTip="Обновить статус">
+                                            <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="13"/>
+                                        </Button>
+                                        <Button Command="{Binding OpenAddServerOverlayCommand}" Style="{StaticResource DarkButtonStyle}" Width="32" Height="32" Padding="0" ToolTip="Добавить сервер">
+                                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="13"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
                                 <Border BorderBrush="{DynamicResource HoverOverlayBrush}" BorderThickness="0,1,0,0" VerticalAlignment="Top" Margin="0,58,0,0"/>
 
-                                <ScrollViewer Margin="0,51,0,0" VerticalScrollBarVisibility="Auto"
+                                <ScrollViewer Margin="0,59,0,0" VerticalScrollBarVisibility="Auto"
                                               Visibility="{Binding HasServers, Converter={StaticResource BoolToVisConverter}}">
                                     <ItemsControl ItemsSource="{Binding Servers}" Margin="20,15,20,20">
                                         <ItemsControl.ItemTemplate>
@@ -443,10 +456,10 @@
                                 <TextBlock Text="{Binding ProgressText}" Foreground="{DynamicResource PrimaryTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14" FontFamily="Inter"/>
                             </Grid>
 
-                            <Button x:Name="PlayButton" Grid.Column="3" Content="Играть" Height="45" Style="{StaticResource PlayButtonStyle}" Command="{Binding PlayCommand}" FontFamily="Inter" FontSize="22">
+                            <Button x:Name="PlayButton" Grid.Column="3" Content="{DynamicResource Str_Action_Play}" Height="45" Style="{StaticResource PlayButtonStyle}" Command="{Binding PlayCommand}" FontFamily="Inter" FontSize="22">
                                 <Button.ContextMenu>
                                     <ContextMenu>
-                                        <MenuItem Header="Запустить игру" Command="{Binding PlayCommand}">
+                                        <MenuItem Header="{DynamicResource Str_Action_Play}" Command="{Binding PlayCommand}">
                                             <MenuItem.Icon>
                                                 <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                             </MenuItem.Icon>
@@ -671,6 +684,43 @@
                             <Button Content="Создать" Width="140" Height="42" Style="{StaticResource PlayButtonStyle}" Command="{Binding CreateShortcutCommand}" FontFamily="Inter"/>
                         </StackPanel>
                     </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Add Server Overlay -->
+            <Grid x:Name="AddServerOverlay" Grid.Row="1" Grid.RowSpan="2" 
+                  Visibility="{Binding IsAddServerOverlayVisible, Converter={StaticResource BoolToVisConverter}}" Panel.ZIndex="910">
+                <Border Background="#AA000000" CornerRadius="0,0,11,11" MouseDown="CloseAddServerOverlay_Click"/>
+                <Border Width="420" Height="340" HorizontalAlignment="Center" VerticalAlignment="Center" CornerRadius="16" Background="{DynamicResource ModpackOverlayBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="2">
+                    <Border.Effect>
+                        <DropShadowEffect Color="Black" Direction="270" ShadowDepth="4" Opacity="0.5" BlurRadius="20"/>
+                    </Border.Effect>
+                    <Grid Margin="30">
+                        <TextBlock Text="{DynamicResource Str_Action_AddServer}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Top" FontFamily="Inter"/>
+
+                        <StackPanel Margin="0,46,0,0">
+                            <TextBlock Text="Название сервера" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
+                            <TextBox Text="{Binding NewServerName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="40" Style="{StaticResource CustomTextBoxStyle}" Margin="0,0,0,14" Padding="14,0"/>
+
+                            <TextBlock Text="IP-адрес или домен сервера" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
+                            <TextBox Text="{Binding NewServerIp, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="40" Style="{StaticResource CustomTextBoxStyle}" Margin="0,0,0,14" Padding="14,0"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                            <Button Content="{DynamicResource Str_Action_Cancel}" Width="110" Height="40" Style="{StaticResource DarkButtonStyle}" Margin="0,0,10,0" Command="{Binding CloseAddServerOverlayCommand}" FontFamily="Inter"/>
+                            <Button Content="{DynamicResource Str_Action_Save}" Width="140" Height="40" Style="{StaticResource PlayButtonStyle}" Command="{Binding AddServerCommand}" FontFamily="Inter"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Drag & Drop Visual Overlay -->
+            <Grid x:Name="DragDropOverlay" Grid.Row="1" Grid.RowSpan="2" Visibility="Collapsed" Panel.ZIndex="998" Background="#DD0E131F" IsHitTestVisible="False">
+                <Border BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2" CornerRadius="12" Margin="24" SnapsToDevicePixels="True">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" FontSize="52" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,14"/>
+                        <TextBlock Text="{DynamicResource Str_DragDrop_Overlay}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center"/>
+                    </StackPanel>
                 </Border>
             </Grid>
 

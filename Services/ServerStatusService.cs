@@ -17,6 +17,7 @@ namespace MinecraftLauncher.Services
         Task<List<ServerItem>> LoadAndPingServersAsync(string gamePath);
         void InjectServersIfEnabled(string gamePath, bool autoAddServers);
         void RemoveServer(string gamePath, string ip);
+        void AddServer(string gamePath, string name, string ip);
     }
 
     public class ServerStatusService : IServerStatusService
@@ -203,6 +204,57 @@ namespace MinecraftLauncher.Services
 
                     nbtFile.SaveToFile(serversFile, NbtCompression.None);
                 }
+            }
+            catch { }
+        }
+
+        public void AddServer(string gamePath, string name, string ip)
+        {
+            if (string.IsNullOrWhiteSpace(gamePath) || string.IsNullOrWhiteSpace(ip)) return;
+            if (string.IsNullOrWhiteSpace(name)) name = ip;
+
+            try
+            {
+                string serversFile = Path.Combine(gamePath, "servers.dat");
+                NbtFile nbtFile = new NbtFile();
+                NbtList serversList;
+
+                if (File.Exists(serversFile))
+                {
+                    nbtFile.LoadFromFile(serversFile);
+                    serversList = nbtFile.RootTag.Get<NbtList>("servers") ?? new NbtList("servers", NbtTagType.Compound);
+                    if (nbtFile.RootTag.Get("servers") == null) nbtFile.RootTag.Add(serversList);
+                }
+                else
+                {
+                    nbtFile.RootTag = new NbtCompound("");
+                    serversList = new NbtList("servers", NbtTagType.Compound);
+                    nbtFile.RootTag.Add(serversList);
+                }
+
+                bool found = false;
+                foreach (NbtCompound srv in serversList)
+                {
+                    if (string.Equals(srv.Get<NbtString>("ip")?.Value, ip, StringComparison.OrdinalIgnoreCase))
+                    {
+                        srv["name"] = new NbtString("name", name);
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    var compound = new NbtCompound
+                    {
+                        new NbtString("ip", ip),
+                        new NbtString("name", name),
+                        new NbtByte("acceptTextures", 1)
+                    };
+                    serversList.Add(compound);
+                }
+
+                nbtFile.SaveToFile(serversFile, NbtCompression.None);
             }
             catch { }
         }

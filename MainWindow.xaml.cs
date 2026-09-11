@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using MinecraftLauncher.Common;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Services;
 using MinecraftLauncher.ViewModels;
 using MinecraftLauncher.Views.Pages;
@@ -52,6 +53,11 @@ namespace MinecraftLauncher
             {
                 ToastService.Instance.ShowSuccess($"QLauncher успешно обновлен до {App.JustUpdatedVersion}!", "Обновление");
                 App.JustUpdatedVersion = null;
+            }
+
+            if (!LauncherPathHelper.IsPortableMode && PortableBadge != null)
+            {
+                PortableBadge.Visibility = Visibility.Collapsed;
             }
 
             var loadFade = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(350));
@@ -454,6 +460,21 @@ namespace MinecraftLauncher
         private void OpenFolder_Logs(object sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("logs"); }
         private void OpenFolder_Root(object sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute(""); }
 
+        private void Window_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                if (DragDropOverlay != null) DragDropOverlay.Visibility = Visibility.Visible;
+                e.Effects = DragDropEffects.Copy;
+                e.Handled = true;
+            }
+        }
+
+        private void Window_DragLeave(object sender, DragEventArgs e)
+        {
+            if (DragDropOverlay != null) DragDropOverlay.Visibility = Visibility.Collapsed;
+        }
+
         private void Window_DragOver(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
@@ -465,13 +486,14 @@ namespace MinecraftLauncher
 
         private void Window_Drop(object sender, DragEventArgs e)
         {
+            if (DragDropOverlay != null) DragDropOverlay.Visibility = Visibility.Collapsed;
             if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
 
             string[]? files = (string[])e.Data.GetData(DataFormats.FileDrop);
             if (files == null || files.Length == 0) return;
 
             var settings = SettingsService.Instance.Settings;
-            string targetModsDir = Path.Combine(settings.GamePath, "mods");
+            string effectiveGameDir = settings.GamePath;
 
             string selectedPack = ViewModel.SelectedVersion;
             if (!string.IsNullOrEmpty(selectedPack) && selectedPack.StartsWith("⭐"))
@@ -482,13 +504,20 @@ namespace MinecraftLauncher
                 var modpack = settings.Modpacks.Find(p => p.Name == packName);
                 if (modpack != null && Directory.Exists(modpack.FolderPath))
                 {
-                    targetModsDir = Path.Combine(modpack.FolderPath, "mods");
+                    effectiveGameDir = modpack.FolderPath;
                 }
             }
 
+            string targetModsDir = Path.Combine(effectiveGameDir, "mods");
+            string targetShaderpacksDir = Path.Combine(effectiveGameDir, "shaderpacks");
+            string targetResourcepacksDir = Path.Combine(effectiveGameDir, "resourcepacks");
+
             Directory.CreateDirectory(targetModsDir);
 
-            int installedCount = 0;
+            int modsCount = 0;
+            int shadersCount = 0;
+            int resourcesCount = 0;
+
             foreach (string file in files)
             {
                 string ext = Path.GetExtension(file).ToLowerInvariant();
@@ -516,19 +545,72 @@ namespace MinecraftLauncher
                     });
                     return;
                 }
-                else if (ext == ".jar" || ext == ".zip")
+                else if (ext == ".jar")
                 {
                     string destFile = Path.Combine(targetModsDir, Path.GetFileName(file));
                     File.Copy(file, destFile, true);
-                    installedCount++;
+                    modsCount++;
+                }
+                else if (ext == ".zip")
+                {
+                    bool isShader = false;
+                    bool isResource = false;
+                    try
+                    {
+                        using var archive = System.IO.Compression.ZipFile.OpenRead(file);
+                        foreach (var entry in archive.Entries)
+                        {
+                            if (entry.FullName.StartsWith("shaders/", StringComparison.OrdinalIgnoreCase))
+                            {
+                                isShader = true;
+                                break;
+                            }
+                            if (string.Equals(entry.FullName, "pack.mcmeta", StringComparison.OrdinalIgnoreCase))
+                            {
+                                isResource = true;
+                            }
+                        }
+                    }
+                    catch { }
+
+                    if (isShader)
+                    {
+                        Directory.CreateDirectory(targetShaderpacksDir);
+                        string destFile = Path.Combine(targetShaderpacksDir, Path.GetFileName(file));
+                        File.Copy(file, destFile, true);
+                        shadersCount++;
+                    }
+                    else if (isResource)
+                    {
+                        Directory.CreateDirectory(targetResourcepacksDir);
+                        string destFile = Path.Combine(targetResourcepacksDir, Path.GetFileName(file));
+                        File.Copy(file, destFile, true);
+                        resourcesCount++;
+                    }
+                    else
+                    {
+                        string destFile = Path.Combine(targetModsDir, Path.GetFileName(file));
+                        File.Copy(file, destFile, true);
+                        modsCount++;
+                    }
                 }
             }
 
-            if (installedCount > 0)
+            int total = modsCount + shadersCount + resourcesCount;
+            if (total > 0)
             {
                 AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
-                ToastService.Instance.ShowSuccess($"Установлено {installedCount} файлов в папку mods.", "Моды");
+                var parts = new System.Collections.Generic.List<string>();
+                if (modsCount > 0) parts.Add($"{modsCount} модов");
+                if (shadersCount > 0) parts.Add($"{shadersCount} шейдеров");
+                if (resourcesCount > 0) parts.Add($"{resourcesCount} текстур-паков");
+                ToastService.Instance.ShowSuccess($"Успешно импортировано: {string.Join(", ", parts)}", "Импорт");
             }
+        }
+
+        private void CloseAddServerOverlay_Click(object sender, MouseButtonEventArgs e)
+        {
+            ViewModel.CloseAddServerOverlayCommand.Execute(null);
         }
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)

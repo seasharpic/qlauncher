@@ -17,6 +17,8 @@ namespace MinecraftLauncher.Views.Windows
             await SimulateLoadingAsync();
 
             var mainWindow = new MainWindow();
+            Application.Current.MainWindow = mainWindow;
+            mainWindow.Closed += (_, _) => Application.Current.Shutdown();
             mainWindow.Show();
 
             Close();

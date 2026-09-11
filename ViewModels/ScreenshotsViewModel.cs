@@ -22,10 +22,18 @@ namespace MinecraftLauncher.ViewModels
 
         public ObservableCollection<ScreenshotItem> Screenshots { get; } = new();
 
+        private string? _previewPath;
+
         public BitmapImage? PreviewImage
         {
             get => _previewImage;
             set => SetProperty(ref _previewImage, value);
+        }
+
+        public string? PreviewPath
+        {
+            get => _previewPath;
+            set => SetProperty(ref _previewPath, value);
         }
 
         public bool IsPreviewVisible
@@ -108,6 +116,7 @@ namespace MinecraftLauncher.ViewModels
                 bitmap.UriSource = new Uri(path, UriKind.Absolute);
                 bitmap.EndInit();
 
+                PreviewPath = path;
                 PreviewImage = bitmap;
                 IsPreviewVisible = true;
             }
@@ -118,6 +127,7 @@ namespace MinecraftLauncher.ViewModels
         {
             IsPreviewVisible = false;
             PreviewImage = null;
+            PreviewPath = null;
         }
 
         private void ExecuteCopyImage(string? path)

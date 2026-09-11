@@ -46,6 +46,9 @@ namespace MinecraftLauncher.ViewModels
         private bool _installSodium = true;
         private bool _installIris = true;
         private ImageBrush? _customBackgroundBrush;
+        private bool _isAddServerOverlayVisible;
+        private string _newServerName = "";
+        private string _newServerIp = "";
 
         private DispatcherTimer? _newsTimer;
         private DispatcherTimer? _serverTimer;
@@ -195,6 +198,24 @@ namespace MinecraftLauncher.ViewModels
             set => SetProperty(ref _customBackgroundBrush, value);
         }
 
+        public bool IsAddServerOverlayVisible
+        {
+            get => _isAddServerOverlayVisible;
+            set => SetProperty(ref _isAddServerOverlayVisible, value);
+        }
+
+        public string NewServerName
+        {
+            get => _newServerName;
+            set => SetProperty(ref _newServerName, value);
+        }
+
+        public string NewServerIp
+        {
+            get => _newServerIp;
+            set => SetProperty(ref _newServerIp, value);
+        }
+
         public AsyncRelayCommand PlayCommand { get; }
         public AsyncRelayCommand<string> ConnectServerCommand { get; }
         public RelayCommand ToggleThemeCommand { get; }
@@ -210,6 +231,9 @@ namespace MinecraftLauncher.ViewModels
         public RelayCommand<string> CopyServerIpCommand { get; }
         public AsyncRelayCommand RefreshServersCommand { get; }
         public RelayCommand<ServerItem> DeleteServerCommand { get; }
+        public RelayCommand OpenAddServerOverlayCommand { get; }
+        public RelayCommand CloseAddServerOverlayCommand { get; }
+        public AsyncRelayCommand AddServerCommand { get; }
         public RelayCommand ExitCommand { get; }
 
         public MainViewModel() : this(
@@ -290,6 +314,32 @@ namespace MinecraftLauncher.ViewModels
                     Servers.Remove(server);
                     _toastService.ShowInfo($"Сервер '{server.Name}' удален", "Сервер");
                 }
+            });
+
+            OpenAddServerOverlayCommand = new RelayCommand(() =>
+            {
+                NewServerName = "";
+                NewServerIp = "";
+                IsAddServerOverlayVisible = true;
+            });
+
+            CloseAddServerOverlayCommand = new RelayCommand(() => IsAddServerOverlayVisible = false);
+
+            AddServerCommand = new AsyncRelayCommand(async () =>
+            {
+                if (string.IsNullOrWhiteSpace(NewServerIp))
+                {
+                    _toastService.ShowWarning("Введите IP-адрес или домен сервера.", "Сервер");
+                    return;
+                }
+
+                string name = string.IsNullOrWhiteSpace(NewServerName) ? NewServerIp.Trim() : NewServerName.Trim();
+                string ip = NewServerIp.Trim();
+
+                _serverStatusService.AddServer(_settingsService.Settings.GamePath, name, ip);
+                IsAddServerOverlayVisible = false;
+                await RefreshServersAsync();
+                _toastService.ShowSuccess($"Сервер '{name}' добавлен в список!", "Сервер");
             });
 
             _launchService.FileProgressChanged += OnFileProgressChanged;
@@ -541,6 +591,22 @@ namespace MinecraftLauncher.ViewModels
             {
                 _toastService.ShowWarning("Пожалуйста, добавьте или выберите аккаунт в настройках.", "Аккаунт");
                 return;
+            }
+
+            // Java Compatibility Guard
+            var compat = JavaCompatibilityService.Instance.CheckCompatibility(version, settings.JavaPath);
+            if (!compat.IsCompatible)
+            {
+                var choice = QMessageBoxWindow.Show(
+                    $"{compat.Message}\n\nРекомендуется использовать Java {compat.RequiredVersion}.\nВы хотите продолжить запуск?",
+                    "Проверка совместимости Java",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (choice != MessageBoxResult.Yes)
+                {
+                    return;
+                }
             }
 
             IsActionOverlayVisible = true;

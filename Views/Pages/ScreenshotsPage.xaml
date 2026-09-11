@@ -102,9 +102,23 @@
                         <Grid.InputBindings>
                             <MouseBinding Gesture="LeftClick" Command="{Binding ClosePreviewCommand}"/>
                         </Grid.InputBindings>
-                        <Border Margin="40" CornerRadius="12" ClipToBounds="True" VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <Image Source="{Binding PreviewImage}" Stretch="Uniform" MaxHeight="600" RenderOptions.BitmapScalingMode="HighQuality"/>
-                        </Border>
+                        <Grid Margin="40" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Border CornerRadius="12" ClipToBounds="True">
+                                <Image Source="{Binding PreviewImage}" Stretch="Uniform" MaxHeight="600" RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </Border>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,12,0">
+                                <Button Content="{DynamicResource Str_Screenshots_Copy}" 
+                                        Command="{Binding CopyImageCommand}" 
+                                        CommandParameter="{Binding PreviewPath}" 
+                                        Style="{DynamicResource DarkButtonStyle}" 
+                                        Height="34" Padding="14,0" Margin="0,0,8,0" FontSize="12"/>
+                                <Button Content="&#xE8BB;" FontFamily="Segoe MDL2 Assets" 
+                                        Command="{Binding ClosePreviewCommand}" 
+                                        Style="{DynamicResource DarkButtonStyle}" 
+                                        Width="34" Height="34" FontSize="12" ToolTip="Закрыть"/>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
                 </Grid>
             </Grid>

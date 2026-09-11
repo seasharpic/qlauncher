@@ -57,6 +57,8 @@ namespace MinecraftLauncher.ViewModels
             set => SetProperty(ref _isCheckingUpdates, value);
         }
 
+        public ObservableCollection<WorldBackupItem> Backups { get; } = new();
+
         public RelayCommand<LocalModItem> ToggleModCommand { get; }
         public RelayCommand<LocalModItem> DeleteModCommand { get; }
         public RelayCommand<LocalModItem> OpenModInExplorerCommand { get; }
@@ -66,6 +68,8 @@ namespace MinecraftLauncher.ViewModels
         public RelayCommand OpenWorldsFolderCommand { get; }
         public RelayCommand<WorldItem> BackupWorldCommand { get; }
         public RelayCommand<WorldItem> DeleteWorldCommand { get; }
+        public AsyncRelayCommand<WorldBackupItem> RestoreBackupCommand { get; }
+        public RelayCommand<WorldBackupItem> DeleteBackupCommand { get; }
         public RelayCommand ExportZipCommand { get; }
         public AsyncRelayCommand CheckModUpdatesCommand { get; }
 
@@ -159,11 +163,14 @@ namespace MinecraftLauncher.ViewModels
             OpenWorldsFolderCommand = new RelayCommand(ExecuteOpenWorldsFolder);
             BackupWorldCommand = new RelayCommand<WorldItem>(ExecuteBackupWorld);
             DeleteWorldCommand = new RelayCommand<WorldItem>(ExecuteDeleteWorld);
+            RestoreBackupCommand = new AsyncRelayCommand<WorldBackupItem>(ExecuteRestoreBackupAsync);
+            DeleteBackupCommand = new RelayCommand<WorldBackupItem>(ExecuteDeleteBackup);
             ExportZipCommand = new RelayCommand(ExecuteExportZip);
             CheckModUpdatesCommand = new AsyncRelayCommand(ExecuteCheckModUpdatesAsync);
 
             LoadMods();
             LoadWorlds();
+            LoadBackups();
         }
 
         public void LoadMods()
@@ -332,25 +339,82 @@ namespace MinecraftLauncher.ViewModels
             catch { }
         }
 
-        private void ExecuteBackupWorld(WorldItem? world)
+        public void LoadBackups()
+        {
+            Backups.Clear();
+            var list = WorldBackupService.Instance.GetBackups(_profile.FolderPath);
+            foreach (var b in list)
+            {
+                Backups.Add(b);
+            }
+        }
+
+        private async void ExecuteBackupWorld(WorldItem? world)
         {
             if (world == null || !Directory.Exists(world.FullPath)) return;
 
             try
             {
-                string backupsDir = Path.Combine(_profile.FolderPath, "backups");
-                Directory.CreateDirectory(backupsDir);
-
-                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string zipName = $"{world.WorldName}_{timestamp}.zip";
-                string zipPath = Path.Combine(backupsDir, zipName);
-
-                ZipFile.CreateFromDirectory(world.FullPath, zipPath);
-                _toastService.ShowSuccess($"Бэкап сохранен в '{zipName}'!", "Резервная копия");
+                _toastService.ShowInfo($"Создание бэкапа мира '{world.WorldName}'...", "Резервное копирование");
+                await WorldBackupService.Instance.CreateBackupAsync(world.FullPath, _profile.FolderPath);
+                LoadBackups();
+                _toastService.ShowSuccess($"Резервная копия мира '{world.WorldName}' создана.", "Резервное копирование");
             }
             catch (Exception ex)
             {
                 _toastService.ShowError($"Ошибка создания бэкапа: {ex.Message}", "Ошибка");
+            }
+        }
+
+        private async Task ExecuteRestoreBackupAsync(WorldBackupItem? backup)
+        {
+            if (backup == null || !File.Exists(backup.FullPath)) return;
+
+            var result = QMessageBoxWindow.Show(
+                $"Восстановить мир '{backup.WorldName}' из архива '{backup.FileName}'?\nТекущее состояние мира будет сохранено в резервную копию.",
+                "Восстановление мира",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                _toastService.ShowInfo($"Восстановление мира '{backup.WorldName}'...", "Восстановление");
+                await WorldBackupService.Instance.RestoreBackupAsync(backup.FullPath, _profile.FolderPath);
+                LoadWorlds();
+                LoadBackups();
+                _toastService.ShowSuccess($"Мир '{backup.WorldName}' успешно восстановлен.", "Восстановление");
+            }
+            catch (Exception ex)
+            {
+                _toastService.ShowError($"Ошибка восстановления: {ex.Message}", "Ошибка");
+            }
+        }
+
+        private void ExecuteDeleteBackup(WorldBackupItem? backup)
+        {
+            if (backup == null || !File.Exists(backup.FullPath)) return;
+
+            var result = QMessageBoxWindow.Show(
+                $"Удалить резервную копию '{backup.FileName}' безвозвратно?",
+                "Удаление бэкапа",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                if (WorldBackupService.Instance.DeleteBackup(backup.FullPath))
+                {
+                    Backups.Remove(backup);
+                    _toastService.ShowInfo($"Бэкап '{backup.FileName}' удален.", "Резервные копии");
+                }
+            }
+            catch (Exception ex)
+            {
+                _toastService.ShowError($"Ошибка удаления бэкапа: {ex.Message}", "Ошибка");
             }
         }
 

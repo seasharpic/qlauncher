@@ -99,6 +99,19 @@ namespace MinecraftLauncher.Helpers
                     };
                 }
 
+                if (content.Contains("org.lwjgl.LWJGLException: Pixel format not accelerated") ||
+                    content.Contains("GLFW error 65542: WGL: The driver does not appear to support OpenGL") ||
+                    content.Contains("ig4icd64.dll") || content.Contains("nvoglv64.dll") || content.Contains("atio6axx.dll"))
+                {
+                    return new CrashAnalysisResult
+                    {
+                        HasCrash = true,
+                        Title = "Сбой видеодрайвера (OpenGL)",
+                        Summary = "Видеокарта или драйвер не поддерживают требуемую версию OpenGL.",
+                        Recommendation = "Обновите драйверы видеокарты или переключите используемый GPU в Настройках лаунчера."
+                    };
+                }
+
                 return new CrashAnalysisResult
                 {
                     HasCrash = true,

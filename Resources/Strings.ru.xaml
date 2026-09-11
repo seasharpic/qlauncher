@@ -1,0 +1,85 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- Navigation -->
+    <sys:String x:Key="Str_Nav_Home">Главная</sys:String>
+    <sys:String x:Key="Str_Nav_Modpacks">Сборки</sys:String>
+    <sys:String x:Key="Str_Nav_Mods">Моды</sys:String>
+    <sys:String x:Key="Str_Nav_Screenshots">Скриншоты</sys:String>
+    <sys:String x:Key="Str_Nav_Console">Консоль</sys:String>
+    <sys:String x:Key="Str_Nav_QuickFolder">Быстрый доступ к папкам</sys:String>
+
+    <!-- Actions -->
+    <sys:String x:Key="Str_Action_Play">ИГРАТЬ</sys:String>
+    <sys:String x:Key="Str_Action_Preparing">Подготовка к запуску...</sys:String>
+    <sys:String x:Key="Str_Action_Ready">Готов к запуску</sys:String>
+    <sys:String x:Key="Str_Action_CreateModpack">Создать сборку</sys:String>
+    <sys:String x:Key="Str_Action_CreateShortcut">Создать ярлык</sys:String>
+    <sys:String x:Key="Str_Action_AddAccount">Добавить аккаунт</sys:String>
+    <sys:String x:Key="Str_Action_AddServer">Добавить сервер</sys:String>
+    <sys:String x:Key="Str_Action_Refresh">Обновить</sys:String>
+    <sys:String x:Key="Str_Action_Export">Экспорт</sys:String>
+    <sys:String x:Key="Str_Action_Import">Импорт</sys:String>
+    <sys:String x:Key="Str_Action_Backup">Резервная копия</sys:String>
+    <sys:String x:Key="Str_Action_Restore">Восстановить</sys:String>
+    <sys:String x:Key="Str_Action_Delete">Удалить</sys:String>
+    <sys:String x:Key="Str_Action_Save">Сохранить</sys:String>
+    <sys:String x:Key="Str_Action_Cancel">Отмена</sys:String>
+    <sys:String x:Key="Str_Action_Clean">Очистить</sys:String>
+    <sys:String x:Key="Str_Action_Copy">Скопировать</sys:String>
+    <sys:String x:Key="Str_Action_OpenFolder">Открыть папку</sys:String>
+    <sys:String x:Key="Str_Action_Back">Назад</sys:String>
+
+    <!-- Settings -->
+    <sys:String x:Key="Str_Settings_Title">Настройки</sys:String>
+    <sys:String x:Key="Str_Settings_Language">Язык интерфейса / Language</sys:String>
+    <sys:String x:Key="Str_Settings_Theme">Режим темы</sys:String>
+    <sys:String x:Key="Str_Settings_ThemeLight">Светлая</sys:String>
+    <sys:String x:Key="Str_Settings_ThemeDark">Тёмная</sys:String>
+    <sys:String x:Key="Str_Settings_AccentColor">Акцентный цвет интерфейса</sys:String>
+    <sys:String x:Key="Str_Settings_CloseOnLaunch">Закрывать лаунчер при запуске игры</sys:String>
+    <sys:String x:Key="Str_Settings_DiscordRpc">Показывать статус в Discord (RPC)</sys:String>
+    <sys:String x:Key="Str_Settings_UiSounds">Включить звуковые эффекты интерфейса</sys:String>
+    <sys:String x:Key="Str_Settings_HideServerIp">Скрывать IP серверов в Discord</sys:String>
+    <sys:String x:Key="Str_Settings_AutoAddServers">Автоматически добавлять серверы SCRAFT</sys:String>
+    <sys:String x:Key="Str_Settings_Memory">Выделение оперативной памяти (RAM)</sys:String>
+    <sys:String x:Key="Str_Settings_JavaPath">Путь к Java (JRE/JDK)</sys:String>
+    <sys:String x:Key="Str_Settings_JvmPreset">Профиль аргументов JVM</sys:String>
+    <sys:String x:Key="Str_Settings_Gpu">Графический процессор (Видеокарта)</sys:String>
+    <sys:String x:Key="Str_Settings_AutoTune">Оптимизировать под моё железо</sys:String>
+    <sys:String x:Key="Str_Settings_Display">Параметры окна игры</sys:String>
+    <sys:String x:Key="Str_Settings_Fullscreen">Запускать в полном экране (Fullscreen)</sys:String>
+    <sys:String x:Key="Str_Settings_Resolution">Разрешение окна игры</sys:String>
+    <sys:String x:Key="Str_Settings_Wallpaper">Пользовательский фон главного экрана</sys:String>
+    <sys:String x:Key="Str_Settings_Storage">Дисковое пространство и кэш</sys:String>
+    <sys:String x:Key="Str_Settings_CleanCache">Очистить временные данные</sys:String>
+    <sys:String x:Key="Str_Settings_PortableMode">Портативный режим</sys:String>
+    <sys:String x:Key="Str_Settings_PortableActive">Портативный режим активен (данные хранятся в папке лаунчера ./data)</sys:String>
+    <sys:String x:Key="Str_Settings_PortableInactive">Стандартный режим (данные хранятся в %APPDATA%/.qlauncher)</sys:String>
+    <sys:String x:Key="Str_Settings_ExportPortable">Экспортировать портативную сборку...</sys:String>
+    <sys:String x:Key="Str_Settings_OpenDataFolder">Открыть папку данных лаунчера</sys:String>
+    <sys:String x:Key="Str_Settings_ShowSplash">Показывать экран заставки (Splash Screen)</sys:String>
+    <sys:String x:Key="Str_Settings_CheckUpdates">Проверять обновления при каждом запуске</sys:String>
+    <sys:String x:Key="Str_Settings_UpdateChannel">Канал обновлений</sys:String>
+    <sys:String x:Key="Str_Settings_UpdateMirror">Зеркало загрузки</sys:String>
+    <sys:String x:Key="Str_Settings_BandwidthLimit">Ограничение скорости загрузки</sys:String>
+    <sys:String x:Key="Str_Settings_ExportDiagnostic">Экспорт диагностического отчёта</sys:String>
+    <sys:String x:Key="Str_Settings_About">О программе</sys:String>
+    <sys:String x:Key="Str_Settings_AboutDesc">Современный легковесный лаунчер Minecraft с акцентом на производительность и надежность.</sys:String>
+
+    <!-- Pages -->
+    <sys:String x:Key="Str_Modpacks_Title">Управление сборками</sys:String>
+    <sys:String x:Key="Str_Modpacks_CreateNew">Создать новую сборку</sys:String>
+    <sys:String x:Key="Str_Modpacks_ImportZip">Импортировать из ZIP / .mrpack</sys:String>
+    <sys:String x:Key="Str_Mods_SearchPlaceholder">Поиск модов, шейдеров, ресурс-паков на Modrinth...</sys:String>
+    <sys:String x:Key="Str_Worlds_Title">Миры и резервные копии</sys:String>
+    <sys:String x:Key="Str_Worlds_ActiveWorlds">Миры сохранения</sys:String>
+    <sys:String x:Key="Str_Worlds_Backups">Резервные копии</sys:String>
+    <sys:String x:Key="Str_Worlds_NoWorlds">Сохранения миров не найдены. Запустите игру, чтобы создать свой первый мир!</sys:String>
+    <sys:String x:Key="Str_Worlds_NoBackups">Резервные копии еще не созданы.</sys:String>
+    <sys:String x:Key="Str_Worlds_CreateBackup">Создать бэкап</sys:String>
+    <sys:String x:Key="Str_Screenshots_Title">Галерея скриншотов</sys:String>
+    <sys:String x:Key="Str_Screenshots_Copy">Скопировать в буфер</sys:String>
+    <sys:String x:Key="Str_DragDrop_Overlay">Отпустите файлы для добавления в сборку (.jar / .zip / .mrpack)</sys:String>
+</ResourceDictionary>

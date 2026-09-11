@@ -58,17 +58,41 @@
 
                     <TextBlock Text="ОСНОВНЫЕ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"/>
 
-                    <CheckBox Content="Закрывать лаунчер при запуске игры" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding CloseOnLaunch, Mode=TwoWay}"/>
-                    <CheckBox Content="Показывать статус в Discord (RPC)" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding EnableDiscordRpc, Mode=TwoWay}"/>
-                    <CheckBox Content="Включить звуковые эффекты интерфейса" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding EnableUiSounds, Mode=TwoWay}"/>
-                    <CheckBox Content="Скрывать IP серверов в Discord" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding HideServerIp, Mode=TwoWay}"/>
-                    <CheckBox Content="Автоматически добавлять сервера SCRAFT" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding AutoAddServers, Mode=TwoWay}"/>
+                    <TextBlock Text="{DynamicResource Str_Settings_Language}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,8"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                        <RadioButton Style="{StaticResource ThemeCardRadioStyle}" 
+                                     GroupName="LanguageSelectionGroup"
+                                     IsChecked="{Binding IsRussianLanguage, Mode=OneWay}"
+                                     Command="{Binding ChangeLanguageCommand}"
+                                     CommandParameter="ru"
+                                     Width="140" Margin="0,0,12,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="8,8">
+                                <TextBlock Text="Русский" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton Style="{StaticResource ThemeCardRadioStyle}" 
+                                     GroupName="LanguageSelectionGroup"
+                                     IsChecked="{Binding IsEnglishLanguage, Mode=OneWay}"
+                                     Command="{Binding ChangeLanguageCommand}"
+                                     CommandParameter="en"
+                                     Width="140">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="8,8">
+                                <TextBlock Text="English" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+
+                    <CheckBox Content="{DynamicResource Str_Settings_CloseOnLaunch}" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding CloseOnLaunch, Mode=TwoWay}"/>
+                    <CheckBox Content="{DynamicResource Str_Settings_DiscordRpc}" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding EnableDiscordRpc, Mode=TwoWay}"/>
+                    <CheckBox Content="{DynamicResource Str_Settings_UiSounds}" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding EnableUiSounds, Mode=TwoWay}"/>
+                    <CheckBox Content="{DynamicResource Str_Settings_HideServerIp}" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding HideServerIp, Mode=TwoWay}"/>
+                    <CheckBox Content="{DynamicResource Str_Settings_AutoAddServers}" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding AutoAddServers, Mode=TwoWay}"/>
 
                     <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
 
                     <TextBlock Text="JAVA И ПАМЯТЬ" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"/>
 
-                    <TextBlock Text="Выделение оперативной памяти (МБ)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <TextBlock Text="{DynamicResource Str_Settings_Memory}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
                     <Grid Margin="0,0,0,15">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -78,7 +102,7 @@
                         <TextBox Grid.Column="1" Text="{Binding RamMb, Mode=TwoWay}" Style="{StaticResource CustomTextBoxStyle}" Height="35" TextAlignment="Center" Padding="0" IsReadOnly="True" FontSize="13"/>
                     </Grid>
 
-                    <TextBlock Text="Свой путь к Java (оставьте пустым для авто-скачивания)" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <TextBlock Text="{DynamicResource Str_Settings_JavaPath}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
                     <Grid Margin="0,0,0,15">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -88,12 +112,21 @@
                         <Button Grid.Column="1" Content="Обзор..." Width="100" Height="40" Style="{StaticResource DarkButtonStyle}" Command="{Binding BrowseJavaCommand}" FontSize="13"/>
                     </Grid>
 
-                    <TextBlock Text="Пресет оптимизации JVM" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <TextBlock Text="{DynamicResource Str_Settings_JvmPreset}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
                     <ComboBox Height="40" Style="{StaticResource CustomComboBoxStyle}" SelectedValuePath="Tag" SelectedValue="{Binding JvmPreset, Mode=TwoWay}" Margin="0,0,0,15" Padding="12,0,0,0" VerticalContentAlignment="Center" FontSize="13">
                         <ComboBoxItem Content="Стандартный (G1GC)" Tag="default"/>
                         <ComboBoxItem Content="Aikar's Flags (Макс. FPS и плавность)" Tag="aikar"/>
                         <ComboBoxItem Content="Low Latency (ZGC / Shenandoah)" Tag="zgc_shenandoah"/>
                     </ComboBox>
+
+                    <Button Content="{DynamicResource Str_Settings_AutoTune}" 
+                            Command="{Binding AutoTuneHardwareCommand}" 
+                            Height="38" Style="{StaticResource DarkButtonStyle}" 
+                            HorizontalAlignment="Left" Padding="16,0" Margin="0,0,0,15" FontSize="13">
+                        <Button.ToolTip>
+                            <ToolTip Content="Автоматически определяет объем RAM, подбирает оптимальный профиль JVM и активирует дискретную видеокарту"/>
+                        </Button.ToolTip>
+                    </Button>
 
                     <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
 
@@ -261,7 +294,7 @@
 
                     <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
 
-                    <TextBlock Text="ОБСЛУЖИВАНИЕ ДИСКА" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                    <TextBlock Text="{DynamicResource Str_Settings_Storage}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,15"/>
                     <Grid Margin="0,0,0,15">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -271,8 +304,29 @@
                             <TextBlock Text="{Binding CacheInfoText}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13"/>
                             <TextBlock Text="Удаляет временные файлы, кэш скинов и старые журналы" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,2,0,0"/>
                         </StackPanel>
-                        <Button Grid.Column="1" Content="Очистить кэш" Command="{Binding CleanCacheCommand}" Width="100" Height="40" Style="{StaticResource DarkButtonStyle}" FontSize="13"/>
+                        <Button Grid.Column="1" Content="{DynamicResource Str_Settings_CleanCache}" Command="{Binding CleanCacheCommand}" Width="160" Height="40" Style="{StaticResource DarkButtonStyle}" FontSize="13"/>
                     </Grid>
+
+                    <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_PortableMode}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                    <Border Background="{DynamicResource InputBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xEDA2;" FontFamily="Segoe MDL2 Assets" FontSize="22" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding PortableModeStatusText}" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13"/>
+                                <TextBlock Text="{Binding DataDirectoryPath}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="{DynamicResource Str_Settings_ExportPortable}" Command="{Binding ExportPortableCommand}" Height="38" Padding="16,0" Style="{StaticResource DarkButtonStyle}" Margin="0,0,10,0" FontSize="13"/>
+                        <Button Content="{DynamicResource Str_Settings_OpenDataFolder}" Command="{Binding OpenDataFolderCommand}" Height="38" Padding="16,0" Style="{StaticResource DarkButtonStyle}" FontSize="13"/>
+                    </StackPanel>
 
                     <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
 
@@ -387,14 +441,30 @@
 
                     <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,0,0,20"/>
 
-                    <TextBlock Text="ДАННЫЕ НАСТРОЕК" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,15"/>
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="Экспорт" Width="110" Height="40" Style="{StaticResource DarkButtonStyle}" Margin="0,0,10,0" Click="ExportSettings_Click" FontSize="13"/>
-                        <Button Content="Импорт" Width="110" Height="40" Style="{StaticResource DarkButtonStyle}" Margin="0,0,10,0" Click="ImportSettings_Click" FontSize="13"/>
-                        <Button Content="Сбросить" Width="110" Height="40" Style="{StaticResource DarkButtonStyle}" Foreground="#E81123" Click="ResetSettings_Click" FontSize="13"/>
-                    </StackPanel>
+                    <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
 
-                    <Button Content="Сохранено" Width="140" Height="42" HorizontalAlignment="Right" Margin="0,20,0,0" Style="{StaticResource DarkButtonStyle}" Click="BackButton_Click" FontSize="13"/>
+                    <TextBlock Text="{DynamicResource Str_Settings_About}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                    <Border Background="{DynamicResource InputBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16,14" Margin="0,0,0,15">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Image Source="/logo.png" Width="48" Height="48" Margin="0,0,16,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="QLauncher" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="16" FontWeight="Bold"/>
+                                    <Border Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="6,1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="v2.0.0 Release" Foreground="Black" FontSize="11" FontWeight="Bold"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="{DynamicResource Str_Settings_AboutDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                <TextBlock Text="Designed and developed with high-performance C# / WPF and modern launch architecture." Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Opacity="0.7" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Button Content="{DynamicResource Str_Action_Save}" Width="140" Height="42" HorizontalAlignment="Right" Margin="0,15,0,0" Style="{StaticResource DarkButtonStyle}" Click="BackButton_Click" FontSize="13"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>

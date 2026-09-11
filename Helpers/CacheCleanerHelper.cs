@@ -37,6 +37,24 @@ namespace MinecraftLauncher.Helpers
                         totalBytes += new FileInfo(file).Length;
                     }
                 }
+
+                string avatarDir = Path.Combine(LauncherPathHelper.GetDefaultDataDirectory(), "avatars");
+                if (Directory.Exists(avatarDir))
+                {
+                    foreach (var file in Directory.GetFiles(avatarDir, "*.*", SearchOption.AllDirectories))
+                    {
+                        totalBytes += new FileInfo(file).Length;
+                    }
+                }
+
+                string tempUpdate = Path.Combine(Path.GetTempPath(), "QLauncher_Update");
+                if (Directory.Exists(tempUpdate))
+                {
+                    foreach (var file in Directory.GetFiles(tempUpdate, "*.*", SearchOption.AllDirectories))
+                    {
+                        totalBytes += new FileInfo(file).Length;
+                    }
+                }
             }
             catch { }
 
@@ -57,6 +75,12 @@ namespace MinecraftLauncher.Helpers
 
                 string cacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Cache");
                 if (Directory.Exists(cacheDir)) Directory.Delete(cacheDir, true);
+
+                string avatarDir = Path.Combine(LauncherPathHelper.GetDefaultDataDirectory(), "avatars");
+                if (Directory.Exists(avatarDir)) Directory.Delete(avatarDir, true);
+
+                string tempUpdate = Path.Combine(Path.GetTempPath(), "QLauncher_Update");
+                if (Directory.Exists(tempUpdate)) Directory.Delete(tempUpdate, true);
             }
             catch { }
 

@@ -6,6 +6,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/Themes/DarkTheme.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/Resources/Strings.ru.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="CaptionButtonStyle" TargetType="Button">

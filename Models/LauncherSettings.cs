@@ -26,6 +26,7 @@ namespace MinecraftLauncher.Models
         public string GpuPreference { get; set; } = "HighPerformance";
         public string CustomWallpaperPath { get; set; } = "";
         public bool IsDarkTheme { get; set; } = true;
+        public string Language { get; set; } = "ru";
 
         public bool CheckUpdatesOnStartup { get; set; } = true;
         public bool ShowSplashOnStartup { get; set; } = true;
