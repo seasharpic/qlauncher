@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows.Media.Imaging;
 
@@ -14,8 +14,8 @@ namespace MinecraftLauncher.Models
         public BitmapImage? Icon { get; set; }
 
         public string DisplaySize => SizeBytes >= 1048576 * 1024
-            ? $"{(SizeBytes / (1024.0 * 1048576.0)):F1} ГБ"
-            : $"{(SizeBytes / 1048576.0):F1} МБ";
+            ? Services.LocalizationService.Instance.Format("Str_Size_Gb", $"{(SizeBytes / (1024.0 * 1048576.0)):F1}")
+            : Services.LocalizationService.Instance.Format("Str_Size_Mb", $"{(SizeBytes / 1048576.0):F1}");
 
         public string DisplayDate => LastModified.ToString("dd.MM.yyyy HH:mm");
         public string LastPlayedText { get; set; } = "";
@@ -30,7 +30,7 @@ namespace MinecraftLauncher.Models
         public DateTime CreatedAt { get; set; }
         public long SizeBytes { get; set; }
 
-        public string DisplaySize => $"{(SizeBytes / 1048576.0):F1} МБ";
+        public string DisplaySize => Services.LocalizationService.Instance.Format("Str_Size_Mb", $"{(SizeBytes / 1048576.0):F1}");
         public string DisplayDate => CreatedAt.ToString("dd.MM.yyyy HH:mm");
     }
 }

@@ -1,7 +1,7 @@
-<Window x:Class="MinecraftLauncher.Views.Windows.UpdateWindow"
+﻿<Window x:Class="MinecraftLauncher.Views.Windows.UpdateWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Обновление QLauncher" Height="380" Width="600"
+        Title="{DynamicResource Str_Update_WindowTitle}" Height="380" Width="600"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterScreen" ShowInTaskbar="True"
         KeyDown="Window_KeyDown" FontFamily="Inter">
@@ -23,7 +23,7 @@
                 <Grid Margin="12,0,0,0">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
                         <Image Source="/logo.png" Width="20" Height="20" RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,8,0"/>
-                        <TextBlock Text="Обновление QLauncher" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBlock Text="{DynamicResource Str_Update_WindowTitle}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
                         <!-- Version transition badge -->
                         <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="4" Padding="6,2" VerticalAlignment="Center" Margin="0,0,8,0">
@@ -32,13 +32,13 @@
 
                         <!-- Release type badge -->
                         <Border Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
-                            <TextBlock x:Name="ReleaseTypeBadgeText" Text="Новый функционал" Foreground="White" FontSize="10" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="ReleaseTypeBadgeText" Text="{DynamicResource Str_Update_NewVersion}" Foreground="White" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button x:Name="OpenBrowserBtn" Content="&#xE774;" Style="{DynamicResource CaptionButtonStyle}" Click="OpenBrowserBtn_Click" ToolTip="Открыть страницу релиза в браузере"/>
-                        <Button x:Name="CloseBtn" Content="&#xE8BB;" Style="{DynamicResource CloseButtonStyle}" Click="CloseBtn_Click" ToolTip="Закрыть (Esc)"/>
+                        <Button x:Name="OpenBrowserBtn" Content="&#xE774;" Style="{DynamicResource CaptionButtonStyle}" Click="OpenBrowserBtn_Click" ToolTip="{DynamicResource Str_Update_OpenRelease}"/>
+                        <Button x:Name="CloseBtn" Content="&#xE8BB;" Style="{DynamicResource CloseButtonStyle}" Click="CloseBtn_Click" ToolTip="{DynamicResource Str_Update_Close}"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -54,16 +54,16 @@
                 <!-- Release Meta Header -->
                 <Grid Grid.Row="0" Margin="2,0,2,6">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="ReleaseDateText" Text="Релиз от 11 сентября 2026" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                        <TextBlock x:Name="ReleaseDateText" Text="" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                         <TextBlock Text=" • " Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
-                        <TextBlock x:Name="AuthorText" Text="Автор: dyagyatis" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                        <TextBlock x:Name="AuthorText" Text="" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                         <TextBlock Text=" • " Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
-                        <TextBlock x:Name="MirrorBadgeText" Text="Источник: GitHub" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                        <TextBlock x:Name="MirrorBadgeText" Text="" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <TextBlock x:Name="SizeText" Text="Размер: ~18.5 МБ" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,0,10,0"/>
-                        <Button Content="Копировать список" Style="{DynamicResource CaptionButtonStyle}" Width="Auto" Padding="6,2" FontSize="11" Click="CopyChangelog_Click" ToolTip="Скопировать список изменений в буфер обмена"/>
+                        <TextBlock x:Name="SizeText" Text="" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,0,10,0"/>
+                        <Button Content="{DynamicResource Str_Update_CopyList}" Style="{DynamicResource CaptionButtonStyle}" Width="Auto" Padding="6,2" FontSize="11" Click="CopyChangelog_Click" ToolTip="{DynamicResource Str_Update_CopyChangelogTip}"/>
                     </StackPanel>
                 </Grid>
 
@@ -76,7 +76,7 @@
 
                 <!-- Tech details bar -->
                 <Grid Grid.Row="2" Margin="2,4,2,0">
-                    <TextBlock x:Name="Sha256Text" Text="SHA-256: вычисляется..." Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="Sha256Text" Text="{DynamicResource Str_Update_Sha256Pending}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" TextTrimming="CharacterEllipsis"/>
                 </Grid>
             </Grid>
 
@@ -85,11 +85,11 @@
                 <Grid>
                     <!-- State 1: Initial (Update / Later / Skip) -->
                     <Grid x:Name="InitialActionsPanel" Visibility="Visible">
-                        <Button Content="Пропустить эту версию" Style="{DynamicResource CaptionButtonStyle}" Width="Auto" Padding="6,4" HorizontalAlignment="Left" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Click="SkipVersion_Click" ToolTip="Лаунчер больше не будет напоминать об этой версии"/>
+                        <Button Content="{DynamicResource Str_Update_SkipVersion}" Style="{DynamicResource CaptionButtonStyle}" Width="Auto" Padding="6,4" HorizontalAlignment="Left" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Click="SkipVersion_Click" ToolTip="{DynamicResource Str_Update_SkipVersionTip}"/>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="Позже" Style="{DynamicResource DarkButtonStyle}" Width="90" Height="34" Margin="0,0,8,0" Click="Later_Click"/>
-                            <Button x:Name="StartUpdateBtn" Content="Обновить" Style="{DynamicResource PlayButtonStyle}" Width="120" Height="34" Click="StartUpdate_Click"/>
+                            <Button Content="{DynamicResource Str_Update_Later}" Style="{DynamicResource DarkButtonStyle}" Width="90" Height="34" Margin="0,0,8,0" Click="Later_Click"/>
+                            <Button x:Name="StartUpdateBtn" Content="{DynamicResource Str_Update_Start}" Style="{DynamicResource PlayButtonStyle}" Width="120" Height="34" Click="StartUpdate_Click"/>
                         </StackPanel>
                     </Grid>
 
@@ -101,25 +101,25 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                            <TextBlock x:Name="DownloadStatusText" Text="Подготовка к загрузке..." Foreground="{DynamicResource PrimaryTextBrush}" FontSize="11" FontWeight="Medium" Margin="0,0,0,6"/>
+                            <TextBlock x:Name="DownloadStatusText" Text="{DynamicResource Str_Update_PreparingDownload}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="11" FontWeight="Medium" Margin="0,0,0,6"/>
 
                             <Border Height="6" Background="{DynamicResource WindowBorderBrush}" CornerRadius="3">
                                 <Border x:Name="DownloadProgressBarFill" Width="0" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" CornerRadius="3"/>
                             </Border>
 
-                            <TextBlock x:Name="DownloadSpeedEtaText" Text="Ожидание соединения..." Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,4,0,0"/>
+                            <TextBlock x:Name="DownloadSpeedEtaText" Text="{DynamicResource Str_Update_WaitingConnection}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,4,0,0"/>
                         </StackPanel>
 
-                        <Button Grid.Column="1" Content="Отмена" Style="{DynamicResource DarkButtonStyle}" Width="80" Height="34" VerticalAlignment="Center" Click="CancelDownload_Click"/>
+                        <Button Grid.Column="1" Content="{DynamicResource Str_Action_Cancel}" Style="{DynamicResource DarkButtonStyle}" Width="80" Height="34" VerticalAlignment="Center" Click="CancelDownload_Click"/>
                     </Grid>
 
                     <!-- State 3: Ready to restart -->
                     <Grid x:Name="ReadyToRestartPanel" Visibility="Collapsed">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                            <TextBlock Text="Целостность проверена (SHA-256 OK). Обновление готово к установке." Foreground="{DynamicResource PrimaryTextBrush}" FontSize="11" FontWeight="Medium"/>
+                            <TextBlock Text="{DynamicResource Str_Update_Verifying}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="11" FontWeight="Medium"/>
                         </StackPanel>
 
-                        <Button x:Name="RestartBtn" Content="Перезапустить лаунчер" Style="{DynamicResource PlayButtonStyle}" Width="190" Height="34" HorizontalAlignment="Right" Click="Restart_Click"/>
+                        <Button x:Name="RestartBtn" Content="{DynamicResource Str_Update_RestartBtn}" Style="{DynamicResource PlayButtonStyle}" Width="190" Height="34" HorizontalAlignment="Right" Click="Restart_Click"/>
                     </Grid>
                 </Grid>
             </Border>

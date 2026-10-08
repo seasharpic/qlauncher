@@ -1,4 +1,4 @@
-<Page x:Class="MinecraftLauncher.Views.Pages.ModpacksPage"
+﻿<Page x:Class="MinecraftLauncher.Views.Pages.ModpacksPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:helpers="clr-namespace:MinecraftLauncher.Helpers"
@@ -7,7 +7,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       mc:Ignorable="d"
       d:DataContext="{d:DesignInstance vm:ModpacksViewModel}"
-      Title="Управление сборками" Background="Transparent"
+      Title="{DynamicResource Str_Modpacks_Title}" Background="Transparent"
       FontFamily="Inter">
 
     <Grid Margin="20">
@@ -25,24 +25,24 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="16" Width="38" Height="38" Style="{StaticResource DarkButtonStyle}" Click="BackButton_Click" ToolTip="Назад" Margin="0,0,15,0"/>
+                    <Button Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="16" Width="38" Height="38" Style="{StaticResource DarkButtonStyle}" Click="BackButton_Click" ToolTip="{DynamicResource Str_Action_Back}" Margin="0,0,15,0"/>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="Ваши сборки Minecraft" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold"/>
-                        <TextBlock Text="Выбирайте, запускайте и настраивайте созданные сборки" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,2,0,0"/>
+                        <TextBlock Text="{DynamicResource Str_Modpacks_Header}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="{DynamicResource Str_Modpacks_Subheader}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,2,0,0"/>
                     </StackPanel>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Height="36" Padding="14,0" Style="{StaticResource DarkButtonStyle}" Click="ImportZip_Click" Margin="0,0,10,0" ToolTip="Импортировать готовую сборку из Zip-архива" FontSize="13">
+                    <Button Height="36" Padding="14,0" Style="{StaticResource DarkButtonStyle}" Click="ImportZip_Click" Margin="0,0,10,0" ToolTip="{DynamicResource Str_Modpacks_ImportTooltip}" FontSize="13">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Импорт Zip" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Str_Modpacks_ImportBtn}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <Button Height="36" Padding="14,0" Style="{StaticResource PlayButtonStyle}" Click="CreatePack_Click" FontSize="13">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Новая сборка" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Str_Modpacks_NewBtn}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -51,7 +51,7 @@
 
         <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" CornerRadius="16" Padding="20">
             <Grid>
-                <TextBlock Text="У вас пока нет созданных сборок. Нажмите 'Новая сборка' для создания!" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="{DynamicResource Str_Modpacks_Empty}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -76,42 +76,42 @@
                                 <Border Width="290" Background="{DynamicResource ModpackOverlayBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1.5" CornerRadius="14" Margin="0,0,16,16" Padding="16" helpers:Card3DTiltHelper.Enable3DTilt="True">
                                     <Border.ContextMenu>
                                         <ContextMenu>
-                                            <MenuItem Header="Выбрать сборку"
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_Play}"
                                                       Command="{Binding DataContext.SelectPackCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                       CommandParameter="{Binding Name}">
                                                 <MenuItem.Icon>
                                                     <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                                 </MenuItem.Icon>
                                             </MenuItem>
-                                            <MenuItem Header="Настройки сборки"
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_Manage}"
                                                       Command="{Binding DataContext.ManagePackCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                       CommandParameter="{Binding Name}">
                                                 <MenuItem.Icon>
                                                     <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                                 </MenuItem.Icon>
                                             </MenuItem>
-                                            <MenuItem Header="Открыть папку сборки"
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_OpenFolder}"
                                                       Command="{Binding DataContext.OpenPackFolderCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                       CommandParameter="{Binding Name}">
                                                 <MenuItem.Icon>
                                                     <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                                 </MenuItem.Icon>
                                             </MenuItem>
-                                            <MenuItem Header="Открыть папку mods"
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_OpenMods}"
                                                       Command="{Binding DataContext.OpenPackModsCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                       CommandParameter="{Binding Name}">
                                                 <MenuItem.Icon>
                                                     <TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                                 </MenuItem.Icon>
                                             </MenuItem>
-                                            <MenuItem Header="Создать ярлык на рабочем столе"
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_Shortcut}"
                                                       Command="{Binding DataContext.CreateShortcutCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                       CommandParameter="{Binding Name}">
                                                 <MenuItem.Icon>
                                                     <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                                 </MenuItem.Icon>
                                             </MenuItem>
-                                            <MenuItem Header="Клонировать сборку"
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_Clone}"
                                                       Command="{Binding DataContext.DuplicatePackCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                       CommandParameter="{Binding Name}">
                                                 <MenuItem.Icon>
@@ -119,7 +119,7 @@
                                                 </MenuItem.Icon>
                                             </MenuItem>
                                             <Separator/>
-                                            <MenuItem Header="Удалить сборку"
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_Delete}"
                                                       Command="{Binding DataContext.DeletePackCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                       CommandParameter="{Binding Name}">
                                                 <MenuItem.Icon>
@@ -147,7 +147,7 @@
 
                                             <TextBlock Text="{Binding Name}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="18" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
                                             <Border Grid.Column="1" Background="{DynamicResource AccentBrush}" CornerRadius="6" Padding="8,3" Visibility="{Binding IsActiveVisibility}">
-                                                <TextBlock Text="Активна" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                                <TextBlock Text="{DynamicResource Str_Modpacks_ActiveBadge}" Foreground="White" FontSize="11" FontWeight="Bold"/>
                                             </Border>
                                         </Grid>
 
@@ -171,10 +171,10 @@
                                             <Button Grid.Column="0" Height="36" Style="{StaticResource PlayButtonStyle}" Tag="{Binding Name}" Click="SelectPack_Click" Margin="0,0,8,0" FontSize="13">
                                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
                                                     <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Выбрать" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Modpacks_SelectBtn}" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
-                                            <Button Grid.Column="1" Width="36" Height="36" Style="{StaticResource DarkButtonStyle}" Tag="{Binding Name}" Click="ManagePack_Click" ToolTip="Настройки и управление сборкой">
+                                            <Button Grid.Column="1" Width="36" Height="36" Style="{StaticResource DarkButtonStyle}" Tag="{Binding Name}" Click="ManagePack_Click" ToolTip="{DynamicResource Str_Modpacks_CardManageTooltip}">
                                                 <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Button>
                                         </Grid>

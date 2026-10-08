@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Net.Http;
@@ -15,13 +15,16 @@ namespace MinecraftLauncher.ViewModels
         private static readonly HttpClient HttpClient = new HttpClient();
         private readonly ISettingsService _settingsService;
         private readonly IToastService _toastService;
+
+        // Локализация для строк, которые собираются в коде.
+        private readonly ILocalizationService _loc = LocalizationService.Instance;
         private readonly IMinecraftLaunchService _launchService;
 
         private string _searchQuery = "";
         private string _selectedCategory = "mod";
-        private string _categoryHint = "Поиск модификаций для расширения игрового процесса";
+        private string _categoryHint = LocalizationService.Instance.GetString("Str_Mods_HintMod");
         private bool _isLoading;
-        private string _loadingText = "Поиск...";
+        private string _loadingText = LocalizationService.Instance.GetString("Str_Mods_SearchingEllipsis");
 
         public ObservableCollection<ModItem> Mods { get; } = new();
 
@@ -87,9 +90,9 @@ namespace MinecraftLauncher.ViewModels
         {
             CategoryHint = SelectedCategory switch
             {
-                "resourcepack" => "Поиск текстурпаков и ресурспаков для загрузки в папку resourcepacks",
-                "shader" => "Поиск шейдеров (OptiFine / Iris) для загрузки в папку shaderpacks",
-                _ => "Поиск модификаций для расширения игрового процесса"
+                "resourcepack" => LocalizationService.Instance.GetString("Str_Mods_HintResourcePack"),
+                "shader" => LocalizationService.Instance.GetString("Str_Mods_HintShader"),
+                _ => LocalizationService.Instance.GetString("Str_Mods_HintMod")
             };
         }
 
@@ -99,7 +102,7 @@ namespace MinecraftLauncher.ViewModels
             if (string.IsNullOrEmpty(query)) return;
 
             IsLoading = true;
-            LoadingText = "Поиск на Modrinth...";
+            LoadingText = LocalizationService.Instance.GetString("Str_Mods_Searching");
             Mods.Clear();
 
             try
@@ -116,9 +119,9 @@ namespace MinecraftLauncher.ViewModels
                     Mods.Add(new ModItem
                     {
                         Slug = hit.GetProperty("slug").GetString() ?? "",
-                        Title = hit.GetProperty("title").GetString() ?? "Без названия",
+                        Title = hit.GetProperty("title").GetString() ?? LocalizationService.Instance.GetString("Str_Mods_UnknownTitle"),
                         Description = hit.GetProperty("description").GetString() ?? "",
-                        Author = hit.GetProperty("author").GetString() ?? "Автор",
+                        Author = hit.GetProperty("author").GetString() ?? LocalizationService.Instance.GetString("Str_Mods_UnknownAuthor"),
                         IconUrl = hit.GetProperty("icon_url").GetString() ?? "",
                         Downloads = hit.GetProperty("downloads").GetInt32().ToString("N0"),
                         ProjectType = SelectedCategory
@@ -127,7 +130,7 @@ namespace MinecraftLauncher.ViewModels
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка поиска: {ex.Message}", "Modrinth API");
+                _toastService.ShowError(_loc.Format("Str_Mods_SearchError", ex.Message), _loc.GetString("Str_T_ModrinthApi"));
             }
             finally
             {
@@ -166,7 +169,7 @@ namespace MinecraftLauncher.ViewModels
             Directory.CreateDirectory(destDir);
 
             IsLoading = true;
-            LoadingText = $"Загрузка '{item.Title}'...";
+            LoadingText = LocalizationService.Instance.Format("Str_Mods_SearchingTitle", item.Title);
 
             try
             {
@@ -178,7 +181,7 @@ namespace MinecraftLauncher.ViewModels
 
                 if (root.GetArrayLength() == 0)
                 {
-                    _toastService.ShowWarning("Для данного проекта не найдено версий.", "Modrinth");
+                    _toastService.ShowWarning(_loc.GetString("Str_Mods_NoVersions"), _loc.GetString("Str_T_Modrinth"));
                     return;
                 }
 
@@ -186,7 +189,7 @@ namespace MinecraftLauncher.ViewModels
                 var files = firstVersion.GetProperty("files");
                 if (files.GetArrayLength() == 0)
                 {
-                    _toastService.ShowWarning("Файлы для скачивания отсутствуют.", "Modrinth");
+                    _toastService.ShowWarning(_loc.GetString("Str_Mods_NoFiles"), _loc.GetString("Str_T_Modrinth"));
                     return;
                 }
 
@@ -197,11 +200,11 @@ namespace MinecraftLauncher.ViewModels
                 byte[] fileBytes = await HttpClient.GetByteArrayAsync(downloadUrl);
                 await File.WriteAllBytesAsync(filePath, fileBytes);
 
-                _toastService.ShowSuccess($"Файл '{fileName}' сохранен в '{subFolder}'!", "Установка");
+                _toastService.ShowSuccess(_loc.Format("Str_Mods_Installed", fileName, subFolder), _loc.GetString("Str_T_Install"));
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Не удалось скачать: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_Mods_DownloadError", ex.Message), _loc.GetString("Str_T_Error"));
             }
             finally
             {

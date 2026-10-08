@@ -24,15 +24,21 @@ namespace MinecraftLauncher.Services
     {
         public static ServerStatusService Instance { get; } = new ServerStatusService();
 
+        // Клиент переиспользуется: раньше на каждый сервер создавался свой HttpClient,
+        // то есть при 20 серверах каждые 2 минуты рвались сокеты и повторялся DNS.
+        private static readonly HttpClient SharedClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(5)
+        };
+
         public async Task<ServerStatus> GetStatusAsync(string ip)
         {
             var sw = Stopwatch.StartNew();
             try
             {
-                using HttpClient client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
                 string url = $"https://api.mcstatus.io/v2/status/java/{ip}";
 
-                string response = await client.GetStringAsync(url);
+                string response = await SharedClient.GetStringAsync(url);
                 sw.Stop();
 
                 using JsonDocument doc = JsonDocument.Parse(response);
@@ -92,39 +98,75 @@ namespace MinecraftLauncher.Services
                 return uiServers;
             }
 
+            // Пингуем параллельно с ограничением. Раньше было последовательно: при 20 серверах
+            // и таймауте 5 секунд полный цикл растягивался до 100 секунд и успевал
+            // пересечься со следующим тиком таймера.
+            using var semaphore = new SemaphoreSlim(8);
+            var tasks = new List<Task>(uiServers.Count);
+
             foreach (var srv in uiServers)
             {
-                var status = await GetStatusAsync(srv.Ip);
-                if (status.Online)
+                var captured = srv;
+                tasks.Add(Task.Run(async () =>
                 {
-                    srv.OnlineText = $"{status.PlayersNow}/{status.PlayersMax}";
-                    srv.Version = status.Version;
-
-                    if (status.PingMs >= 0)
+                    await semaphore.WaitAsync();
+                    try
                     {
-                        srv.PingText = $"{status.PingMs} ms";
-                        if (status.PingMs < 60)
-                            srv.PingColor = new SolidColorBrush(Color.FromRgb(80, 220, 100));
-                        else if (status.PingMs < 160)
-                            srv.PingColor = new SolidColorBrush(Color.FromRgb(240, 200, 50));
-                        else
-                            srv.PingColor = new SolidColorBrush(Color.FromRgb(240, 80, 80));
+                        var status = await GetStatusAsync(captured.Ip);
+                        ApplyStatus(captured, status);
                     }
-
-                    double percentage = status.PlayersMax > 0 ? (double)status.PlayersNow / status.PlayersMax : 0;
-                    srv.ProgressWidth = 200 * percentage;
-                }
-                else
-                {
-                    srv.OnlineText = "Offline";
-                    srv.Version = "Нет связи";
-                    srv.ProgressWidth = 0;
-                    srv.PingText = "-";
-                    srv.PingColor = new SolidColorBrush(Color.FromRgb(150, 150, 150));
-                }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }));
             }
 
+            await Task.WhenAll(tasks);
+
             return uiServers;
+        }
+
+        private static void ApplyStatus(ServerItem srv, ServerStatus status)
+        {
+            if (status.Online)
+            {
+                srv.OnlineText = $"{status.PlayersNow}/{status.PlayersMax}";
+                srv.Version = status.Version;
+
+                if (status.PingMs >= 0)
+                {
+                    srv.PingText = $"{status.PingMs} ms";
+                    if (status.PingMs < 60)
+                        srv.PingColor = CreateBrush(80, 220, 100);
+                    else if (status.PingMs < 160)
+                        srv.PingColor = CreateBrush(240, 200, 50);
+                    else
+                        srv.PingColor = CreateBrush(240, 80, 80);
+                }
+
+                double percentage = status.PlayersMax > 0 ? (double)status.PlayersNow / status.PlayersMax : 0;
+                srv.ProgressWidth = 200 * percentage;
+            }
+            else
+            {
+                srv.OnlineText = "Offline";
+                srv.Version = LocalizationService.Instance.GetString("Str_Server_NoConnection");
+                srv.ProgressWidth = 0;
+                srv.PingText = "-";
+                srv.PingColor = CreateBrush(150, 150, 150);
+            }
+        }
+
+        /// <summary>
+        /// Кисти создаются один раз и замораживаются: раньше на каждый сервер
+        /// и на каждое обновление выделялась новая SolidColorBrush.
+        /// </summary>
+        private static SolidColorBrush CreateBrush(byte r, byte g, byte b)
+        {
+            var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
         }
 
         public void InjectServersIfEnabled(string gamePath, bool autoAddServers)
@@ -150,8 +192,11 @@ namespace MinecraftLauncher.Services
                     nbtFile.RootTag.Add(serversList);
                 }
 
-                const string targetIp = "play.scraft.ru";
-                const string targetName = "SCRAFT Server";
+                string targetIp = SettingsService.Instance.Settings.AutoInjectServerIp;
+                string targetName = SettingsService.Instance.Settings.AutoInjectServerName;
+
+                // Пустой адрес — значит автодобавление выключено настройками.
+                if (string.IsNullOrWhiteSpace(targetIp)) return;
 
                 bool exists = false;
                 foreach (NbtCompound server in serversList)

@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Services.LaunchEngine.Models;
 
 namespace MinecraftLauncher.Services.LaunchEngine
@@ -17,6 +18,9 @@ namespace MinecraftLauncher.Services.LaunchEngine
 
     public class MinecraftLaunchEngine : IMinecraftLaunchEngine
     {
+        // Локализация для статусов прогресса, которые видны в оверлее запуска.
+        private static readonly ILocalizationService L = LocalizationService.Instance;
+
         public static MinecraftLaunchEngine Instance { get; } = new();
 
         private readonly MojangManifestService _manifestService = new();
@@ -34,14 +38,14 @@ namespace MinecraftLauncher.Services.LaunchEngine
             progress?.Report(new LaunchProgress
             {
                 Phase = LaunchPhase.Initializing,
-                StatusText = "Подготовка к запуску игры...",
+                StatusText = L.GetString("Str_Launch_Initializing"),
                 Percentage = 5
             });
 
             var versionInfo = await _manifestService.ResolveVersionInfoAsync(options.GameRootPath, options.VersionId);
             if (versionInfo == null)
             {
-                throw new FileNotFoundException($"Не удалось найти конфигурацию для версии '{options.VersionId}'");
+                throw new FileNotFoundException(L.Format("Str_Launch_VersionNotFound", options.VersionId));
             }
 
             await _manifestService.EnsureClientJarAsync(options.GameRootPath, versionInfo, progress);
@@ -54,16 +58,43 @@ namespace MinecraftLauncher.Services.LaunchEngine
             progress?.Report(new LaunchProgress
             {
                 Phase = LaunchPhase.BuildingArguments,
-                StatusText = "Формирование параметров запуска JVM...",
+                StatusText = L.GetString("Str_Launch_BuildingArgs"),
                 Percentage = 95
             });
 
-            var arguments = _argumentBuilder.BuildArguments(versionInfo, options, classpathJars, nativesDir);
+            // Спрашиваем у самой JVM, какие -XX-опции она понимает. Состав опций
+            // зависит от сборки (Temurin / Zulu / Corretto), а неизвестный флаг
+            // обрывает запуск игры. Результат кэшируется в JavaService, поэтому
+            // платим за это один запуск процесса на конкретный javaw.exe.
+            var supportedFlags = await JavaService.GetSupportedFlagsAsync(options.JavaPath);
+
+            // Если состав опций узнать не вышло, проверяем сами флаги пробным
+            // запуском JVM: неизвестная опция иначе просто роняет игру на старте.
+            IReadOnlyList<string>? approvedFlags = null;
+
+            if (supportedFlags == null)
+            {
+                var candidateFlags = JvmOptimizationHelper.GetOptimizedJvmArguments(
+                    options.JvmPreset,
+                    options.RamMb,
+                    JavaService.DetectJavaMajorVersion(options.JavaPath),
+                    options.CustomJvmArgs,
+                    options.UseOptimizedJvmArgs,
+                    null,
+                    out _);
+
+                var (validated, stripAll) = await JavaService.ValidateJvmArgsAsync(options.JavaPath, candidateFlags);
+
+                approvedFlags = stripAll ? Array.Empty<string>() : validated;
+            }
+
+            var arguments = _argumentBuilder.BuildArguments(
+                versionInfo, options, classpathJars, nativesDir, supportedFlags, approvedFlags);
 
             progress?.Report(new LaunchProgress
             {
                 Phase = LaunchPhase.StartingProcess,
-                StatusText = "Запуск процесса Minecraft...",
+                StatusText = L.GetString("Str_Launch_Starting"),
                 Percentage = 100
             });
 
@@ -92,7 +123,7 @@ namespace MinecraftLauncher.Services.LaunchEngine
             var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
             if (!process.Start())
             {
-                throw new InvalidOperationException("Не удалось запустить процесс Java.");
+                throw new InvalidOperationException(L.GetString("Str_Launch_ProcessFailed"));
             }
 
             process.BeginOutputReadLine();

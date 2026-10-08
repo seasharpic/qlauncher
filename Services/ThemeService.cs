@@ -22,6 +22,7 @@ namespace MinecraftLauncher.Services
         public event Action? ThemeChanged;
 
         private string? _currentAccentMain;
+        private string _currentAccentPreset = "sapphire";
         private string? _currentAccentHover;
 
         public void SetTheme(bool isDark)
@@ -123,6 +124,78 @@ namespace MinecraftLauncher.Services
                     ApplyAccentColor("#3B85E6", "#6AC4F7");
                     break;
             }
+
+            RememberAccentPreset(presetName);
         }
+
+        /// <summary>
+        /// Запоминает пресет акцента в настройках.
+        /// Выбор акцента жил только в памяти сервиса, поэтому после
+        /// перезапуска лаунчера интерфейс всегда возвращался к синему.
+        /// </summary>
+        private void RememberAccentPreset(string presetName)
+        {
+            // Псевдонимы приводятся к каноническому имени, иначе в settings.json
+            // попадало бы то, что прислал вызов, а не то, что реально применено.
+            string canonical = presetName.ToLowerInvariant() switch
+            {
+                "amethyst" => "purple",
+                "pink" => "rose",
+                "gold" => "amber",
+                "blue" => "sapphire",
+                "emerald" or "purple" or "rose" or "amber" or "sapphire" => presetName.ToLowerInvariant(),
+                _ => "sapphire",
+            };
+
+            _currentAccentPreset = canonical;
+
+            try
+            {
+                var settings = SettingsService.Instance.Settings;
+                if (!string.Equals(settings.AccentPreset, canonical, StringComparison.OrdinalIgnoreCase))
+                {
+                    settings.AccentPreset = canonical;
+                    SettingsService.Instance.Save();
+                }
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Восстанавливает сохранённый акцент при запуске.
+        /// Вызывается из App после инициализации настроек.
+        /// </summary>
+        public void RestoreAccentFromSettings()
+        {
+            try
+            {
+                ApplyAccentColor(ResolvePresetMain(SettingsService.Instance.Settings.AccentPreset),
+                                 ResolvePresetHover(SettingsService.Instance.Settings.AccentPreset));
+            }
+            catch { }
+        }
+
+        /// <summary>Имя применённого пресета — для отметки выбранного в UI.</summary>
+        public string CurrentAccentPreset => _currentAccentPreset;
+
+        private static string ResolvePresetMain(string? presetName) =>
+            presetName?.ToLowerInvariant() switch
+            {
+                "emerald" => "#10B981",
+                "purple" => "#8B5CF6",
+                "rose" => "#F43F5E",
+                "amber" => "#F59E0B",
+                _ => "#3B85E6",
+            };
+
+        private static string ResolvePresetHover(string? presetName) =>
+            presetName?.ToLowerInvariant() switch
+            {
+                "emerald" => "#34D399",
+                "purple" => "#A78BFA",
+                "rose" => "#FB7185",
+                "amber" => "#FBBF24",
+                _ => "#6AC4F7",
+            };
     }
 }

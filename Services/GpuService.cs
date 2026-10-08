@@ -156,14 +156,18 @@ namespace MinecraftLauncher.Services
                 using var key = Registry.CurrentUser.CreateSubKey(UserGpuPreferencesKey);
                 if (key == null) return;
 
-                string regValue;
+                string? regValue;
                 if (string.Equals(preference, "PowerSaving", StringComparison.OrdinalIgnoreCase))
                 {
                     regValue = "GpuPreference=1;";
                 }
                 else if (string.Equals(preference, "Default", StringComparison.OrdinalIgnoreCase))
                 {
-                    regValue = "GpuPreference=0;";
+                    // Раньше здесь писалось "GpuPreference=0;", и это не то же самое,
+                    // что отсутствие записи: JDK-файлы навсегда оставались
+                    // прописаны в пользовательской таблице выбора GPU.
+                    // Для "Default" значение нужно удалить.
+                    regValue = null;
                 }
                 else
                 {
@@ -172,7 +176,17 @@ namespace MinecraftLauncher.Services
 
                 foreach (var p in pathsToRegister)
                 {
-                    key.SetValue(p, regValue);
+                    if (regValue == null)
+                    {
+                        if (key.GetValue(p) != null)
+                        {
+                            key.DeleteValue(p, throwOnMissingValue: false);
+                        }
+                    }
+                    else
+                    {
+                        key.SetValue(p, regValue);
+                    }
                 }
             }
             catch { }

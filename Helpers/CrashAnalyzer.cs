@@ -1,13 +1,20 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using MinecraftLauncher.Models;
+using MinecraftLauncher.Services;
 
 namespace MinecraftLauncher.Helpers
 {
+    /// <summary>
+    /// Анализ crash-репортов: текст разбора показывается пользователю в тосте.
+    /// Раньше он был зашит по-русски прямо здесь, из-за чего в английском
+    /// интерфейсе подсказка после падения игры оставалась русской.
+    /// </summary>
     public static class CrashAnalyzer
     {
+        private static readonly ILocalizationService L = LocalizationService.Instance;
         public static CrashAnalysisResult AnalyzeLatestCrash(string gamePath)
         {
             try
@@ -39,9 +46,9 @@ namespace MinecraftLauncher.Helpers
                     return new CrashAnalysisResult
                     {
                         HasCrash = true,
-                        Title = "Сбой игры",
-                        Summary = "Minecraft завершился с ненулевым кодом выхода.",
-                        Recommendation = "Откройте консоль в лаунчере для просмотра журнала работы."
+                        Title = L.GetString("Str_Crash_Title_Generic"),
+                        Summary = L.GetString("Str_Crash_Summary_Generic"),
+                        Recommendation = L.GetString("Str_Crash_Fix_Generic")
                     };
                 }
 
@@ -53,9 +60,9 @@ namespace MinecraftLauncher.Helpers
                     return new CrashAnalysisResult
                     {
                         HasCrash = true,
-                        Title = "Нехватка оперативной памяти",
-                        Summary = "Игре недостаточно выделенной оперативной памяти (RAM).",
-                        Recommendation = "Увеличьте объем выделяемой памяти в настройках лаунчера."
+                        Title = L.GetString("Str_Crash_Title_Oom"),
+                        Summary = L.GetString("Str_Crash_Summary_Oom"),
+                        Recommendation = L.GetString("Str_Crash_Fix_Oom")
                     };
                 }
 
@@ -65,9 +72,9 @@ namespace MinecraftLauncher.Helpers
                     return new CrashAnalysisResult
                     {
                         HasCrash = true,
-                        Title = "Конфликт модов оптимизации",
-                        Summary = "Обнаружен совместный запуск несовместимых графических модификаций.",
-                        Recommendation = "Удалите OptiFine из папки mods при использовании Sodium и Iris."
+                        Title = L.GetString("Str_Crash_Title_ModConflict"),
+                        Summary = L.GetString("Str_Crash_Summary_ModConflict"),
+                        Recommendation = L.GetString("Str_Crash_Fix_ModConflict")
                     };
                 }
 
@@ -76,14 +83,14 @@ namespace MinecraftLauncher.Helpers
                     content.Contains("net.fabricmc.loader.impl.formatted.FormattedException"))
                 {
                     var match = Regex.Match(content, @"Requires:\s*(.+)");
-                    string req = match.Success ? match.Groups[1].Value.Trim() : "библиотеки Fabric API";
+                    string req = match.Success ? match.Groups[1].Value.Trim() : L.GetString("Str_Crash_MissingLib_Fabric");
 
                     return new CrashAnalysisResult
                     {
                         HasCrash = true,
-                        Title = "Отсутствует зависимость",
-                        Summary = $"Для работы установленных модов требуется: {req}",
-                        Recommendation = "Установите необходимые моды через раздел 'Моды' в лаунчере."
+                        Title = L.GetString("Str_Crash_Title_MissingDep"),
+                        Summary = L.Format("Str_Crash_Summary_MissingDep", req),
+                        Recommendation = L.GetString("Str_Crash_Fix_MissingDep")
                     };
                 }
 
@@ -93,9 +100,9 @@ namespace MinecraftLauncher.Helpers
                     return new CrashAnalysisResult
                     {
                         HasCrash = true,
-                        Title = "Несовместимая версия Java",
-                        Summary = "Версия игры или один из модов скомпилирован под более новую версию Java.",
-                        Recommendation = "Проверьте выбор Java в настройках (рекомендуется автоматический выбор версий 17 или 21)."
+                        Title = L.GetString("Str_Crash_Title_Java"),
+                        Summary = L.GetString("Str_Crash_Summary_Java"),
+                        Recommendation = L.GetString("Str_Crash_Fix_Java")
                     };
                 }
 
@@ -106,18 +113,18 @@ namespace MinecraftLauncher.Helpers
                     return new CrashAnalysisResult
                     {
                         HasCrash = true,
-                        Title = "Сбой видеодрайвера (OpenGL)",
-                        Summary = "Видеокарта или драйвер не поддерживают требуемую версию OpenGL.",
-                        Recommendation = "Обновите драйверы видеокарты или переключите используемый GPU в Настройках лаунчера."
+                        Title = L.GetString("Str_Crash_Title_OpenGl"),
+                        Summary = L.GetString("Str_Crash_Summary_OpenGl"),
+                        Recommendation = L.GetString("Str_Crash_Fix_OpenGl")
                     };
                 }
 
                 return new CrashAnalysisResult
                 {
                     HasCrash = true,
-                    Title = "Ошибка выполнения игры",
-                    Summary = "Процесс завершился аварийно.",
-                    Recommendation = "Перейдите во вкладку 'Консоль' для просмотра полного журнала событий."
+                    Title = L.GetString("Str_Crash_Title_Runtime"),
+                    Summary = L.GetString("Str_Crash_Summary_Runtime"),
+                    Recommendation = L.GetString("Str_Crash_Fix_Runtime")
                 };
             }
             catch
@@ -125,9 +132,9 @@ namespace MinecraftLauncher.Helpers
                 return new CrashAnalysisResult
                 {
                     HasCrash = true,
-                    Title = "Сбой игры",
-                    Summary = "Игра завершилась с ошибкой.",
-                    Recommendation = "Откройте консоль лаунчера для анализа логов."
+                    Title = L.GetString("Str_Crash_Title_Generic"),
+                    Summary = L.GetString("Str_Crash_Summary_Unknown"),
+                    Recommendation = L.GetString("Str_Crash_Fix_Unknown")
                 };
             }
         }

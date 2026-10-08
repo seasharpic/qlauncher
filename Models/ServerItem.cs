@@ -7,7 +7,7 @@ namespace MinecraftLauncher.Models
     {
         private string _name = "";
         private string _ip = "";
-        private string _onlineText = "Загрузка...";
+        private string _onlineText = Services.LocalizationService.Instance.GetString("Str_Server_Checking");
         private string _version = "...";
         private double _progressWidth = 0;
         private string _pingText = "";

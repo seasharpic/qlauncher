@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using MinecraftLauncher.Helpers;
 
 namespace MinecraftLauncher.Services
 {
@@ -11,7 +12,10 @@ namespace MinecraftLauncher.Services
         HttpClient HttpClient { get; }
         void FixFabricVersionJson(string minecraftBasePath, string versionId);
         void FixAllFabricVersions(string minecraftBasePath);
-        Task<string> InstallFabricViaMirrorAsync(HttpClient client, string gameVersion, string minecraftBasePath);
+
+        /// <summary>
+        /// Загрузка строки с официального источника и зеркала по очереди.
+        /// </summary>
         Task<string> FetchWithFallbackAsync(HttpClient client, string primaryUrl, string? fallbackUrl = null);
     }
 
@@ -27,13 +31,9 @@ namespace MinecraftLauncher.Services
 
         public AntiBlockService()
         {
-            var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true,
-                AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
-            };
-
-            HttpClient = new HttpClient(handler);
+            // Валидация TLS-сертификатов включена: этот клиент загружает новости
+            // и манифесты, и подмена сертификата позволяла бы подсунуть свой ответ.
+            HttpClient = SecureHttp.CreateBrowserLikeClient(TimeSpan.FromSeconds(60));
             HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
             HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "*/*");
             HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
@@ -74,8 +74,17 @@ namespace MinecraftLauncher.Services
             catch { }
         }
 
+        /// <summary>
+        /// Установка Fabric через зеркало bmclapi.
+        ///
+        /// Мёртвый код: метод дублировал ModLoaderService.InstallFabricAsync и
+        /// нигде не вызывался. Удалён вместе с объявлением в интерфейсе, чтобы
+        /// не путать при чтении (две реализации одного и того же расходятся).
+        /// </summary>
+        [Obsolete("Используйте ModLoaderService.InstallFabricAsync. Метод оставлен только для совместимости и вызываться не будет.")]
         public async Task<string> InstallFabricViaMirrorAsync(HttpClient client, string gameVersion, string minecraftBasePath)
         {
+            if (client is null) throw new ArgumentNullException(nameof(client));
             string url = $"{BmclapiFabricMeta}/v2/versions/loader/{gameVersion}";
             string jsonStr = await client.GetStringAsync(url);
 
@@ -83,13 +92,13 @@ namespace MinecraftLauncher.Services
             var root = doc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() == 0)
-                throw new InvalidOperationException($"Не найдена версия Fabric для Minecraft {gameVersion}");
+                throw new InvalidOperationException(LocalizationService.Instance.Format("Str_AntiBlock_NoFabric", gameVersion));
 
             var firstItem = root[0];
             string loaderVersion = firstItem.GetProperty("loader").GetProperty("version").GetString() ?? "";
 
             if (string.IsNullOrEmpty(loaderVersion))
-                throw new InvalidOperationException("Не удалось определить версию Fabric Loader");
+                throw new InvalidOperationException(LocalizationService.Instance.GetString("Str_AntiBlock_NoLoaderVersion"));
 
             string profileUrl = $"{BmclapiFabricMeta}/v2/versions/loader/{gameVersion}/{loaderVersion}/profile/json";
             string profileJson = await client.GetStringAsync(profileUrl);
@@ -135,7 +144,7 @@ namespace MinecraftLauncher.Services
                 catch { }
             }
 
-            throw new InvalidOperationException("Не удалось загрузить данные ни с основного сервера, ни с зеркала.");
+            throw new InvalidOperationException(LocalizationService.Instance.GetString("Str_AntiBlock_NoSource"));
         }
     }
 }

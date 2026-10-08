@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using System.Windows;
 using MinecraftLauncher.Common;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Models;
 using MinecraftLauncher.Services;
 using MinecraftLauncher.Services.LaunchEngine;
@@ -17,6 +18,9 @@ namespace MinecraftLauncher.ViewModels
     {
         private readonly ISettingsService _settingsService;
         private readonly IToastService _toastService;
+
+        // Локализация для строк, которые собираются в коде.
+        private readonly ILocalizationService _loc = LocalizationService.Instance;
         private readonly IAudioService _audioService;
 
         public ObservableCollection<ModpackCardItem> Modpacks { get; } = new();
@@ -74,7 +78,7 @@ namespace MinecraftLauncher.ViewModels
                     Name = pack.Name,
                     LoaderTag = string.IsNullOrWhiteSpace(pack.Loader) ? "Vanilla" : pack.Loader,
                     GameVersionTag = string.IsNullOrWhiteSpace(pack.GameVersion) ? "1.20.1" : pack.GameVersion,
-                    PlaytimeText = $"{hours} ч {mins} мин • {pack.LaunchCount} запусков",
+                    PlaytimeText = _loc.Format("Str_Playtime_Summary", hours, mins, pack.LaunchCount),
                     IsActiveVisibility = isActive ? Visibility.Visible : Visibility.Collapsed
                 });
             }
@@ -91,7 +95,7 @@ namespace MinecraftLauncher.ViewModels
                 _settingsService.Save(settings);
 
                 LoadModpacks();
-                _toastService.ShowSuccess($"Активная сборка переключена на '{pack.Name}'", "Сборка");
+                _toastService.ShowSuccess(_loc.Format("Str_Pack_Switched", pack.Name), _loc.GetString("Str_T_PackCreateTitle"));
                 RequestClose?.Invoke();
             }
         }
@@ -117,55 +121,34 @@ namespace MinecraftLauncher.ViewModels
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "Modpack files (*.mrpack;*.zip)|*.mrpack;*.zip|Modrinth Pack (*.mrpack)|*.mrpack|Zip Archive (*.zip)|*.zip",
-                Title = "Импорт сборки Minecraft"
+                Title = _loc.GetString("Str_Dialog_ImportPackMinecraft")
             };
 
             if (dlg.ShowDialog() == true)
             {
                 try
                 {
-                    var settings = _settingsService.Settings;
-                    string ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
+                    _toastService.ShowInfo(_loc.GetString("Str_Import_Progress"), _loc.GetString("Str_T_ImportTitle"));
 
-                    if (ext == ".mrpack")
-                    {
-                        _toastService.ShowInfo("Начат импорт Modrinth сборки (.mrpack)...", "Импорт");
-                        var profile = await MrPackInstaller.InstallMrPackAsync(dlg.FileName, settings.GamePath);
-                        settings.Modpacks.Add(profile);
-                        _settingsService.Save(settings);
+                    // Логика импорта вынесена в общий сервис: раньше она была
+                    // продублирована в трёх местах и уже разошлась между ними.
+                    var profile = await ModpackImportService.Instance.ImportAsync(
+                        dlg.FileName,
+                        _settingsService.Settings.GamePath);
 
-                        LoadModpacks();
-                        _toastService.ShowSuccess($"Сборка '{profile.Name}' ({profile.Loader}) успешно установлена!", "Импорт .mrpack");
-                    }
-                    else
-                    {
-                        string packName = Path.GetFileNameWithoutExtension(dlg.FileName);
-                        string instancesPath = Path.Combine(settings.GamePath, "instances", packName);
-                        if (Directory.Exists(instancesPath))
-                        {
-                            packName += "_" + DateTime.Now.ToString("HHmmss");
-                            instancesPath = Path.Combine(settings.GamePath, "instances", packName);
-                        }
+                    // Изменение общего списка и сохранение — на UI-потоке.
+                    _settingsService.Settings.Modpacks.Add(profile);
+                    _settingsService.Save();
 
-                        Directory.CreateDirectory(instancesPath);
-                        ZipFile.ExtractToDirectory(dlg.FileName, instancesPath, true);
-
-                        settings.Modpacks.Add(new ModpackProfile
-                        {
-                            Name = packName,
-                            GameVersion = "1.20.1",
-                            Loader = "Custom",
-                            FolderPath = instancesPath
-                        });
-
-                        _settingsService.Save(settings);
-                        LoadModpacks();
-                        _toastService.ShowSuccess($"Сборка '{packName}' успешно импортирована!", "Импорт");
-                    }
+                    LoadModpacks();
+                    _toastService.ShowSuccess(
+                        _loc.Format("Str_Import_DoneWithLoader", profile.Name, profile.Loader),
+                        _loc.GetString("Str_T_ImportTitle"));
                 }
                 catch (Exception ex)
                 {
-                    _toastService.ShowError($"Ошибка импорта: {ex.Message}", "Ошибка");
+                    CrashLogWriter.Write("ModpackImport", $"Failed to import '{dlg.FileName}'", ex);
+                    _toastService.ShowError(_loc.Format("Str_Import_Error", ex.Message), _loc.GetString("Str_T_Error"));
                 }
             }
         }
@@ -200,7 +183,7 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
-        private void ExecuteDuplicatePack(string? packName)
+        private async void ExecuteDuplicatePack(string? packName)
         {
             if (string.IsNullOrWhiteSpace(packName)) return;
             var pack = _settingsService.Settings.Modpacks.Find(p => p.Name == packName);
@@ -208,18 +191,20 @@ namespace MinecraftLauncher.ViewModels
 
             try
             {
-                string newName = $"{pack.Name} (Копия)";
+                string newName = $"{pack.Name}{_loc.GetString("Str_Profile_CopySuffix")}";
                 string instancesDir = Path.Combine(_settingsService.Settings.GamePath, "instances");
                 string newFolder = Path.Combine(instancesDir, newName);
                 int counter = 2;
                 while (Directory.Exists(newFolder) || _settingsService.Settings.Modpacks.Exists(p => p.Name == newName))
                 {
-                    newName = $"{pack.Name} (Копия {counter++})";
+                    newName = $"{pack.Name}{_loc.GetString("Str_Profile_CopySuffix")} {counter++}";
                     newFolder = Path.Combine(instancesDir, newName);
                 }
 
+                // Копирование всей сборки выполнялось на UI-потоке в синхронном RelayCommand:
+                // сборка на несколько гигабайт подвешивала интерфейс на минуты.
                 Directory.CreateDirectory(newFolder);
-                CopyDirectory(pack.FolderPath, newFolder);
+                await Task.Run(() => CopyDirectory(pack.FolderPath, newFolder));
 
                 var newProfile = new ModpackProfile
                 {
@@ -235,11 +220,11 @@ namespace MinecraftLauncher.ViewModels
                 _settingsService.Save(settings);
 
                 LoadModpacks();
-                _toastService.ShowSuccess($"Сборка '{newName}' успешно создана!", "Клонирование");
+                _toastService.ShowSuccess(_loc.Format("Str_Pack_Duplicated", newName), _loc.GetString("Str_T_Clone"));
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка дублирования: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_Pack_DuplicateError", ex.Message), _loc.GetString("Str_T_Error"));
             }
         }
 
@@ -287,13 +272,13 @@ namespace MinecraftLauncher.ViewModels
                         shortcut.WorkingDirectory = Path.GetDirectoryName(exePath) ?? "";
                         shortcut.Save();
 
-                        _toastService.ShowSuccess($"Ярлык для '{pack.Name}' создан на рабочем столе!", "Ярлык");
+                        _toastService.ShowSuccess(_loc.Format("Str_Pack_ShortcutCreated", pack.Name), _loc.GetString("Str_T_Shortcut"));
                     }
                 }
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка создания ярлыка: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_Pack_ShortcutError", ex.Message), _loc.GetString("Str_T_Error"));
             }
         }
 
@@ -303,7 +288,7 @@ namespace MinecraftLauncher.ViewModels
             var pack = _settingsService.Settings.Modpacks.Find(p => p.Name == packName);
             if (pack == null) return;
 
-            if (QMessageBoxWindow.Show($"Удалить сборку '{pack.Name}' и все её файлы?", "Удаление сборки", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (QMessageBoxWindow.Show(_loc.Format("Str_Pack_DeleteQuestion", pack.Name), _loc.GetString("Str_T_DeleteConfirm"), MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 try
                 {
@@ -319,7 +304,7 @@ namespace MinecraftLauncher.ViewModels
                 _settingsService.Save(settings);
 
                 LoadModpacks();
-                _toastService.ShowInfo($"Сборка '{pack.Name}' удалена.", "Успешно");
+                _toastService.ShowInfo(_loc.Format("Str_Pack_DeleteDone", pack.Name), _loc.GetString("Str_T_Success"));
             }
         }
     }

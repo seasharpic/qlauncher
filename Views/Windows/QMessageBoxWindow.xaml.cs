@@ -2,19 +2,25 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
+using MinecraftLauncher.Services;
 
 namespace MinecraftLauncher.Views.Windows
 {
     public partial class QMessageBoxWindow : Window
     {
+        // Локализация для подписей кнопок и заголовка по умолчанию.
+        private static readonly ILocalizationService L = LocalizationService.Instance;
+
         public MessageBoxResult Result { get; private set; } = MessageBoxResult.None;
 
-        public QMessageBoxWindow(string message, string title, MessageBoxButton buttons, MessageBoxImage image)
+        public QMessageBoxWindow(string message, string? title, MessageBoxButton buttons, MessageBoxImage image)
         {
             InitializeComponent();
 
             MessageText.Text = message;
-            TitleText.Text = title;
+            TitleText.Text = string.IsNullOrEmpty(title)
+                ? L.GetString("Str_MessageBox_WindowTitle")
+                : title;
 
             if (image == MessageBoxImage.Error)
                 TopAccent.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E81123"));
@@ -25,12 +31,15 @@ namespace MinecraftLauncher.Views.Windows
 
             if (buttons == MessageBoxButton.YesNo)
             {
-                AddButton("Да", MessageBoxResult.Yes, "#3B85E6", true);
-                AddButton("Нет", MessageBoxResult.No, "#3A3D4D", false);
+                // Подписи кнопок берём из ресурсов: раньше они были русскими
+                // литералами, и в английском интерфейсе диалог подтверждения
+                // оставался смешанным.
+                AddButton(L.GetString("Str_Yes"), MessageBoxResult.Yes, "#3B85E6", true);
+                AddButton(L.GetString("Str_No"), MessageBoxResult.No, "#3A3D4D", false);
             }
             else
             {
-                AddButton("ОК", MessageBoxResult.OK, "#3B85E6", true);
+                AddButton(L.GetString("Str_Ok"), MessageBoxResult.OK, "#3B85E6", true);
             }
         }
 
@@ -69,7 +78,7 @@ namespace MinecraftLauncher.Views.Windows
             return (ControlTemplate)XamlReader.Parse(xaml);
         }
 
-        public static MessageBoxResult Show(string message, string title = "Уведомление", MessageBoxButton buttons = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information)
+        public static MessageBoxResult Show(string message, string title = null!, MessageBoxButton buttons = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information)
         {
             var msgBox = new QMessageBoxWindow(message, title, buttons, image);
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -73,7 +73,7 @@ namespace MinecraftLauncher.Services
                             posts.Add(new TelegramPost
                             {
                                 Text = cleanText,
-                                Date = dateNode?.InnerText ?? "Недавно",
+                                Date = dateNode?.InnerText ?? LocalizationService.Instance.GetString("Str_News_Recently"),
                                 ImageUrl = imageUrl
                             });
                         }
@@ -82,11 +82,7 @@ namespace MinecraftLauncher.Services
 
                 if (posts.Count == 0)
                 {
-                    posts.Add(new TelegramPost
-                    {
-                        Date = "QLauncher v2.0",
-                        Text = "Добро пожаловать в QLauncher!\n\nНовости и важные анонсы будут публиковаться здесь. Подписывайтесь на наш Telegram-канал @QLauncher_MC, чтобы первыми узнавать об обновлениях."
-                    });
+                    posts.Add(CreateWelcomePost());
                 }
 
                 posts.Reverse();
@@ -94,15 +90,25 @@ namespace MinecraftLauncher.Services
             }
             catch
             {
-                return new List<TelegramPost>
-                {
-                    new TelegramPost
-                    {
-                        Date = "QLauncher v2.0",
-                        Text = "Добро пожаловать в QLauncher!\n\nНовости и важные анонсы будут публиковаться здесь. Подписывайтесь на наш Telegram-канал @QLauncher_MC, чтобы первыми узнавать об обновлениях."
-                    }
-                };
+                return new List<TelegramPost> { CreateWelcomePost() };
             }
+        }
+
+        /// <summary>
+        /// Заглушка, когда Telegram недоступен. Раньше текст был зашит по-русски
+        /// в двух местах (обычный пустой список и блок catch), поэтому в
+        /// английском интерфейсе приветствие оставалось русским.
+        /// </summary>
+        private static TelegramPost CreateWelcomePost()
+        {
+            var loc = LocalizationService.Instance;
+
+            return new TelegramPost
+            {
+                Date = "QLauncher v2.0",
+                Text = loc.GetString("Str_News_Welcome") + Environment.NewLine + Environment.NewLine +
+                       loc.GetString("Str_News_WelcomeBody")
+            };
         }
     }
 }

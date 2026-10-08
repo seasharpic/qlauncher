@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using DiscordRPC;
+using MinecraftLauncher.ViewModels;
 
 namespace MinecraftLauncher.Services
 {
@@ -15,7 +16,7 @@ namespace MinecraftLauncher.Services
         void StopRpc();
         void SetMenuState(string? selectedVersion = null);
         void SetPageState(string details, string state);
-        void SetLaunchingState(string version, string step = "Подготовка к запуску...");
+        void SetLaunchingState(string version, string? step = null);
         void UpdateSelectedVersion(string? version);
         void StartGameTracking(string version, string gamePath, bool hideIp, Process? process = null, string? serverIp = null);
         void StopGameTracking();
@@ -39,19 +40,19 @@ namespace MinecraftLauncher.Services
         private CancellationTokenSource? _cts;
         private DateTime? _launcherStartTime;
         private DateTime? _gameStartTime;
-        private string _currentPageDetails = "В главном меню";
-        private string _currentPageState = "Выбирает сборку";
+        private string _currentPageDetails = LocalizationService.Instance.GetString("Str_Discord_PageHomeDetails");
+        private string _currentPageState = LocalizationService.Instance.GetString("Str_Discord_PageHomeState");
         private string _currentDetails = "";
         private string _currentState = "";
         private GameActivity _activity = GameActivity.MainMenu;
 
         public bool IsGameRunning => _gameStartTime != null;
-        public bool IsInMenu => _currentPageDetails == "В главном меню";
+        public bool IsInMenu => _currentPageDetails == LocalizationService.Instance.GetString("Str_Discord_PageHomeDetails");
 
         private static Button[] CreateDefaultButtons() => new[]
         {
-            new Button { Label = "Скачать QLauncher", Url = "https://github.com/dyagyatis/QLauncher" },
-            new Button { Label = "Telegram канал", Url = "https://t.me/QLauncher_MC" }
+            new Button { Label = LocalizationService.Instance.GetString("Str_Discord_ButtonDownload"), Url = "https://github.com/dyagyatis/QLauncher" },
+            new Button { Label = LocalizationService.Instance.GetString("Str_Discord_ButtonTelegram"), Url = "https://t.me/QLauncher_MC" }
         };
 
         public static DiscordService Instance { get; } = new DiscordService();
@@ -109,7 +110,7 @@ namespace MinecraftLauncher.Services
 
         public void StopRpc()
         {
-            _cts?.Cancel();
+            CancelAndDisposeTracking();
             _gameStartTime = null;
             _activity = GameActivity.MainMenu;
 
@@ -137,7 +138,7 @@ namespace MinecraftLauncher.Services
             _currentDetails = details;
             _currentState = state;
 
-            string largeText = details == "В главном меню" ? "QLauncher v2.0" : $"QLauncher • {details}";
+            string largeText = details == LocalizationService.Instance.GetString("Str_Discord_PageHomeDetails") ? "QLauncher" : $"QLauncher • {details}";
 
             _client.SetPresence(new RichPresence
             {
@@ -155,21 +156,21 @@ namespace MinecraftLauncher.Services
 
         public void SetMenuState(string? selectedVersion = null)
         {
-            string state = !string.IsNullOrWhiteSpace(selectedVersion) && !selectedVersion.Contains("Создать новую сборку")
-                ? $"Выбрана {selectedVersion.Replace("⭐", "").Trim()}"
-                : "Выбирает сборку";
+            string state = !string.IsNullOrWhiteSpace(selectedVersion) && !MainViewModel.IsCreateModpackEntry(selectedVersion)
+                ? LocalizationService.Instance.Format("Str_Discord_SelectedVersion", selectedVersion.Replace("⭐", "").Trim())
+                : LocalizationService.Instance.GetString("Str_Discord_PickingPack");
 
             if (IsGameRunning)
             {
-                _currentPageDetails = "В главном меню";
+                _currentPageDetails = LocalizationService.Instance.GetString("Str_Discord_PageHomeDetails");
                 _currentPageState = state;
                 return;
             }
 
-            SetPageState("В главном меню", state);
+            SetPageState(LocalizationService.Instance.GetString("Str_Discord_PageHomeDetails"), state);
         }
 
-        public void SetLaunchingState(string version, string step = "Подготовка к запуску...")
+        public void SetLaunchingState(string version, string? step = null)
         {
             EnsureClient();
             if (_client == null || _client.IsDisposed) return;
@@ -177,8 +178,11 @@ namespace MinecraftLauncher.Services
             string cleanVer = version.Replace("⭐", "").Trim();
             var (loaderKey, loaderTitle) = ResolveLoaderInfo(version);
 
-            _currentDetails = $"Запуск {cleanVer}";
-            _currentState = step;
+            _currentDetails = LocalizationService.Instance.Format("Str_Discord_Launching", cleanVer);
+            // step необязателен: при null показываем стандартное «подготовка к запуску».
+            _currentState = string.IsNullOrEmpty(step)
+                ? LocalizationService.Instance.GetString("Str_Launch_Initializing")
+                : step;
 
             _client.SetPresence(new RichPresence
             {
@@ -218,16 +222,16 @@ namespace MinecraftLauncher.Services
             if (!string.IsNullOrWhiteSpace(serverIp))
             {
                 _activity = GameActivity.Multiplayer;
-                string srv = hideIp ? "В сетевой игре" : FormatServerName(serverIp);
-                UpdatePresence(srv, "Подключение к серверу...", loaderKey, modInfo);
+                string srv = hideIp ? LocalizationService.Instance.GetString("Str_Discord_Online") : FormatServerName(serverIp);
+                UpdatePresence(srv, LocalizationService.Instance.GetString("Str_Discord_Joining"), loaderKey, modInfo);
             }
             else
             {
                 _activity = GameActivity.Initializing;
-                UpdatePresence($"Запуск {cleanVer}", "Загрузка ресурсов...", loaderKey, modInfo);
+                UpdatePresence(LocalizationService.Instance.Format("Str_Discord_Launching", cleanVer), LocalizationService.Instance.GetString("Str_Discord_LoadingAssets"), loaderKey, modInfo);
             }
 
-            _cts?.Cancel();
+            CancelAndDisposeTracking();
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
 
@@ -270,13 +274,13 @@ namespace MinecraftLauncher.Services
                                     if (string.IsNullOrWhiteSpace(serverIp))
                                     {
                                         _activity = GameActivity.MainMenu;
-                                        UpdatePresence($"Играет в {cleanVer}", "В главном меню", loaderKey, modInfo);
+                                        UpdatePresence(LocalizationService.Instance.Format("Str_Discord_Playing", cleanVer), LocalizationService.Instance.GetString("Str_Discord_PageHomeDetails"), loaderKey, modInfo);
                                     }
                                     else
                                     {
                                         _activity = GameActivity.Multiplayer;
-                                        string srv = hideIp ? "В сетевой игре" : FormatServerName(serverIp);
-                                        UpdatePresence(srv, "Играет на сервере", loaderKey, modInfo);
+                                        string srv = hideIp ? LocalizationService.Instance.GetString("Str_Discord_Online") : FormatServerName(serverIp);
+                                        UpdatePresence(srv, LocalizationService.Instance.GetString("Str_Discord_OnServer"), loaderKey, modInfo);
                                     }
                                 }
                                 break;
@@ -300,14 +304,40 @@ namespace MinecraftLauncher.Services
 
         public void StopGameTracking()
         {
-            _cts?.Cancel();
+            // Раньше токен только отменялся, но никогда не освобождался, и новый
+            // CancellationTokenSource создавался на каждом запуске игры.
+            CancelAndDisposeTracking();
+
             _gameStartTime = null;
             _activity = GameActivity.MainMenu;
 
-            EnsureClient();
+            // Раньше здесь стоял EnsureClient(), который ради сброса статуса
+            // создавал и инициализировал новый RPC-клиент, если его ещё не было.
+            // Теперь только сбрасываем статус у уже существующего клиента.
             if (_client == null || _client.IsDisposed) return;
 
             SetPageState(_currentPageDetails, _currentPageState);
+        }
+
+        /// <summary>
+        /// Отменяет отслеживание и освобождает CTS. Токен отменяется в трёх местах,
+        /// и ни один из них не освобождал источник.
+        /// </summary>
+        private void CancelAndDisposeTracking()
+        {
+            var cts = Interlocked.Exchange(ref _cts, null);
+            if (cts == null) return;
+
+            try
+            {
+                cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Уже освобождён — ничего делать не нужно.
+            }
+
+            cts.Dispose();
         }
 
         private void HandleLogLine(string line, string version, string loaderKey, string modInfo, bool hideIp, string? serverIp)
@@ -329,8 +359,8 @@ namespace MinecraftLauncher.Services
                     catch { }
                 }
 
-                string details = string.IsNullOrEmpty(serverDetails) ? "В сетевой игре" : serverDetails;
-                string state = hideIp ? "Сетевая игра" : "Играет на сервере";
+                string details = string.IsNullOrEmpty(serverDetails) ? LocalizationService.Instance.GetString("Str_Discord_Online") : serverDetails;
+                string state = hideIp ? LocalizationService.Instance.GetString("Str_Discord_Multiplayer") : LocalizationService.Instance.GetString("Str_Discord_OnServer");
                 _activity = GameActivity.Multiplayer;
                 UpdatePresence(details, state, loaderKey, modInfo);
                 return;
@@ -343,7 +373,7 @@ namespace MinecraftLauncher.Services
                 line.Contains("Preparing spawn area", StringComparison.OrdinalIgnoreCase))
             {
                 _activity = GameActivity.Singleplayer;
-                UpdatePresence("В одиночной игре", "Выживание в мире", loaderKey, modInfo);
+                UpdatePresence(LocalizationService.Instance.GetString("Str_Discord_Singleplayer"), LocalizationService.Instance.GetString("Str_Discord_Surviving"), loaderKey, modInfo);
                 return;
             }
 
@@ -353,7 +383,7 @@ namespace MinecraftLauncher.Services
                 if (_activity == GameActivity.Singleplayer)
                 {
                     _activity = GameActivity.SingleplayerPaused;
-                    UpdatePresence("В одиночной игре", "В меню игры", loaderKey, modInfo);
+                    UpdatePresence(LocalizationService.Instance.GetString("Str_Discord_Singleplayer"), LocalizationService.Instance.GetString("Str_Discord_InGameMenu"), loaderKey, modInfo);
                 }
                 return;
             }
@@ -365,7 +395,7 @@ namespace MinecraftLauncher.Services
                     line.Contains("advancements", StringComparison.OrdinalIgnoreCase))
                 {
                     _activity = GameActivity.Singleplayer;
-                    UpdatePresence("В одиночной игре", "Выживание в мире", loaderKey, modInfo);
+                    UpdatePresence(LocalizationService.Instance.GetString("Str_Discord_Singleplayer"), LocalizationService.Instance.GetString("Str_Discord_Surviving"), loaderKey, modInfo);
                 }
             }
 
@@ -378,7 +408,7 @@ namespace MinecraftLauncher.Services
                 line.Contains("left the game", StringComparison.OrdinalIgnoreCase))
             {
                 _activity = GameActivity.MainMenu;
-                UpdatePresence($"Играет в {version}", "В главном меню", loaderKey, modInfo);
+                UpdatePresence(LocalizationService.Instance.Format("Str_Discord_Playing", version), LocalizationService.Instance.GetString("Str_Discord_PageHomeDetails"), loaderKey, modInfo);
                 return;
             }
 
@@ -397,13 +427,13 @@ namespace MinecraftLauncher.Services
                     if (string.IsNullOrWhiteSpace(serverIp))
                     {
                         _activity = GameActivity.MainMenu;
-                        UpdatePresence($"Играет в {version}", "В главном меню", loaderKey, modInfo);
+                        UpdatePresence(LocalizationService.Instance.Format("Str_Discord_Playing", version), LocalizationService.Instance.GetString("Str_Discord_PageHomeDetails"), loaderKey, modInfo);
                     }
                     else
                     {
                         _activity = GameActivity.Multiplayer;
-                        string srv = hideIp ? "В сетевой игре" : FormatServerName(serverIp);
-                        UpdatePresence(srv, "Играет на сервере", loaderKey, modInfo);
+                        string srv = hideIp ? LocalizationService.Instance.GetString("Str_Discord_Online") : FormatServerName(serverIp);
+                        UpdatePresence(srv, LocalizationService.Instance.GetString("Str_Discord_OnServer"), loaderKey, modInfo);
                     }
                 }
             }
@@ -445,11 +475,29 @@ namespace MinecraftLauncher.Services
                         reader.DiscardBufferedData();
                     }
 
-                    string? line = await reader.ReadLineAsync();
+                    // ReadLineAsync не принимает токен и не имеет таймаута: если игра жива,
+                    // но молчит (меню, пауза), watcher навсегда застревал на
+                    // чтении, держал FileStream открытым и не доходил до проверки
+                    // отмены. WaitAsync с ожиданием позволяет выйти по токену.
+                    string? line = await ReadLineWithCancellationAsync(reader, token);
                     if (line == null)
                     {
+                        if (token.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
                         lastPosition = fs.Position;
-                        await Task.Delay(500, token);
+
+                        try
+                        {
+                            await Task.Delay(500, token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
+
                         continue;
                     }
 
@@ -458,6 +506,44 @@ namespace MinecraftLauncher.Services
                 }
             }
             catch { }
+        }
+
+        /// <summary>
+        /// Читает строку, но позволяет выйти по токену отмены.
+        /// Возвращает null при отмене или по достижении лимита ожидания,
+        /// чтобы вызывающий код различил эти случаи по token.IsCancellationRequested.
+        /// </summary>
+        private static async Task<string?> ReadLineWithCancellationAsync(StreamReader reader, CancellationToken token)
+        {
+            Task<string?> readTask = reader.ReadLineAsync();
+
+            // Если данные не идут, ждать бесконечно нельзя: опрашиваем
+            // с небольшим интервалом и следим за токеном.
+            while (true)
+            {
+                Task completed = await Task.WhenAny(readTask, Task.Delay(200, token));
+
+                if (completed == readTask)
+                {
+                    try
+                    {
+                        return await readTask;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return null;
+                    }
+                    catch (IOException)
+                    {
+                        return null;
+                    }
+                }
+
+                if (token.IsCancellationRequested)
+                {
+                    return null;
+                }
+            }
         }
 
         private void UpdatePresence(string details, string state, string loaderKey, string modInfo)
@@ -504,7 +590,7 @@ namespace MinecraftLauncher.Services
                     int count = Directory.GetFiles(modsDir, "*.jar", SearchOption.TopDirectoryOnly).Length;
                     if (count > 0)
                     {
-                        return $"{loaderTitle} • {count} модов";
+                        return LocalizationService.Instance.Format("Str_Discord_ModsCount", $"{loaderTitle} • {count}");
                     }
                 }
             }
@@ -515,7 +601,7 @@ namespace MinecraftLauncher.Services
 
         private static string FormatServerName(string rawIp)
         {
-            if (string.IsNullOrWhiteSpace(rawIp)) return "Сетевая игра";
+            if (string.IsNullOrWhiteSpace(rawIp)) return LocalizationService.Instance.GetString("Str_Discord_Online");
 
             string lower = rawIp.ToLowerInvariant();
             if (lower.Contains("hypixel")) return "Hypixel Network";
@@ -532,7 +618,7 @@ namespace MinecraftLauncher.Services
             if (lower.Contains("spworlds")) return "SPWorlds";
 
             string clean = rawIp.Split(':')[0].Trim();
-            return $"Сервер {clean}";
+            return LocalizationService.Instance.Format("Str_Discord_Server", clean);
         }
     }
 }

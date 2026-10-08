@@ -107,11 +107,12 @@ namespace MinecraftLauncher.Services
                         {
                             var fi = new FileInfo(file);
                             string baseName = Path.GetFileNameWithoutExtension(file);
-                            string worldName = baseName;
-                            if (baseName.Contains("_"))
-                            {
-                                worldName = baseName.Substring(0, baseName.LastIndexOf('_'));
-                            }
+
+                            // Раньше имя мира вырезалось по последнему '_', но сам
+                            // таймстамп содержит '_' ("yyyyMMdd_HHmmss"), поэтому
+                            // из "My_World_20260106_143000" получалось "My_World_20260106".
+                            // Теперь отрезаем ровно метку времени в конце.
+                            string worldName = TryStripTimestamp(baseName) ?? baseName;
 
                             list.Add(new WorldBackupItem
                             {
@@ -129,6 +130,39 @@ namespace MinecraftLauncher.Services
             }
 
             return list;
+        }
+
+        /// <summary>
+        /// Убирает метку времени в конце имени бекапа, возвращая имя мира.
+        ///
+        /// Формат имени: "{ИмяМира}_yyyyMMdd_HHmmss". Отрезать нужно ровно
+        /// последние 15 символов (метка плюс разделитель), а не по последнему '_',
+        /// иначе мир "My_World" восстанавливался как "My_World_20260106".
+        /// Если хвост не похож на метку времени, возвращаем null.
+        /// </summary>
+        private static string? TryStripTimestamp(string fileNameWithoutExtension)
+        {
+            // Метка: "_" + 8 цифр даты + "_" + 6 цифр времени = 16 символов.
+            const int timestampWithSeparatorLength = 1 + 8 + 1 + 6;
+
+            if (fileNameWithoutExtension.Length <= timestampWithSeparatorLength)
+            {
+                return null;
+            }
+
+            string tail = fileNameWithoutExtension[^timestampWithSeparatorLength..];
+            if (tail[0] != '_' || tail[9] != '_')
+            {
+                return null;
+            }
+
+            for (int i = 1; i < timestampWithSeparatorLength; i++)
+            {
+                if (i == 9) continue;
+                if (!char.IsDigit(tail[i])) return null;
+            }
+
+            return fileNameWithoutExtension[..^timestampWithSeparatorLength];
         }
 
         public async Task<string> CreateBackupAsync(string worldPath, string gamePath)
@@ -154,7 +188,7 @@ namespace MinecraftLauncher.Services
             await Task.Run(() =>
             {
                 string fileName = Path.GetFileNameWithoutExtension(backupZipPath);
-                string worldName = fileName.Contains("_") ? fileName.Substring(0, fileName.LastIndexOf('_')) : fileName;
+                string worldName = TryStripTimestamp(fileName) ?? fileName;
 
                 string savesDir = Path.Combine(gamePath, "saves");
                 Directory.CreateDirectory(savesDir);
@@ -162,8 +196,16 @@ namespace MinecraftLauncher.Services
                 string targetWorldDir = Path.Combine(savesDir, worldName);
                 if (Directory.Exists(targetWorldDir))
                 {
-                    // Create backup of current state before overwriting
-                    string conflictBackup = Path.Combine(savesDir, $"{worldName}_pre_restore_{DateTime.Now:yyyyMMdd_HHmmss}");
+                    // Отодвигаем текущий мир в backups, а не в saves: раньше папка
+                    // "Мир_pre_restore_..." появлялась среди миров и выглядела
+                    // в игре как фантомный мир.
+                    string backupsRoot = Path.Combine(gamePath, "backups");
+                    Directory.CreateDirectory(backupsRoot);
+
+                    string conflictBackup = Path.Combine(
+                        backupsRoot,
+                        $"{worldName}_pre_restore_{DateTime.Now:yyyyMMdd_HHmmss}");
+
                     Directory.Move(targetWorldDir, conflictBackup);
                 }
 

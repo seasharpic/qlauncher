@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace MinecraftLauncher.Models
 {
@@ -19,10 +19,10 @@ namespace MinecraftLauncher.Models
                 double gb = VramBytes / (1024.0 * 1024.0 * 1024.0);
                 if (gb >= 1.0)
                 {
-                    return $"{gb:F0} ГБ";
+                    return Services.LocalizationService.Instance.Format("Str_Size_Gb", $"{gb:F0}");
                 }
                 double mb = VramBytes / (1024.0 * 1024.0);
-                return $"{mb:F0} МБ";
+                return Services.LocalizationService.Instance.Format("Str_Size_Mb", $"{mb:F0}");
             }
         }
 

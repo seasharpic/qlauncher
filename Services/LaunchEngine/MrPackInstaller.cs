@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Models;
 using MinecraftLauncher.Services.LaunchEngine.Models;
 
@@ -24,12 +25,12 @@ namespace MinecraftLauncher.Services.LaunchEngine
             IProgress<LaunchProgress>? progress = null)
         {
             if (!File.Exists(mrPackFilePath))
-                throw new FileNotFoundException("Файл .mrpack не найден.", mrPackFilePath);
+                throw new FileNotFoundException(LocalizationService.Instance.GetString("Str_MrPack_NotFound"), mrPackFilePath);
 
             using var archive = ZipFile.OpenRead(mrPackFilePath);
             var indexEntry = archive.GetEntry("modrinth.index.json");
             if (indexEntry == null)
-                throw new InvalidDataException("В архиве отсутствует modrinth.index.json");
+                throw new InvalidDataException(LocalizationService.Instance.GetString("Str_MrPack_IndexMissing"));
 
             using var indexStream = indexEntry.Open();
             using var doc = await JsonDocument.ParseAsync(indexStream);
@@ -62,6 +63,10 @@ namespace MinecraftLauncher.Services.LaunchEngine
             }
             Directory.CreateDirectory(instanceDir);
 
+            // Элементы с небезопасными путями: молча пропускаем, но сообщаем пользователю,
+            // чтобы он понимал, почему сборка импортировалась не полностью.
+            var skippedEntries = new System.Collections.Generic.List<string>();
+
             foreach (var entry in archive.Entries)
             {
                 if (entry.FullName.StartsWith("overrides/", StringComparison.OrdinalIgnoreCase))
@@ -69,7 +74,15 @@ namespace MinecraftLauncher.Services.LaunchEngine
                     string relPath = entry.FullName.Substring(10);
                     if (string.IsNullOrEmpty(relPath) || relPath.EndsWith("/")) continue;
 
-                    string destPath = Path.Combine(instanceDir, relPath);
+                    // Имя zip-записи берём из недоверенного архива: пропускаем элементы,
+                    // уводящие за пределы папки экземпляра.
+                    string? destPath = SafePath.TryCombineWithin(instanceDir, relPath);
+                    if (destPath == null)
+                    {
+                        skippedEntries.Add($"overrides/{relPath}");
+                        continue;
+                    }
+
                     Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
                     entry.ExtractToFile(destPath, true);
                 }
@@ -86,7 +99,17 @@ namespace MinecraftLauncher.Services.LaunchEngine
                         string downloadUrl = downloadsEl[0].GetString() ?? "";
                         if (!string.IsNullOrEmpty(downloadUrl) && !string.IsNullOrEmpty(path))
                         {
-                            filesToDownload.Add((downloadUrl, Path.Combine(instanceDir, path)));
+                            // path приходит из modrinth.index.json внутри архива и не проверяется .NET,
+                        // поэтому обычный Path.Combine позволял записать файл
+                        // в любую точку диска ("C:/Windows/...").
+                        string? destPath = SafePath.TryCombineWithin(instanceDir, path);
+                        if (destPath == null)
+                        {
+                            skippedEntries.Add(path);
+                            continue;
+                        }
+
+                        filesToDownload.Add((downloadUrl, destPath));
                         }
                     }
                 }
@@ -112,7 +135,7 @@ namespace MinecraftLauncher.Services.LaunchEngine
                             progress?.Report(new LaunchProgress
                             {
                                 Phase = LaunchPhase.DownloadingAssets,
-                                StatusText = $"Импорт модов сборки ({cur}/{total})...",
+                                StatusText = LocalizationService.Instance.Format("Str_MrPack_Importing", cur, total),
                                 Percentage = (int)((cur / (double)total) * 100)
                             });
                         }
@@ -124,6 +147,16 @@ namespace MinecraftLauncher.Services.LaunchEngine
                 }
 
                 await Task.WhenAll(tasks);
+            }
+
+            if (skippedEntries.Count > 0)
+            {
+                progress?.Report(new LaunchProgress
+                {
+                    Phase = LaunchPhase.Completed,
+                    StatusText = LocalizationService.Instance.Format("Str_MrPack_Skipped", skippedEntries.Count),
+                    Percentage = 100
+                });
             }
 
             return new ModpackProfile

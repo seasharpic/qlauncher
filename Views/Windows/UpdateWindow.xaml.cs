@@ -25,15 +25,21 @@ namespace MinecraftLauncher.Views.Windows
 
         private void UpdateWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // Строки собираются в коде, поэтому подстановка идёт через
+            // LocalizationService: DynamicResource здесь не работает.
+            var loc = LocalizationService.Instance;
+
             VersionBadgeText.Text = $"{UpdateService.CurrentVersion} -> {Release.TagName}";
             ReleaseTypeBadgeText.Text = Release.ReleaseTypeBadge;
-            ReleaseDateText.Text = $"Релиз от {Release.ReleaseDateFormatted}";
-            AuthorText.Text = $"Автор: {Release.Author}";
-            MirrorBadgeText.Text = $"Зеркало: {Release.ActiveMirror}";
-            SizeText.Text = string.IsNullOrWhiteSpace(Release.FileSizeFormatted) ? "" : $"Размер: ~{Release.FileSizeFormatted}";
+            ReleaseDateText.Text = loc.Format("Str_Update_ReleaseDate", Release.ReleaseDateFormatted);
+            AuthorText.Text = loc.Format("Str_Update_Author", Release.Author);
+            MirrorBadgeText.Text = loc.Format("Str_Update_Mirror", Release.ActiveMirror);
+            SizeText.Text = string.IsNullOrWhiteSpace(Release.FileSizeFormatted)
+                ? ""
+                : loc.Format("Str_Update_Size", Release.FileSizeFormatted);
             ChangelogTextBlock.Text = Release.FormattedChangelog;
             Sha256Text.Text = string.IsNullOrEmpty(Release.Sha256)
-                ? "SHA-256: контрольная сумма проверяется при загрузке"
+                ? loc.GetString("Str_Update_Sha256PendingCode")
                 : $"SHA-256: {Release.Sha256}";
         }
 
@@ -73,7 +79,9 @@ namespace MinecraftLauncher.Views.Windows
                 var settings = SettingsService.Instance.Settings;
                 settings.SkippedVersion = Release.TagName;
                 SettingsService.Instance.Save(settings);
-                ToastService.Instance.ShowInfo($"Версия {Release.TagName} пропущена.", "Обновления");
+                ToastService.Instance.ShowInfo(
+                    LocalizationService.Instance.Format("Str_Update_SkippedToast", Release.TagName),
+                    LocalizationService.Instance.GetString("Str_Update_Title"));
             }
             catch { }
             Close();
@@ -85,7 +93,9 @@ namespace MinecraftLauncher.Views.Windows
             {
                 string text = $"QLauncher {Release.TagName} Changelog\n{Release.FormattedChangelog}";
                 Clipboard.SetText(text);
-                ToastService.Instance.ShowSuccess("Список изменений скопирован в буфер обмена.", "Обновление");
+                ToastService.Instance.ShowSuccess(
+                    LocalizationService.Instance.GetString("Str_Update_CopiedToast"),
+                    LocalizationService.Instance.GetString("Str_Update_TitleSingle"));
             }
             catch { }
         }
@@ -97,6 +107,7 @@ namespace MinecraftLauncher.Views.Windows
             ReadyToRestartPanel.Visibility = Visibility.Collapsed;
 
             _downloadCts = new CancellationTokenSource();
+            var loc = LocalizationService.Instance;
             string tempDir = Path.Combine(Path.GetTempPath(), "QLauncher_Update");
             Directory.CreateDirectory(tempDir);
             _downloadedFilePath = Path.Combine(tempDir, Release.FileName);
@@ -111,15 +122,21 @@ namespace MinecraftLauncher.Views.Windows
                 double speedMb = report.SpeedBytesPerSec / (1024.0 * 1024.0);
 
                 int pct = (int)(report.Percentage * 100);
-                DownloadStatusText.Text = $"Загрузка: {pct}% ({mbRecv:F1} / {(mbTotal > 0 ? $"{mbTotal:F1} МБ" : "???")}) • Зеркало: {report.ActiveMirror}";
+                DownloadStatusText.Text = loc.Format(
+                    "Str_Update_DownloadProgress",
+                    pct,
+                    $"{mbRecv:F1}",
+                    mbTotal > 0 ? $"{mbTotal:F1}" : "???",
+                    report.ActiveMirror);
 
                 string etaText = report.EstimatedTimeRemaining > TimeSpan.Zero
-                    ? $"~{Math.Ceiling(report.EstimatedTimeRemaining.TotalSeconds)} сек"
-                    : "расчёт...";
-                DownloadSpeedEtaText.Text = $"{speedMb:F1} МБ/с • осталось {etaText}";
+                    ? loc.Format("Str_Update_EtaSeconds", (int)Math.Ceiling(report.EstimatedTimeRemaining.TotalSeconds))
+                    : loc.GetString("Str_Update_EtaPending");
+
+                DownloadSpeedEtaText.Text = loc.Format("Str_Update_SpeedEta", $"{speedMb:F1}", etaText);
             });
 
-            DownloadStatusText.Text = $"Подключение к {Release.ActiveMirror}...";
+            DownloadStatusText.Text = loc.Format("Str_Update_Connecting", Release.ActiveMirror);
 
             bool success = await UpdateService.Instance.DownloadUpdateWithFallbackAsync(Release, _downloadedFilePath, progress, _downloadCts.Token);
 
@@ -127,8 +144,8 @@ namespace MinecraftLauncher.Views.Windows
 
             if (!success || !File.Exists(_downloadedFilePath))
             {
-                DownloadStatusText.Text = "Ошибка загрузки обновления.";
-                DownloadSpeedEtaText.Text = "Не удалось загрузить файл с зеркал. Попробуйте позже.";
+                DownloadStatusText.Text = loc.GetString("Str_Update_DownloadError");
+                DownloadSpeedEtaText.Text = loc.GetString("Str_Update_DownloadErrorHint");
                 await Task.Delay(2500);
                 DownloadProgressPanel.Visibility = Visibility.Collapsed;
                 InitialActionsPanel.Visibility = Visibility.Visible;
@@ -136,13 +153,13 @@ namespace MinecraftLauncher.Views.Windows
             }
 
             // Проверка целостности SHA-256
-            DownloadStatusText.Text = "Проверка целостности SHA-256...";
+            DownloadStatusText.Text = loc.GetString("Str_Update_VerifyingHash");
             bool hashValid = await Task.Run(() => UpdateService.Instance.VerifySha256(_downloadedFilePath, Release.Sha256));
 
             if (!hashValid)
             {
-                DownloadStatusText.Text = "Ошибка: несовпадение контрольной суммы SHA-256.";
-                DownloadSpeedEtaText.Text = "Файл повреждён при передаче. Попробуйте снова.";
+                DownloadStatusText.Text = loc.GetString("Str_Update_HashMismatch");
+                DownloadSpeedEtaText.Text = loc.GetString("Str_Update_Corrupted");
                 try { File.Delete(_downloadedFilePath); } catch { }
                 await Task.Delay(3000);
                 DownloadProgressPanel.Visibility = Visibility.Collapsed;

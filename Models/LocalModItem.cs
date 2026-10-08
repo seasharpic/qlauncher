@@ -1,4 +1,4 @@
-using System.Windows.Media;
+﻿using System.Windows.Media;
 using MinecraftLauncher.Common;
 
 namespace MinecraftLauncher.Models
@@ -35,11 +35,11 @@ namespace MinecraftLauncher.Models
             }
         }
 
-        public string StatusText => IsEnabled ? "Включён" : "Отключён";
+        public string StatusText => Services.LocalizationService.Instance.GetString(IsEnabled ? "Str_Mod_Enabled" : "Str_Mod_Disabled");
         public Brush StatusColor => IsEnabled
             ? new SolidColorBrush(Color.FromRgb(80, 220, 100))
             : new SolidColorBrush(Color.FromRgb(220, 80, 80));
-        public string ActionText => IsEnabled ? "Отключить" : "Включить";
+        public string ActionText => Services.LocalizationService.Instance.GetString(IsEnabled ? "Str_Mod_Disable" : "Str_Mod_Enable");
     }
 
     public class ModpackCardItem : ObservableObject

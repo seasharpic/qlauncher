@@ -1,4 +1,4 @@
-<Page x:Class="MinecraftLauncher.Views.Pages.ModsPage"
+﻿<Page x:Class="MinecraftLauncher.Views.Pages.ModsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:helpers="clr-namespace:MinecraftLauncher.Helpers"
@@ -7,7 +7,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       mc:Ignorable="d"
       d:DataContext="{d:DesignInstance vm:ModsViewModel}"
-      Title="Каталог контента" FontFamily="Inter">
+      Title="{DynamicResource Str_Mods_Title}" FontFamily="Inter">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -24,16 +24,16 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0" Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="16" Width="40" Height="40" Style="{StaticResource DarkButtonStyle}" Click="BackButton_Click" ToolTip="Назад" Margin="0,0,15,0"/>
+            <Button Grid.Column="0" Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="16" Width="40" Height="40" Style="{StaticResource DarkButtonStyle}" Click="BackButton_Click" ToolTip="{DynamicResource Str_Action_Back}" Margin="0,0,15,0"/>
             <TextBox Grid.Column="1" Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource CustomTextBoxStyle}" Height="40" Margin="0,0,10,0" KeyDown="SearchBox_KeyDown"/>
 
             <ComboBox Grid.Column="2" Width="160" Height="40" Style="{StaticResource CustomComboBoxStyle}" SelectedValuePath="Tag" SelectedValue="{Binding SelectedCategory, Mode=TwoWay}" Margin="0,0,10,0" Padding="12,0,0,0" VerticalContentAlignment="Center">
-                <ComboBoxItem Content="Моды" Tag="mod"/>
-                <ComboBoxItem Content="Ресурс-паки" Tag="resourcepack"/>
-                <ComboBoxItem Content="Шейдеры" Tag="shader"/>
+                <ComboBoxItem Content="{DynamicResource Str_Mods_Category_Mod}" Tag="mod"/>
+                <ComboBoxItem Content="{DynamicResource Str_Mods_Category_ResourcePack}" Tag="resourcepack"/>
+                <ComboBoxItem Content="{DynamicResource Str_Mods_Category_Shader}" Tag="shader"/>
             </ComboBox>
 
-            <Button Grid.Column="3" Content="Искать" Width="100" Height="40" Style="{StaticResource PlayButtonStyle}" Command="{Binding SearchCommand}"/>
+            <Button Grid.Column="3" Content="{DynamicResource Str_Mods_SearchBtn}" Width="100" Height="40" Style="{StaticResource PlayButtonStyle}" Command="{Binding SearchCommand}"/>
         </Grid>
 
         <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="12,8" Margin="0,0,0,12">
@@ -84,7 +84,7 @@
 
                                         <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Downloads}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Right" Margin="0,0,0,5"/>
-                                            <Button Content="Установить" Height="35" Style="{StaticResource PlayButtonStyle}"
+                                            <Button Content="{DynamicResource Str_Mods_InstallBtn}" Height="35" Style="{StaticResource PlayButtonStyle}"
                                                     Command="{Binding DataContext.InstallModCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                     CommandParameter="{Binding}"/>
                                         </StackPanel>

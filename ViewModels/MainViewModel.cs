@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -21,6 +21,10 @@ namespace MinecraftLauncher.ViewModels
     public class MainViewModel : ViewModelBase
     {
         private readonly ISettingsService _settingsService;
+
+        private readonly object _outputHandlersGate = new();
+        private (DataReceivedEventHandler outHandler, DataReceivedEventHandler errHandler)? _outputHandlers;
+        private Process? _attachedProcess;
         private readonly IMinecraftLaunchService _launchService;
         private readonly IServerStatusService _serverStatusService;
         private readonly INewsService _newsService;
@@ -30,17 +34,30 @@ namespace MinecraftLauncher.ViewModels
         private readonly IThemeService _themeService;
         private readonly IToastService _toastService;
 
+        // Локализация для строк, которые собираются в коде: в XAML подстановкой
+        // занимается DynamicResource, здесь нужен явный вызов.
+        private readonly ILocalizationService _loc = LocalizationService.Instance;
+
         private AccountProfile? _selectedAccount;
         private string _selectedVersion = "";
-        private string _progressText = "Готов к запуску";
+        private string _progressText = LocalizationService.Instance.GetString("Str_Progress_Ready");
         private double _progressFillRatio = 0.0;
         private bool _isActionOverlayVisible;
-        private string _actionOverlayText = "Обработка...";
+        private string _actionOverlayText = LocalizationService.Instance.GetString("Str_Progress_Processing");
+
+        // Пункт списка «+ Создать новую сборку» и префикс строки прогресса
+        // хранятся в полях, а не сравниваются с русским литералом: иначе
+        // проверка "выбран ли пункт создания сборки" ломалась бы в англоязычном
+        // интерфейсе.
+        private string _newPackShortcut = "";
+        private string _progressPreparingPrefix =
+            LocalizationService.Instance.GetString("Str_Progress_Preparing").Split(' ')[0];
         private bool _isShortcutOverlayVisible;
         private string _shortcutVersion = "";
         private string _shortcutIp = "mc.hypixel.net";
         private bool _isModpackOverlayVisible;
-        private string _newModpackName = "Моя сборка";
+        private string _newModpackName = LocalizationService.Instance.GetString("Str_Modpack_DefaultName");
+        private bool _newModpackNameEdited;
         private string _newModpackVersion = "1.20.1";
         private string _newModpackLoader = "Vanilla";
         private bool _installSodium = true;
@@ -52,6 +69,57 @@ namespace MinecraftLauncher.ViewModels
 
         private DispatcherTimer? _newsTimer;
         private DispatcherTimer? _serverTimer;
+
+        // Флаги защиты от наложения тиков (см. RunExclusiveAsync).
+        private readonly SemaphoreSlim _newsRefreshRunning = new(1, 1);
+        private readonly SemaphoreSlim _serverRefreshRunning = new(1, 1);
+        private bool _disposed;
+
+        /// <summary>
+        /// Выполняет обновление, не позволяя двум тикам идти одновременно.
+        /// Если предыдущий заход ещё не закончился, новый просто пропускается.
+        /// </summary>
+        private static async Task RunExclusiveAsync(Func<Task> operation, SemaphoreSlim gate)
+        {
+            if (!await gate.WaitAsync(0))
+            {
+                return;
+            }
+
+            try
+            {
+                await operation();
+            }
+            catch (Exception ex)
+            {
+                // Раньше исключение уходило в DispatcherUnhandledException и
+                // всплывало модальным окном поверх игры.
+                CrashLogWriter.Write("PeriodicRefresh", "Periodic refresh failed", ex);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }
+
+        /// <summary>
+        /// Останавливает таймеры и освобождает ресурсы.
+        /// Раньше они никогда не останавливались и держали сильную ссылку на
+        /// MainViewModel, продолжая тикать после закрытия окна.
+        /// </summary>
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            _newsTimer?.Stop();
+            _serverTimer?.Stop();
+
+            _newsTimer = null;
+            _serverTimer = null;
+
+            DetachProcessOutputHandlers(_attachedProcess!);
+        }
 
         public ObservableCollection<TelegramPost> NewsPosts { get; } = new();
         public ObservableCollection<ServerItem> Servers { get; } = new();
@@ -66,6 +134,9 @@ namespace MinecraftLauncher.ViewModels
         public IUpdateService UpdateService => _updateService;
 
         public event Action<Process>? GameLaunched;
+
+        /// <summary>Строка вывода процесса игры. Её читает окно консоли.</summary>
+        public event Action<string?>? ProcessOutputLine;
         public event Action? RequestClose;
         public event Action? RequestHide;
         public event Action? RequestShow;
@@ -94,11 +165,14 @@ namespace MinecraftLauncher.ViewModels
             {
                 if (SetProperty(ref _selectedVersion, value))
                 {
-                    if (!string.IsNullOrEmpty(value) && !value.Contains("Создать новую сборку"))
+                    if (!string.IsNullOrEmpty(value) && !IsCreateModpackEntry(value))
                     {
                         var settings = _settingsService.Settings;
                         settings.LastSelectedVersion = value;
-                        _settingsService.Save(settings);
+
+                        // Отложенная запись: раньше settings.json переписывался
+                        // на каждое изменение выбора версии.
+                        _settingsService.SaveDebounced();
 
                         _discordService.UpdateSelectedVersion(value);
                     }
@@ -106,7 +180,118 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
-        public string ProgressText
+        /// <summary>
+/// Варианты текста пункта «+ Создать новую сборку», которые уже показывались
+/// пользователю. Сравнивать с текстом словаря нельзя: список версий
+/// собирается один раз при старте, а язык можно переключить в настройках
+/// позже. После переключения список оставался со старым текстом, а
+/// сравнение шло уже с новым — и пункт переставал распознаваться: окно
+/// создания сборки не открывалось, а сам пункт оставался выбранным.
+/// Поэтому варианты запоминаются, а не сверяются с литералом.
+/// </summary>
+private static readonly HashSet<string> CreateModpackEntryTexts =
+    new(StringComparer.OrdinalIgnoreCase);
+
+/// <summary>
+/// Запоминает очередной вариант текста пункта создания сборки.
+/// </summary>
+public static void RegisterCreateModpackEntryText(string? text)
+{
+    if (string.IsNullOrWhiteSpace(text)) return;
+
+    lock (CreateModpackEntryTexts)
+    {
+        CreateModpackEntryTexts.Add(text.Trim());
+    }
+}
+
+/// <summary>
+/// Является ли пункт списка версий командой «создать новую сборку».
+/// </summary>
+public static bool IsCreateModpackEntry(string? version)
+{
+    if (string.IsNullOrWhiteSpace(version)) return false;
+
+    lock (CreateModpackEntryTexts)
+    {
+        if (CreateModpackEntryTexts.Contains(version.Trim())) return true;
+    }
+
+    // Страховка на случай, если язык сменился раньше, чем список пересобран:
+    // сверяем ещё и с тем текстом, который отдаёт словарь прямо сейчас.
+    string current = LocalizationService.Instance.GetString("Str_Progress_NewPackShortcut");
+    return !string.IsNullOrWhiteSpace(current)
+        && string.Equals(version.Trim(), current.Trim(), StringComparison.OrdinalIgnoreCase);
+}
+
+/// <summary>
+/// Пересобирает тексты, которые хранятся в полях, а не берутся из
+/// DynamicResource.
+///
+/// Смена языка на ходу меняет словарь, поэтому такие строки сами не
+/// обновятся: в английском интерфейсе пункт «+ Создать новую сборку»
+/// оставался русским, и его больше нельзя было опознать.
+/// </summary>
+private void OnLanguageChanged()
+{
+    string newShortcut = _loc.GetString("Str_Progress_NewPackShortcut");
+    RegisterCreateModpackEntryText(newShortcut);
+
+    _progressPreparingPrefix = _loc.GetString("Str_Progress_Preparing").Split(' ')[0];
+
+    // Имя новой сборки обновляем, только если пользователь его не трогал:
+    // поле стартует со строки из словаря и переводится вместе с языком.
+    if (!_newModpackNameEdited)
+    {
+        _newModpackName = _loc.GetString("Str_Modpack_DefaultName");
+        OnPropertyChanged(nameof(NewModpackName));
+    }
+
+    int index = Versions.IndexOf(_newPackShortcut);
+    if (index >= 0)
+    {
+        string previous = _newPackShortcut;
+        _newPackShortcut = newShortcut;
+        Versions[index] = newShortcut;
+
+        // Выбранным остаётся тот же пункт, а не первая версия в списке:
+        // иначе переключение языка сбрасывало бы выбор версии.
+        if (SelectedVersion == previous)
+        {
+            SelectedVersion = newShortcut;
+        }
+    }
+    else
+    {
+        _newPackShortcut = newShortcut;
+    }
+
+    // Статичные фразы строки прогресса переводим на новый язык. Фразы
+    // активной операции («Загрузка библиотек 3/40») не трогаем: они и так
+    // сменятся по ходу следующей операции.
+    if (ReadyTextLanguages.Contains(ProgressText))
+    {
+        ProgressText = _loc.GetString("Str_Progress_Ready");
+        ReadyTextLanguages.Add(ProgressText);
+    }
+
+    OnPropertyChanged(nameof(SelectedVersion));
+    OnPropertyChanged(nameof(NewModpackName));
+}
+
+/// <summary>
+/// Варианты статичной надписи в строке прогресса («Готов к запуску»).
+/// Нужны, чтобы переводить её при смене языка, не задев текущий статус.
+/// </summary>
+private static readonly HashSet<string> ReadyTextLanguages =
+    new(StringComparer.Ordinal)
+    {
+        "Готов к запуску",
+        "Ready to play",
+        "Готово к запуску",
+    };
+
+public string ProgressText
         {
             get => _progressText;
             set => SetProperty(ref _progressText, value);
@@ -157,7 +342,15 @@ namespace MinecraftLauncher.ViewModels
         public string NewModpackName
         {
             get => _newModpackName;
-            set => SetProperty(ref _newModpackName, value);
+            set
+            {
+                // Отмечаем, что имя ввёл пользователь: после смены языка
+                // такое поле переводить уже нельзя.
+                if (SetProperty(ref _newModpackName, value))
+                {
+                    _newModpackNameEdited = !string.IsNullOrWhiteSpace(value);
+                }
+            }
         }
 
         public string NewModpackVersion
@@ -270,6 +463,11 @@ namespace MinecraftLauncher.ViewModels
             _themeService = themeService;
             _toastService = toastService;
 
+            // Строка прогресса и пункт создания сборки хранятся в полях,
+            // поэтому за сменой языка нужно следить вручную: DynamicResource
+            // на них не действует.
+            LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
+
             ExitCommand = new RelayCommand(() => RequestClose?.Invoke());
 
             PlayCommand = new AsyncRelayCommand(ExecutePlayAsync);
@@ -294,25 +492,25 @@ namespace MinecraftLauncher.ViewModels
                 if (!string.IsNullOrWhiteSpace(ip))
                 {
                     Clipboard.SetText(ip);
-                    _toastService.ShowSuccess($"IP адрес '{ip}' скопирован в буфер", "Сервер");
+                    _toastService.ShowSuccess(_loc.Format("Str_Server_IpCopied", ip), _loc.GetString("Str_T_Server"));
                 }
             });
 
             RefreshServersCommand = new AsyncRelayCommand(async () =>
             {
                 await RefreshServersAsync();
-                _toastService.ShowSuccess("Статус серверов обновлен", "Мониторинг");
+                _toastService.ShowSuccess(_loc.GetString("Str_Server_StatusUpdated"), _loc.GetString("Str_T_Monitoring"));
             });
 
             DeleteServerCommand = new RelayCommand<ServerItem>(server =>
             {
                 if (server == null || string.IsNullOrWhiteSpace(server.Ip)) return;
 
-                if (QMessageBoxWindow.Show($"Удалить сервер '{server.Name}' из списка?", "Удаление сервера", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                if (QMessageBoxWindow.Show(_loc.Format("Str_Server_DeleteQuestion", server.Name), _loc.GetString("Str_T_DeleteConfirm"), MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
                     _serverStatusService.RemoveServer(_settingsService.Settings.GamePath, server.Ip);
                     Servers.Remove(server);
-                    _toastService.ShowInfo($"Сервер '{server.Name}' удален", "Сервер");
+                    _toastService.ShowInfo(_loc.Format("Str_Server_Removed", server.Name), _loc.GetString("Str_T_Server"));
                 }
             });
 
@@ -329,7 +527,7 @@ namespace MinecraftLauncher.ViewModels
             {
                 if (string.IsNullOrWhiteSpace(NewServerIp))
                 {
-                    _toastService.ShowWarning("Введите IP-адрес или домен сервера.", "Сервер");
+                    _toastService.ShowWarning(_loc.GetString("Str_Server_IpRequired"), _loc.GetString("Str_T_Server"));
                     return;
                 }
 
@@ -339,7 +537,7 @@ namespace MinecraftLauncher.ViewModels
                 _serverStatusService.AddServer(_settingsService.Settings.GamePath, name, ip);
                 IsAddServerOverlayVisible = false;
                 await RefreshServersAsync();
-                _toastService.ShowSuccess($"Сервер '{name}' добавлен в список!", "Сервер");
+                _toastService.ShowSuccess(_loc.Format("Str_Server_Added", name), _loc.GetString("Str_T_Server"));
             });
 
             _launchService.FileProgressChanged += OnFileProgressChanged;
@@ -352,21 +550,28 @@ namespace MinecraftLauncher.ViewModels
             _discordService.StartRpc(settings.EnableDiscordRpc);
             ApplyCustomWallpaper();
 
-            _serverStatusService.InjectServersIfEnabled(settings.GamePath, settings.AutoAddServers);
-            _launchService.Initialize(settings.GamePath);
+            await Task.Run(() => _serverStatusService.InjectServersIfEnabled(settings.GamePath, settings.AutoAddServers));
+
+            // Обход всех версий Fabric ушёл в Task.Run (иначе старт лаунчера
+            // подвисал на большой папке игры).
+            await _launchService.InitializeAsync(settings.GamePath);
 
             await LoadAccountsAsync();
             await LoadVersionsAsync();
             await RefreshServersAsync();
             await RefreshNewsAsync();
 
-            _newsTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(3) };
-            _newsTimer.Tick += async (_, _) => await RefreshNewsAsync();
-            _newsTimer.Start();
+            // Таймеры гасят сами себя на время работы, иначе тики накладывались:
+// async-лямбда возвращает управление в message pump на первом await, поэтому
+// следующий тик мог запуститься, пока предыдущий ещё шёл. В итоге дублировались
+// пинги и последний результат выигрывал у первого.
+_newsTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(3) };
+_newsTimer.Tick += async (_, _) => await RunExclusiveAsync(RefreshNewsAsync, _newsRefreshRunning);
+_newsTimer.Start();
 
-            _serverTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(2) };
-            _serverTimer.Tick += async (_, _) => await RefreshServersAsync();
-            _serverTimer.Start();
+_serverTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(2) };
+_serverTimer.Tick += async (_, _) => await RunExclusiveAsync(RefreshServersAsync, _serverRefreshRunning);
+_serverTimer.Start();
 
             _ = Task.Run(async () =>
             {
@@ -434,28 +639,45 @@ namespace MinecraftLauncher.ViewModels
                 acc.AvatarImage = AvatarHelper.GetDefaultAvatar();
                 Accounts.Add(acc);
 
-                _ = Task.Run(async () =>
-                {
-                    var img = await AvatarHelper.GetAvatarAsync(acc.Nickname, acc.Uuid);
-                    if (img != null)
-                    {
-                        Application.Current.Dispatcher.Invoke(() => acc.AvatarImage = img);
-                    }
-                });
+                // Ошибка загрузки аватара наблюдается явно (иначе терялась в
+                // UnobservedTaskException и молча оставляла дефолтную картинку).
+                // Присваивание через "_ =" подавляет предупреждение CS4014.
+                _ = LoadAvatarAsync(acc);
             }
 
             SelectedAccount = Accounts.FirstOrDefault(a => a.Nickname == settings.ActiveAccount)
                               ?? Accounts.FirstOrDefault();
         }
 
+        private async Task LoadAvatarAsync(AccountProfile acc)
+        {
+            try
+            {
+                var img = await AvatarHelper.GetAvatarAsync(acc.Nickname, acc.Uuid);
+
+                if (img == null || _disposed) return;
+
+                _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    acc.AvatarImage = img;
+                }));
+            }
+            catch (Exception ex)
+            {
+                CrashLogWriter.Write("AvatarLoad", $"Failed to load avatar for '{acc.Nickname}'", ex);
+            }
+        }
+
         public async Task LoadVersionsAsync()
         {
-            ProgressText = "Получение списка версий...";
+            ProgressText = _loc.GetString("Str_Progress_FetchingVersions");
             Versions.Clear();
             VanillaVersions.Clear();
             var settings = _settingsService.Settings;
 
-            Versions.Add("+ Создать новую сборку...");
+            _newPackShortcut = _loc.GetString("Str_Progress_NewPackShortcut");
+            RegisterCreateModpackEntryText(_newPackShortcut);
+            Versions.Add(_newPackShortcut);
 
             foreach (var pack in settings.Modpacks)
             {
@@ -497,7 +719,7 @@ namespace MinecraftLauncher.ViewModels
                 {
                     SelectedVersion = Versions[1];
                 }
-                ProgressText = "Готов к запуску";
+                ProgressText = _loc.GetString("Str_Progress_Ready");
             }
         }
 
@@ -530,10 +752,10 @@ namespace MinecraftLauncher.ViewModels
             {
                 if (total > 0)
                 {
-                    ProgressText = $"Подготовка ({progressed}/{total})";
+                    ProgressText = _loc.Format("Str_Progress_Preparing", progressed, total);
                     if (IsActionOverlayVisible)
                     {
-                        ActionOverlayText = $"Подготовка ресурсов ({progressed}/{total})...";
+                        ActionOverlayText = _loc.Format("Str_Progress_PreparingResources", progressed, total);
                     }
                 }
             });
@@ -546,7 +768,7 @@ namespace MinecraftLauncher.ViewModels
                 ProgressFillRatio = ratio;
                 if (IsActionOverlayVisible && !string.IsNullOrEmpty(speed))
                 {
-                    ActionOverlayText = $"Загрузка компонентов • {speed}";
+                    ActionOverlayText = _loc.Format("Str_Progress_Components", speed);
                 }
 
                 if (total > 0)
@@ -554,8 +776,12 @@ namespace MinecraftLauncher.ViewModels
                     int percent = (int)(ratio * 100);
                     double progMb = progressed / 1048576.0;
                     double totMb = total / 1048576.0;
-                    string progStr = progMb >= 1024 ? $"{(progMb / 1024.0):F1} ГБ" : $"{progMb:F1} МБ";
-                    string totStr = totMb >= 1024 ? $"{(totMb / 1024.0):F1} ГБ" : $"{totMb:F1} МБ";
+                    string progStr = progMb >= 1024
+                        ? _loc.Format("Str_Size_Gb", $"{(progMb / 1024.0):F1}")
+                        : _loc.Format("Str_Size_Mb", $"{progMb:F1}");
+                    string totStr = totMb >= 1024
+                        ? _loc.Format("Str_Size_Gb", $"{(totMb / 1024.0):F1}")
+                        : _loc.Format("Str_Size_Mb", $"{totMb:F1}");
                     ProgressText = $"{progStr} / {totStr} ({percent}%) • {speed}";
                 }
             });
@@ -563,7 +789,7 @@ namespace MinecraftLauncher.ViewModels
 
         private async Task ExecutePlayAsync()
         {
-            if (string.IsNullOrWhiteSpace(SelectedVersion) || SelectedVersion.Contains("Создать новую сборку"))
+            if (string.IsNullOrWhiteSpace(SelectedVersion) || IsCreateModpackEntry(SelectedVersion))
             {
                 IsModpackOverlayVisible = true;
                 return;
@@ -575,11 +801,73 @@ namespace MinecraftLauncher.ViewModels
         private async Task ExecuteConnectServerAsync(string? serverIp)
         {
             if (string.IsNullOrWhiteSpace(serverIp)) return;
-            string ver = string.IsNullOrWhiteSpace(SelectedVersion) || SelectedVersion.Contains("Создать новую сборку")
+            string ver = string.IsNullOrWhiteSpace(SelectedVersion) || IsCreateModpackEntry(SelectedVersion)
                 ? "1.20.1"
                 : SelectedVersion;
 
             await StartGameAsync(ver, serverIp);
+        }
+
+        /// <summary>
+        /// Читает stdout/stderr дочернего процесса.
+        ///
+        /// Это обязательно, а не украшение: MinecraftLaunchEngine включает
+        /// RedirectStandardOutput/Error и вызывает BeginOutputReadLine, но ни один
+        /// обработчик не был привязан, если Discord RPC выключен. Буфер пайпа (64 КБ)
+        /// переполнялся, и процесс игры блокировался навсегда, при этом лаунчер
+        /// сообщал об успешном запуске.
+        /// </summary>
+        private void AttachProcessOutputHandlers(Process process)
+        {
+            lock (_outputHandlersGate)
+            {
+                if (_attachedProcess == process) return;
+
+                DetachProcessOutputHandlers(process);
+
+                DataReceivedEventHandler onOut = (_, e) => ProcessOutputLine?.Invoke(e.Data);
+                DataReceivedEventHandler onErr = (_, e) => ProcessOutputLine?.Invoke(e.Data);
+
+                process.OutputDataReceived += onOut;
+                process.ErrorDataReceived += onErr;
+
+                _outputHandlers = (onOut, onErr);
+                _attachedProcess = process;
+
+                // MinecraftLaunchEngine уже вызвал Begin*ReadLine, но до привязки
+                // хендлеров, поэтому ранний вывод (то есть первоначальный краш-лог)
+                // терялся. Перезапускаем чтение явно.
+                try
+                {
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+                }
+                catch (InvalidOperationException)
+                {
+                    // Чтение уже было запущено движком — это не ошибка.
+                }
+            }
+        }
+
+        private void DetachProcessOutputHandlers(Process? process)
+        {
+            lock (_outputHandlersGate)
+            {
+                if (process == null)
+                {
+                    _outputHandlers = null;
+                    _attachedProcess = null;
+                    return;
+                }
+                if (_outputHandlers is { } handlers && ReferenceEquals(_attachedProcess, process))
+                {
+                    process.OutputDataReceived -= handlers.Item1;
+                    process.ErrorDataReceived -= handlers.Item2;
+                }
+
+                _outputHandlers = null;
+                _attachedProcess = null;
+            }
         }
 
         private async Task StartGameAsync(string version, string? serverIp)
@@ -589,17 +877,20 @@ namespace MinecraftLauncher.ViewModels
 
             if (account == null)
             {
-                _toastService.ShowWarning("Пожалуйста, добавьте или выберите аккаунт в настройках.", "Аккаунт");
+                _toastService.ShowWarning(_loc.GetString("Str_Account_Required"), _loc.GetString("Str_T_Account"));
                 return;
             }
 
-            // Java Compatibility Guard
-            var compat = JavaCompatibilityService.Instance.CheckCompatibility(version, settings.JavaPath);
+            // Java Compatibility Guard.
+            // Раньше проверка была синхронной: она спавнила процесс и ждала его
+            // на UI-потоке (до 3 секунд на каждое нажатие Play), плюс читала
+            // stderr до stdout и могла зависнуть намертво.
+            var compat = await JavaCompatibilityService.Instance.CheckCompatibilityAsync(version, settings.JavaPath);
             if (!compat.IsCompatible)
             {
                 var choice = QMessageBoxWindow.Show(
-                    $"{compat.Message}\n\nРекомендуется использовать Java {compat.RequiredVersion}.\nВы хотите продолжить запуск?",
-                    "Проверка совместимости Java",
+                    $"{compat.Message}\n\n{_loc.Format("Str_Launch_JavaMismatchPrompt", compat.RequiredVersion)}",
+                    _loc.GetString("Str_T_JavaCheck"),
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
 
@@ -610,8 +901,8 @@ namespace MinecraftLauncher.ViewModels
             }
 
             IsActionOverlayVisible = true;
-            ActionOverlayText = "Подготовка к запуску...";
-            _discordService.SetLaunchingState(version, "Подготовка к запуску...");
+            ActionOverlayText = _loc.GetString("Str_Launch_Preparing");
+            _discordService.SetLaunchingState(version, _loc.GetString("Str_Launch_Preparing"));
 
             try
             {
@@ -650,6 +941,12 @@ namespace MinecraftLauncher.ViewModels
                 GameLaunched?.Invoke(process);
 
                 DateTime startTime = DateTime.Now;
+
+                // Наблюдение за процессом игры живёт отдельно от обработчиков
+                // вывода: раньше DiscordService цеплял OutputDataReceived только
+                // если RPC был включён, и при выключенном RPC пайпы никто не читал.
+                AttachProcessOutputHandlers(process);
+
                 _ = Task.Run(() =>
                 {
                     try
@@ -658,17 +955,25 @@ namespace MinecraftLauncher.ViewModels
                         int exitCode = process.ExitCode;
                         long minutes = (long)(DateTime.Now - startTime).TotalMinutes;
 
-                        var s = _settingsService.Load();
-                        if (s.EnableDiscordRpc)
+                        if (_settingsService.Settings.EnableDiscordRpc)
                         {
                             _discordService.StopGameTracking();
                         }
 
                         if (pack != null)
                         {
-                            pack.PlaytimeMinutes += Math.Max(0, minutes);
-                            pack.LaunchCount += 1;
-                            _settingsService.Save(s);
+                            // PlaytimeMinutes и LaunchCount — наблюдаемое свойство,
+                            // поэтому мутируем на UI-потоке: раньше это делалось
+                            // из пула и PropertyChanged улетал не в тот поток.
+                            long added = Math.Max(0, minutes);
+
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                pack.PlaytimeMinutes += added;
+                                pack.LaunchCount += 1;
+                            });
+
+                            _settingsService.Save();
                         }
 
                         if (exitCode != 0)
@@ -680,8 +985,16 @@ namespace MinecraftLauncher.ViewModels
                                 _toastService.ShowError($"{crash.Summary}\n\n{crash.Recommendation}", crash.Title);
                             });
                         }
+
+                        // Хендлеры вывода и сам Process больше не нужны: без Dispose
+                        // на каждый запуск игры оставались живые хендлы.
+                        DetachProcessOutputHandlers(process);
+                        process.Dispose();
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        CrashLogWriter.Write("GameExitWatcher", "Failed while handling game process exit", ex);
+                    }
                 });
 
                 if (settings.CloseOnLaunch)
@@ -692,17 +1005,17 @@ namespace MinecraftLauncher.ViewModels
             catch (Exception ex)
             {
                 ProgressFillRatio = 0.0;
-                ProgressText = "Готов к запуску";
-                _toastService.ShowError($"Ошибка запуска: {ex.Message}", "Ошибка");
+                ProgressText = _loc.GetString("Str_Progress_Ready");
+                _toastService.ShowError(_loc.Format("Str_T_ErrorLaunch", ex.Message), _loc.GetString("Str_T_Error"));
                 _discordService.SetMenuState(SelectedVersion);
             }
             finally
             {
                 IsActionOverlayVisible = false;
-                if (ProgressText.StartsWith("Подготовка"))
+                if (ProgressText.StartsWith(_progressPreparingPrefix, StringComparison.Ordinal))
                 {
                     ProgressFillRatio = 0.0;
-                    ProgressText = "Готов к запуску";
+                    ProgressText = _loc.GetString("Str_Progress_Ready");
                 }
             }
         }
@@ -722,14 +1035,14 @@ namespace MinecraftLauncher.ViewModels
 
                 if (string.IsNullOrWhiteSpace(name))
                 {
-                    _toastService.ShowWarning("Введите название сборки!", "Создание сборки");
+                    _toastService.ShowWarning(_loc.GetString("Str_Pack_NameRequired"), _loc.GetString("Str_T_PackCreateTitle"));
                     return;
                 }
 
                 var settings = _settingsService.Settings;
                 if (settings.Modpacks.Any(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase)))
                 {
-                    _toastService.ShowError("Сборка с таким названием уже существует.", "Ошибка");
+                    _toastService.ShowError(_loc.GetString("Str_Pack_NameExists"), _loc.GetString("Str_T_Error"));
                     return;
                 }
 
@@ -768,11 +1081,11 @@ namespace MinecraftLauncher.ViewModels
                 IsModpackOverlayVisible = false;
                 await LoadVersionsAsync();
                 SelectedVersion = $"⭐ {newPack.Name} ({newPack.Loader})";
-                _toastService.ShowSuccess($"Сборка '{name}' создана!", "Сборки");
+                _toastService.ShowSuccess(_loc.Format("Str_Pack_Created", name), _loc.GetString("Str_T_PacksTitle"));
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка при создании сборки: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_Pack_CreateError", ex.Message), _loc.GetString("Str_T_Error"));
             }
         }
 
@@ -780,7 +1093,7 @@ namespace MinecraftLauncher.ViewModels
         {
             if (string.IsNullOrWhiteSpace(ShortcutVersion) || string.IsNullOrWhiteSpace(ShortcutIp))
             {
-                _toastService.ShowWarning("Заполните все поля для создания ярлыка.", "Ярлык");
+                _toastService.ShowWarning(_loc.GetString("Str_Shortcut_FieldsRequired"), _loc.GetString("Str_T_Shortcut"));
                 return;
             }
 
@@ -804,11 +1117,11 @@ namespace MinecraftLauncher.ViewModels
                 }
 
                 IsShortcutOverlayVisible = false;
-                _toastService.ShowSuccess("Ярлык быстрого входа создан на рабочем столе!", "Готово");
+                _toastService.ShowSuccess(_loc.GetString("Str_Shortcut_Created"), _loc.GetString("Str_T_Done"));
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка создания ярлыка: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_Shortcut_Error", ex.Message), _loc.GetString("Str_T_Error"));
             }
         }
 
@@ -817,62 +1130,32 @@ namespace MinecraftLauncher.ViewModels
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "Modpack files (*.mrpack;*.zip)|*.mrpack;*.zip|Modrinth Pack (*.mrpack)|*.mrpack|Zip Archive (*.zip)|*.zip",
-                Title = "Импорт сборки"
+                Title = _loc.GetString("Str_Dialog_ImportPack")
             };
 
             if (dlg.ShowDialog() == true)
             {
                 try
                 {
-                    var settings = _settingsService.Settings;
-                    string ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
+                    _toastService.ShowInfo(_loc.GetString("Str_Import_Progress"), _loc.GetString("Str_T_ImportTitle"));
 
-                    if (ext == ".mrpack")
-                    {
-                        _toastService.ShowInfo("Импорт Modrinth сборки...", "Импорт");
-                        var profile = await MrPackInstaller.InstallMrPackAsync(dlg.FileName, settings.GamePath);
-                        settings.Modpacks.Add(profile);
-                        _settingsService.Save(settings);
+                    // Общий сервис импорта вместо второй копии этой же логики.
+                    var profile = await ModpackImportService.Instance.ImportAsync(
+                        dlg.FileName,
+                        _settingsService.Settings.GamePath);
 
-                        await LoadVersionsAsync();
-                        IsModpackOverlayVisible = false;
-                        SelectedVersion = $"⭐ {profile.Name} ({profile.Loader})";
-                        _toastService.ShowSuccess($"Сборка '{profile.Name}' успешно установлена!", "Импорт");
-                    }
-                    else
-                    {
-                        string packName = Path.GetFileNameWithoutExtension(dlg.FileName);
-                        string instancesPath = Path.Combine(settings.GamePath, "instances", packName);
+                    _settingsService.Settings.Modpacks.Add(profile);
+                    _settingsService.Save();
 
-                        if (Directory.Exists(instancesPath))
-                        {
-                            packName += "_" + DateTime.Now.ToString("HHmmss");
-                            instancesPath = Path.Combine(settings.GamePath, "instances", packName);
-                        }
-
-                        Directory.CreateDirectory(instancesPath);
-                        ZipFile.ExtractToDirectory(dlg.FileName, instancesPath, true);
-
-                        var newPack = new ModpackProfile
-                        {
-                            Name = packName,
-                            GameVersion = "1.20.1",
-                            Loader = "Custom",
-                            FolderPath = instancesPath
-                        };
-
-                        settings.Modpacks.Add(newPack);
-                        _settingsService.Save(settings);
-
-                        await LoadVersionsAsync();
-                        IsModpackOverlayVisible = false;
-                        SelectedVersion = $"⭐ {newPack.Name} ({newPack.Loader})";
-                        _toastService.ShowSuccess($"Сборка '{packName}' успешно импортирована!", "Импорт");
-                    }
+                    await LoadVersionsAsync();
+                    IsModpackOverlayVisible = false;
+                    SelectedVersion = $"⭐ {profile.Name} ({profile.Loader})";
+                    _toastService.ShowSuccess(_loc.Format("Str_Import_Done", profile.Name), _loc.GetString("Str_T_ImportTitle"));
                 }
                 catch (Exception ex)
                 {
-                    _toastService.ShowError($"Ошибка распаковки сборки: {ex.Message}", "Ошибка импорта");
+                    CrashLogWriter.Write("ModpackImport", $"Failed to import '{dlg.FileName}'", ex);
+                    _toastService.ShowError(_loc.Format("Str_Import_Error", ex.Message), _loc.GetString("Str_T_Error"));
                 }
             }
         }
@@ -881,13 +1164,19 @@ namespace MinecraftLauncher.ViewModels
         {
             if (string.IsNullOrWhiteSpace(SelectedVersion) || !SelectedVersion.StartsWith("⭐ "))
             {
-                _toastService.ShowWarning("Выберите кастомную сборку для удаления.", "Удаление");
+                _toastService.ShowWarning(_loc.GetString("Str_Delete_PackRequired"), _loc.GetString("Str_T_Delete"));
                 return;
             }
 
-            string packName = SelectedVersion.Substring(2, SelectedVersion.LastIndexOf('(') - 3).Trim();
+            // Раньше вычислялось LastIndexOf('(') - 3 без проверки: при записи вида
+            // "⭐ Сборка" без скобок LastIndexOf возвращает -1, и Substring(2, -4)
+            // бросал ArgumentOutOfRangeException прямо в обработчик кнопки.
+            int openParen = SelectedVersion.IndexOf('(');
+            string packName = openParen > 2
+                ? SelectedVersion[2..openParen].Trim()
+                : SelectedVersion[2..].Trim();
 
-            if (QMessageBoxWindow.Show($"Удалить сборку '{packName}' и все ее файлы?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (QMessageBoxWindow.Show(_loc.Format("Str_Pack_DeleteQuestion", packName), _loc.GetString("Str_T_Confirmation"), MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 var settings = _settingsService.Settings;
                 var pack = settings.Modpacks.Find(p => p.Name == packName);
@@ -905,7 +1194,7 @@ namespace MinecraftLauncher.ViewModels
                     settings.Modpacks.Remove(pack);
                     _settingsService.Save(settings);
                     _ = LoadVersionsAsync();
-                    _toastService.ShowSuccess($"Сборка '{packName}' удалена.", "Успешно");
+                    _toastService.ShowSuccess(_loc.Format("Str_Delete_Done", packName), _loc.GetString("Str_T_Success"));
                 }
             }
         }

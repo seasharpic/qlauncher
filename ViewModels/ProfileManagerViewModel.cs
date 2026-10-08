@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -20,6 +20,9 @@ namespace MinecraftLauncher.ViewModels
         private static readonly HttpClient HttpClient = new();
         private readonly ModpackProfile _profile;
         private readonly IToastService _toastService;
+
+        // Локализация для строк, которые собираются в коде.
+        private readonly ILocalizationService _loc = LocalizationService.Instance;
         private readonly IAudioService _audioService;
         private readonly ISettingsService _settingsService;
 
@@ -89,10 +92,10 @@ namespace MinecraftLauncher.ViewModels
             _audioService = audioService;
             _settingsService = settingsService;
 
-            TitleText = $"Сборка: {profile.Name}";
+            TitleText = _loc.Format("Str_Profile_Title", profile.Name);
             long hours = profile.PlaytimeMinutes / 60;
             long mins = profile.PlaytimeMinutes % 60;
-            PlaytimeText = $"Время в игре: {hours} ч {mins} мин • Запусков: {profile.LaunchCount}";
+            PlaytimeText = _loc.Format("Str_Profile_Playtime", hours, mins, profile.LaunchCount);
 
             ToggleModCommand = new RelayCommand<LocalModItem>(ExecuteToggleMod);
             DeleteModCommand = new RelayCommand<LocalModItem>(ExecuteDeleteMod);
@@ -221,7 +224,7 @@ namespace MinecraftLauncher.ViewModels
                 {
                     WorldName = worldName,
                     FullPath = dir,
-                    LastPlayedText = $"Изменен: {lastPlayed}",
+                    LastPlayedText = _loc.Format("Str_Profile_LastPlayed", lastPlayed),
                     IconPath = iconPath
                 });
             }
@@ -231,50 +234,79 @@ namespace MinecraftLauncher.ViewModels
         {
             if (LocalMods.Count == 0)
             {
-                _toastService.ShowInfo("В сборке нет модов для проверки.", "Проверка модов");
+                _toastService.ShowInfo(_loc.GetString("Str_Mods_NothingToCheck"), _loc.GetString("Str_T_ModsCheck"));
                 return;
             }
 
             IsCheckingUpdates = true;
-            _toastService.ShowInfo("Проверка обновлений модов на Modrinth...", "Обновления");
+            _toastService.ShowInfo(_loc.GetString("Str_Mods_UpdateChecking"), _loc.GetString("Str_T_Updates"));
 
             int verifiedCount = 0;
             int unknownCount = 0;
 
-            await Task.Run(async () =>
+            // Снимок коллекции на UI-потоке: раньше LocalMods (привязанная
+            // к UI ObservableCollection) перебиралась из пула, что давало
+            // InvalidOperationException при параллельном изменении и нарушало
+            // потоковую привязку коллекции.
+            var modsToCheck = LocalMods
+                .Where(m => m.IsEnabled && File.Exists(m.FullPath))
+                .Select(m => m.FullPath)
+                .ToList();
+
+            int verified = 0;
+            int unknown = 0;
+
+            using var semaphore = new SemaphoreSlim(6);
+
+            await Task.WhenAll(modsToCheck.Select(async path =>
             {
-                foreach (var mod in LocalMods)
+                await semaphore.WaitAsync();
+                try
                 {
-                    if (!File.Exists(mod.FullPath) || !mod.IsEnabled) continue;
+                    using var stream = File.OpenRead(path);
+                    using var sha1 = SHA1.Create();
+                    byte[] hashBytes = await sha1.ComputeHashAsync(stream);
+                    string hashStr = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
 
-                    try
+                    string url = $"https://api.modrinth.com/v2/version_file/{hashStr}?algorithm=sha1";
+                    var resp = await HttpClient.GetAsync(url);
+
+                    if (resp.IsSuccessStatusCode)
                     {
-                        using var stream = File.OpenRead(mod.FullPath);
-                        using var sha1 = SHA1.Create();
-                        byte[] hashBytes = await sha1.ComputeHashAsync(stream);
-                        string hashStr = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-
-                        string url = $"https://api.modrinth.com/v2/version_file/{hashStr}?algorithm=sha1";
-                        var resp = await HttpClient.GetAsync(url);
-
-                        if (resp.IsSuccessStatusCode)
-                        {
-                            verifiedCount++;
-                        }
-                        else
-                        {
-                            unknownCount++;
-                        }
+                        Interlocked.Increment(ref verified);
                     }
-                    catch
+                    else
                     {
-                        unknownCount++;
+                        Interlocked.Increment(ref unknown);
                     }
                 }
-            });
+                catch
+                {
+                    Interlocked.Increment(ref unknown);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }));
+
+            verifiedCount = verified;
+            unknownCount = unknown;
 
             IsCheckingUpdates = false;
-            _toastService.ShowSuccess($"Проверено модов: {verifiedCount}. Все версии актуальны!", "Проверка обновлений");
+
+            // Раньше сообщение всегда обещало "Все версии актуальны!", даже если
+            // проверка не удалась ни для одного мода. Теперь это отражено в тексте.
+            if (unknownCount > 0)
+            {
+                _toastService.ShowInfo(
+                    _loc.Format("Str_Mods_Partial", verifiedCount, unknownCount),
+                    _loc.GetString("Str_T_Updates"));
+            }
+            else
+            {
+                _toastService.ShowSuccess(_loc.Format("Str_Mods_AllCurrent", verifiedCount), _loc.GetString("Str_T_Updates"));
+            }
         }
 
         private void ExecuteToggleMod(LocalModItem? mod)
@@ -294,7 +326,7 @@ namespace MinecraftLauncher.ViewModels
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Не удалось переключить мод: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_Mod_ToggleError", ex.Message), _loc.GetString("Str_T_Error"));
             }
         }
 
@@ -302,17 +334,17 @@ namespace MinecraftLauncher.ViewModels
         {
             if (mod == null || !File.Exists(mod.FullPath)) return;
 
-            if (QMessageBoxWindow.Show($"Удалить модификацию '{mod.FileName}'?", "Удаление мода", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (QMessageBoxWindow.Show(_loc.Format("Str_Mod_DeleteQuestion", mod.FileName), _loc.GetString("Str_T_DeleteModConfirm"), MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 try
                 {
                     File.Delete(mod.FullPath);
                     LocalMods.Remove(mod);
-                    _toastService.ShowInfo($"Мод '{mod.FileName}' удален.", "Моды");
+                    _toastService.ShowInfo(_loc.Format("Str_Mod_Deleted", mod.FileName), _loc.GetString("Str_T_Mods"));
                 }
                 catch (Exception ex)
                 {
-                    _toastService.ShowError($"Ошибка удаления: {ex.Message}", "Ошибка");
+                    _toastService.ShowError(_loc.Format("Str_Mod_DeleteError", ex.Message), _loc.GetString("Str_T_Error"));
                 }
             }
         }
@@ -355,14 +387,14 @@ namespace MinecraftLauncher.ViewModels
 
             try
             {
-                _toastService.ShowInfo($"Создание бэкапа мира '{world.WorldName}'...", "Резервное копирование");
+                _toastService.ShowInfo(_loc.Format("Str_Backup_Creating", world.WorldName), _loc.GetString("Str_T_Backup"));
                 await WorldBackupService.Instance.CreateBackupAsync(world.FullPath, _profile.FolderPath);
                 LoadBackups();
-                _toastService.ShowSuccess($"Резервная копия мира '{world.WorldName}' создана.", "Резервное копирование");
+                _toastService.ShowSuccess(_loc.Format("Str_Backup_Created", world.WorldName), _loc.GetString("Str_T_Backup"));
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка создания бэкапа: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_Backup_Error", ex.Message), _loc.GetString("Str_T_Error"));
             }
         }
 
@@ -371,8 +403,8 @@ namespace MinecraftLauncher.ViewModels
             if (backup == null || !File.Exists(backup.FullPath)) return;
 
             var result = QMessageBoxWindow.Show(
-                $"Восстановить мир '{backup.WorldName}' из архива '{backup.FileName}'?\nТекущее состояние мира будет сохранено в резервную копию.",
-                "Восстановление мира",
+                _loc.Format("Str_Dialog_RestoreWorld", backup.WorldName, backup.FileName),
+                _loc.GetString("Str_Dialog_RestoreWorldTitle"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
@@ -380,15 +412,15 @@ namespace MinecraftLauncher.ViewModels
 
             try
             {
-                _toastService.ShowInfo($"Восстановление мира '{backup.WorldName}'...", "Восстановление");
+                _toastService.ShowInfo(_loc.Format("Str_Restore_Running", backup.WorldName), _loc.GetString("Str_T_RestoreBackup"));
                 await WorldBackupService.Instance.RestoreBackupAsync(backup.FullPath, _profile.FolderPath);
                 LoadWorlds();
                 LoadBackups();
-                _toastService.ShowSuccess($"Мир '{backup.WorldName}' успешно восстановлен.", "Восстановление");
+                _toastService.ShowSuccess(_loc.Format("Str_Restore_Done", backup.WorldName), _loc.GetString("Str_T_RestoreBackup"));
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка восстановления: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_Restore_Error", ex.Message), _loc.GetString("Str_T_Error"));
             }
         }
 
@@ -397,8 +429,8 @@ namespace MinecraftLauncher.ViewModels
             if (backup == null || !File.Exists(backup.FullPath)) return;
 
             var result = QMessageBoxWindow.Show(
-                $"Удалить резервную копию '{backup.FileName}' безвозвратно?",
-                "Удаление бэкапа",
+                _loc.Format("Str_Dialog_DeleteBackup", backup.FileName),
+                _loc.GetString("Str_Dialog_DeleteBackupTitle"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
 
@@ -409,12 +441,12 @@ namespace MinecraftLauncher.ViewModels
                 if (WorldBackupService.Instance.DeleteBackup(backup.FullPath))
                 {
                     Backups.Remove(backup);
-                    _toastService.ShowInfo($"Бэкап '{backup.FileName}' удален.", "Резервные копии");
+                    _toastService.ShowInfo(_loc.Format("Str_Backup_Deleted", backup.FileName), _loc.GetString("Str_T_Backup"));
                 }
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка удаления бэкапа: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_Backup_DeleteError", ex.Message), _loc.GetString("Str_T_Error"));
             }
         }
 
@@ -422,17 +454,17 @@ namespace MinecraftLauncher.ViewModels
         {
             if (world == null || !Directory.Exists(world.FullPath)) return;
 
-            if (QMessageBoxWindow.Show($"Удалить мир '{world.WorldName}' безвозвратно?", "Удаление мира", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (QMessageBoxWindow.Show(_loc.Format("Str_World_DeleteQuestion", world.WorldName), _loc.GetString("Str_T_DeleteConfirm"), MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 try
                 {
                     Directory.Delete(world.FullPath, true);
                     Worlds.Remove(world);
-                    _toastService.ShowInfo($"Мир '{world.WorldName}' удален.", "Сохранения");
+                    _toastService.ShowInfo(_loc.Format("Str_World_Deleted", world.WorldName), _loc.GetString("Str_T_Worlds"));
                 }
                 catch (Exception ex)
                 {
-                    _toastService.ShowError($"Ошибка удаления мира: {ex.Message}", "Ошибка");
+                    _toastService.ShowError(_loc.Format("Str_World_DeleteError", ex.Message), _loc.GetString("Str_T_Error"));
                 }
             }
         }
@@ -443,7 +475,7 @@ namespace MinecraftLauncher.ViewModels
             {
                 FileName = $"{_profile.Name}.zip",
                 Filter = "Zip Archive (*.zip)|*.zip",
-                Title = "Экспорт сборки"
+                Title = _loc.GetString("Str_Dialog_ExportPack")
             };
 
             if (dlg.ShowDialog() == true)
@@ -452,11 +484,11 @@ namespace MinecraftLauncher.ViewModels
                 {
                     if (File.Exists(dlg.FileName)) File.Delete(dlg.FileName);
                     ZipFile.CreateFromDirectory(_profile.FolderPath, dlg.FileName);
-                    _toastService.ShowSuccess("Сборка успешно экспортирована!", "Экспорт");
+                    _toastService.ShowSuccess(_loc.GetString("Str_Export_Done"), _loc.GetString("Str_T_Export"));
                 }
                 catch (Exception ex)
                 {
-                    _toastService.ShowError($"Ошибка экспорта: {ex.Message}", "Ошибка");
+                    _toastService.ShowError(_loc.Format("Str_Export_Error", ex.Message), _loc.GetString("Str_T_Error"));
                 }
             }
         }

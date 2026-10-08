@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +13,9 @@ namespace MinecraftLauncher.Views.Pages
 {
     public partial class ProfileManagerPage : Page
     {
+        // Локализация для строк, которые собираются в коде.
+        private static readonly ILocalizationService _loc = LocalizationService.Instance;
+
         private readonly ModpackProfile _profile;
         public ProfileManagerViewModel ViewModel { get; }
 
@@ -94,7 +97,7 @@ namespace MinecraftLauncher.Views.Pages
 
         private void DeletePack_Click(object sender, RoutedEventArgs e)
         {
-            if (QMessageBoxWindow.Show($"Вы действительно хотите удалить сборку '{_profile.Name}'?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (QMessageBoxWindow.Show(_loc.Format("Str_Dialog_DeletePack", _profile.Name), _loc.GetString("Str_Dialog_DefaultTitle"), MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 var settings = SettingsService.Instance.Settings;
                 var modpack = settings.Modpacks.Find(p => p.Name == _profile.Name);
@@ -117,7 +120,7 @@ namespace MinecraftLauncher.Views.Pages
                         mainWin.ReloadLauncher();
                         mainWin.CloseSettings();
                     }
-                    ToastService.Instance.ShowSuccess("Сборка успешно удалена.", "Успешно");
+                    ToastService.Instance.ShowSuccess(_loc.GetString("Str_Profile_DeletedPlain"), _loc.GetString("Str_T_Success"));
                 }
             }
         }

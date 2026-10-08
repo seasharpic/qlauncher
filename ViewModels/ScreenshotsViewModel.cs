@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -15,6 +15,9 @@ namespace MinecraftLauncher.ViewModels
     {
         private readonly string _screenshotsFolder;
         private readonly IToastService _toastService;
+
+        // Локализация для строк, которые собираются в коде.
+        private readonly ILocalizationService _loc = LocalizationService.Instance;
 
         private BitmapImage? _previewImage;
         private bool _isPreviewVisible;
@@ -138,11 +141,11 @@ namespace MinecraftLauncher.ViewModels
             {
                 var bitmap = new BitmapImage(new Uri(path, UriKind.Absolute));
                 Clipboard.SetImage(bitmap);
-                _toastService.ShowSuccess("Скриншот скопирован в буфер обмена.", "Галерея");
+                _toastService.ShowSuccess(_loc.GetString("Str_Screenshot_Copied"), _loc.GetString("Str_T_Screenshot"));
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка копирования: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_Screenshot_CopyError", ex.Message), _loc.GetString("Str_T_Error"));
             }
         }
 
@@ -150,17 +153,17 @@ namespace MinecraftLauncher.ViewModels
         {
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
 
-            if (QMessageBoxWindow.Show("Удалить выбранный скриншот?", "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (QMessageBoxWindow.Show(_loc.GetString("Str_Screenshot_DeleteQuestion"), _loc.GetString("Str_T_Confirmation"), MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 try
                 {
                     File.Delete(path);
                     LoadScreenshots();
-                    _toastService.ShowInfo("Скриншот удален.", "Галерея");
+                    _toastService.ShowInfo(_loc.GetString("Str_Screenshot_Deleted"), _loc.GetString("Str_T_Screenshot"));
                 }
                 catch (Exception ex)
                 {
-                    _toastService.ShowError($"Ошибка удаления: {ex.Message}", "Ошибка");
+                    _toastService.ShowError(_loc.Format("Str_Screenshot_DeleteError", ex.Message), _loc.GetString("Str_T_Error"));
                 }
             }
         }

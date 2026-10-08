@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MinecraftLauncher.Helpers;
 
 namespace MinecraftLauncher.Services.LaunchEngine.Models
 {
@@ -11,10 +12,41 @@ namespace MinecraftLauncher.Services.LaunchEngine.Models
         public string JavaPath { get; set; } = "";
         public string PlayerName { get; set; } = "Player";
         public string Uuid { get; set; } = "";
-        public string AccessToken { get; set; } = "offline";
+        public string AccessToken { get; set; } = OfflineAccessToken;
+
+        /// <summary>
+        /// Метка офлайн-аккаунта. Офлайн-аккаунты создаются с таким значением
+        /// вместо настоящего токена, потому что токена у них нет.
+        /// </summary>
+        public const string OfflineAccessToken = "offline";
+
+        /// <summary>
+        /// Нужна ли игре авторизация Microsoft.
+        ///
+        /// Правило живёт здесь, а не в сборщике аргументов: раньше проверка
+        /// выглядела как "!string.IsNullOrEmpty(AccessToken)", из-за чего
+        /// офлайн-аккаунт с меткой "offline" считался онлайновым. В игру
+        /// уходили user_type=mojang и clientid при заведомо нерабочем токене,
+        /// и сессионные серверы отклоняли авторизацию.
+        /// </summary>
+        public bool IsOnlineAuth =>
+            !string.IsNullOrWhiteSpace(AccessToken)
+            && !string.Equals(AccessToken, OfflineAccessToken, StringComparison.OrdinalIgnoreCase);
         public int RamMb { get; set; } = 4096;
-        public string JvmPreset { get; set; } = "default";
+
+        /// <summary>
+        /// Пресет сборщика мусора. Помимо значений из JvmOptimizationHelper
+        /// принимает "Auto" — выбор по объёму памяти. По умолчанию Auto.
+        /// </summary>
+        public string JvmPreset { get; set; } = JvmOptimizationHelper.AutoPresetName;
         public string CustomJvmArgs { get; set; } = "";
+
+        /// <summary>
+        /// Базовые оптимизации JVM (StringDeduplication, ParallelRefProc,
+        /// AlwaysPreTouch, PerfDisableSharedMem) поверх флагов сборщика мусора.
+        /// При false остаются только флаги сборщика.
+        /// </summary>
+        public bool UseOptimizedJvmArgs { get; set; } = true;
         public int ScreenWidth { get; set; } = 1920;
         public int ScreenHeight { get; set; } = 1080;
         public bool IsFullScreen { get; set; }

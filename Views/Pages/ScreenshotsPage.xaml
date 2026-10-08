@@ -1,4 +1,4 @@
-<Page x:Class="MinecraftLauncher.Views.Pages.ScreenshotsPage"
+﻿<Page x:Class="MinecraftLauncher.Views.Pages.ScreenshotsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:vm="clr-namespace:MinecraftLauncher.ViewModels"
@@ -6,7 +6,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       mc:Ignorable="d"
       d:DataContext="{d:DesignInstance vm:ScreenshotsViewModel}"
-      Title="Галерея скриншотов" Background="Transparent"
+      Title="{DynamicResource Str_Screenshots_Title}" Background="Transparent"
       FontFamily="Inter">
 
     <Grid Margin="20">
@@ -25,15 +25,15 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
-                        <Button Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="16" Style="{DynamicResource DarkButtonStyle}" Width="36" Height="36" Click="BackButton_Click" ToolTip="Назад"/>
-                        <TextBlock Text="Галерея скриншотов Minecraft" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                        <Button Content="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="16" Style="{DynamicResource DarkButtonStyle}" Width="36" Height="36" Click="BackButton_Click" ToolTip="{DynamicResource Str_Action_Back}"/>
+                        <TextBlock Text="{DynamicResource Str_Screenshots_Header}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" Margin="15,0,0,0"/>
                     </StackPanel>
 
-                    <Button Grid.Column="2" Content="Открыть папку" Command="{Binding OpenFolderCommand}" Padding="12,6" Style="{DynamicResource DarkButtonStyle}"/>
+                    <Button Grid.Column="2" Content="{DynamicResource Str_Screenshots_OpenFolder}" Command="{Binding OpenFolderCommand}" Padding="12,6" Style="{DynamicResource DarkButtonStyle}"/>
                 </Grid>
 
                 <Grid Grid.Row="1">
-                    <TextBlock Text="Скриншоты пока не найдены..." Foreground="{DynamicResource SecondaryTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource Str_Screenshots_Empty}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -74,10 +74,10 @@
                                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                                         <Button Content="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
                                                                 Command="{Binding DataContext.CopyImageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                                                CommandParameter="{Binding FilePath}" Width="26" Height="26" Style="{DynamicResource DarkButtonStyle}" ToolTip="Копировать" Margin="0,0,4,0"/>
+                                                                CommandParameter="{Binding FilePath}" Width="26" Height="26" Style="{DynamicResource DarkButtonStyle}" ToolTip="{DynamicResource Str_Screenshots_Copy}" Margin="0,0,4,0"/>
                                                         <Button Content="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
                                                                 Command="{Binding DataContext.DeleteImageCommand, RelativeSource={RelativeSource AncestorType=Page}}"
-                                                                CommandParameter="{Binding FilePath}" Width="26" Height="26" Foreground="#FF5555" Style="{DynamicResource DarkButtonStyle}" ToolTip="Удалить"/>
+                                                                CommandParameter="{Binding FilePath}" Width="26" Height="26" Foreground="#FF5555" Style="{DynamicResource DarkButtonStyle}" ToolTip="{DynamicResource Str_Screenshots_DeleteTooltip}"/>
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
@@ -116,7 +116,7 @@
                                 <Button Content="&#xE8BB;" FontFamily="Segoe MDL2 Assets" 
                                         Command="{Binding ClosePreviewCommand}" 
                                         Style="{DynamicResource DarkButtonStyle}" 
-                                        Width="34" Height="34" FontSize="12" ToolTip="Закрыть"/>
+                                        Width="34" Height="34" FontSize="12" ToolTip="{DynamicResource Str_Screenshots_CloseTooltip}"/>
                             </StackPanel>
                         </Grid>
                     </Grid>

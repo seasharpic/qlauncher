@@ -17,6 +17,11 @@ namespace MinecraftLauncher.Models
             set => SetProperty(ref _nickname, value);
         }
 
+        /// <summary>
+        /// Токен сессии Mojang/Xbox. В памяти — обычная строка, на диск сериализуется
+        /// зашифрованной через DPAPI (см. <see cref="ProtectedStringConverter"/>).
+        /// </summary>
+        [JsonConverter(typeof(ProtectedStringConverter))]
         public string AccessToken
         {
             get => _accessToken;

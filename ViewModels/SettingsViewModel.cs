@@ -1,11 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using CmlLib.Core.Auth.Microsoft;
 using Microsoft.Win32;
 using MinecraftLauncher.Common;
 using MinecraftLauncher.Helpers;
@@ -20,6 +19,10 @@ namespace MinecraftLauncher.ViewModels
         private readonly IToastService _toastService;
         private readonly IThemeService _themeService;
 
+        // Локализация для строк, которые собираются в коде: в XAML подстановкой
+        // занимается DynamicResource, здесь нужен явный вызов.
+        private readonly ILocalizationService _loc = LocalizationService.Instance;
+
         private bool _closeOnLaunch;
         private bool _enableDiscordRpc;
         private bool _enableUiSounds;
@@ -27,8 +30,11 @@ namespace MinecraftLauncher.ViewModels
         private bool _hideServerIp;
         private int _ramMb;
         private string _javaPath = "";
-        private string _jvmPreset = "default";
+        private string _jvmPreset = JvmOptimizationHelper.AutoPresetName;
         private string _customJvmArgs = "";
+        private bool _useOptimizedJvmArgs = true;
+        private string _resolvedJvmArgs = "";
+        private string _jvmArgsWarning = "";
         private bool _isFullScreen;
         private int _screenWidth;
         private int _screenHeight;
@@ -43,6 +49,8 @@ namespace MinecraftLauncher.ViewModels
         private bool _showSplashOnStartup = true;
         private string _updateChannel = "stable";
         private string _updateMirror = "auto";
+        private string _mirrorPreference = "Auto";
+        private string _sourcesStatusText = "";
         private int _bandwidthLimitMbps = 0;
         private bool _isCheckingUpdates = false;
 
@@ -99,7 +107,13 @@ namespace MinecraftLauncher.ViewModels
             get => _ramMb;
             set
             {
-                if (SetProperty(ref _ramMb, value)) SaveSettings();
+                if (SetProperty(ref _ramMb, value))
+                {
+                    SaveSettings();
+                    // Пресет "Auto" выбирает сборщик по объёму памяти, поэтому
+                    // изменение RAM меняет и набор флагов.
+                    _ = RefreshJvmPreviewAsync();
+                }
             }
         }
 
@@ -108,7 +122,13 @@ namespace MinecraftLauncher.ViewModels
             get => _javaPath;
             set
             {
-                if (SetProperty(ref _javaPath, value)) SaveSettings();
+                if (SetProperty(ref _javaPath, value))
+                {
+                    SaveSettings();
+                    // Версия JVM определяет доступные сборщики мусора, а конкретная
+                    // сборка — реальный набор опций.
+                    _ = RefreshJvmPreviewAsync();
+                }
             }
         }
 
@@ -117,7 +137,11 @@ namespace MinecraftLauncher.ViewModels
             get => _jvmPreset;
             set
             {
-                if (SetProperty(ref _jvmPreset, value)) SaveSettings();
+                if (SetProperty(ref _jvmPreset, value))
+                {
+                    SaveSettings();
+                    _ = RefreshJvmPreviewAsync();
+                }
             }
         }
 
@@ -126,9 +150,54 @@ namespace MinecraftLauncher.ViewModels
             get => _customJvmArgs;
             set
             {
-                if (SetProperty(ref _customJvmArgs, value)) SaveSettings();
+                if (SetProperty(ref _customJvmArgs, value))
+                {
+                    SaveSettings();
+                    _ = RefreshJvmPreviewAsync();
+                }
             }
         }
+
+        public bool UseOptimizedJvmArgs
+        {
+            get => _useOptimizedJvmArgs;
+            set
+            {
+                if (SetProperty(ref _useOptimizedJvmArgs, value))
+                {
+                    SaveSettings();
+                    _ = RefreshJvmPreviewAsync();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Аргументы, которые лаунчер реально подставит при следующем запуске.
+        /// Показывается пользователю, чтобы выбор пресета не был «чёрным ящиком».
+        /// </summary>
+        public string ResolvedJvmArgs
+        {
+            get => _resolvedJvmArgs;
+            private set => SetProperty(ref _resolvedJvmArgs, value);
+        }
+
+        /// <summary>
+        /// Предупреждение о понижении пресета (например, ZGC на Java 8).
+        /// Пустая строка — всё в порядке.
+        /// </summary>
+        public string JvmArgsWarning
+        {
+            get => _jvmArgsWarning;
+            private set
+            {
+                if (SetProperty(ref _jvmArgsWarning, value))
+                {
+                    OnPropertyChanged(nameof(HasJvmArgsWarning));
+                }
+            }
+        }
+
+        public bool HasJvmArgsWarning => !string.IsNullOrEmpty(_jvmArgsWarning);
 
         public bool IsFullScreen
         {
@@ -268,6 +337,74 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
+        public string MirrorPreference
+        {
+            get => _mirrorPreference;
+            set
+            {
+                if (!SetProperty(ref _mirrorPreference, value)) return;
+
+                // Применяем сразу: от этого зависит порядок источников при
+                // следующей загрузке, и он должен быть виден без перезапуска.
+                MirrorService.Instance.Preference = MirrorService.ParsePreference(value);
+                _settingsService.Settings.MirrorPreference =
+                    MirrorService.PreferenceToString(MirrorService.Instance.Preference);
+                SaveSettings();
+                _ = RefreshSourcesStatusAsync();
+            }
+        }
+
+        /// <summary>
+        /// Что показать пользователю о состоянии источников: какие хосты
+        /// отвечают. Пусто, пока проверка не выполнена или пользователь
+        /// выбрал OfficialOnly (там результат не влияет на поведение).
+        /// </summary>
+        public string SourcesStatusText
+        {
+            get => _sourcesStatusText;
+            private set => SetProperty(ref _sourcesStatusText, value);
+        }
+
+        public async Task RefreshSourcesStatusAsync()
+        {
+            try
+            {
+                await MirrorService.Instance.ProbeAsync();
+            }
+            catch (Exception ex)
+            {
+                CrashLogWriter.Write("SettingsViewModel", "Failed to refresh sources status", ex);
+            }
+
+            if (IsClosed) return;
+
+            MirrorMode preference = MirrorService.Instance.Preference;
+
+            string text;
+            if (preference == MirrorMode.OfficialOnly)
+            {
+                text = _loc.GetString("Str_Sources_OfficialOnlyNote");
+            }
+            else if (!MirrorService.Instance.HasProbeResult)
+            {
+                text = _loc.GetString("Str_Sources_Checking");
+            }
+            else
+            {
+                // Список недоступных хостов: он зависит от результата проверки,
+                // поэтому собирается в коде, а не берётся готовой строкой.
+                string blocked = MirrorService.DescribeBlockedHosts();
+                text = string.IsNullOrEmpty(blocked)
+                    ? _loc.GetString("Str_Sources_AllReachable")
+                    : _loc.Format("Str_Sources_Blocked", blocked);
+            }
+
+            _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                SourcesStatusText = text;
+            }));
+        }
+
         public int BandwidthLimitMbps
         {
             get => _bandwidthLimitMbps;
@@ -276,6 +413,11 @@ namespace MinecraftLauncher.ViewModels
                 if (SetProperty(ref _bandwidthLimitMbps, value))
                 {
                     OnPropertyChanged(nameof(BandwidthLimitTag));
+
+                    // Применяем сразу: загрузка могла уже идти, и лимит
+                    // обязан влиять на неё без перезапуска лаунчера.
+                    BandwidthLimiter.Configure(value);
+
                     SaveSettings();
                 }
             }
@@ -301,11 +443,17 @@ namespace MinecraftLauncher.ViewModels
 
         public bool IsPortableMode => LauncherPathHelper.IsPortableMode;
 
-        public string PortableModeStatusText => IsPortableMode
-            ? (IsRussianLanguage ? "Портативный режим активен (хранилище ./data)" : "Portable mode is active (storage ./data)")
-            : (IsRussianLanguage ? "Стандартный режим (хранилище %APPDATA%/.qlauncher)" : "Standard mode (storage %APPDATA%/.qlauncher)");
+        /// <summary>Кнопка «включить портативный режим» скрыта, когда он уже включён.</summary>
+        public bool CanEnablePortableMode => !IsPortableMode;
 
-        public string CurrentVersionText => $"{UpdateService.CurrentVersion}{(IsPortableMode ? " (Портативный режим)" : "")}";
+        /// <summary>Кнопка «выключить портативный режим» скрыта в обычном режиме.</summary>
+        public bool CanDisablePortableMode => IsPortableMode;
+
+        public string PortableModeStatusText => IsPortableMode
+            ? _loc.GetString("Str_Settings_PortableActive")
+            : _loc.GetString("Str_Settings_PortableInactive");
+
+        public string CurrentVersionText => $"{UpdateService.CurrentVersion}{(IsPortableMode ? _loc.GetString("Str_Settings_PortableSuffix") : "")}";
 
         public string CurrentLanguage => LocalizationService.Instance.CurrentLanguage;
         public bool IsRussianLanguage => CurrentLanguage == "ru";
@@ -325,6 +473,9 @@ namespace MinecraftLauncher.ViewModels
         public RelayCommand RefreshGpuCommand { get; }
         public RelayCommand AutoTuneHardwareCommand { get; }
         public AsyncRelayCommand ExportPortableCommand { get; }
+        public RelayCommand EnablePortableModeCommand { get; }
+        public RelayCommand DisablePortableModeCommand { get; }
+        public AsyncRelayCommand RestartToApplyPortableModeCommand { get; }
         public RelayCommand OpenDataFolderCommand { get; }
         public RelayCommand<string> ChangeLanguageCommand { get; }
         public AsyncRelayCommand CheckUpdatesManualCommand { get; }
@@ -374,11 +525,14 @@ namespace MinecraftLauncher.ViewModels
             RefreshGpuCommand = new RelayCommand(() =>
             {
                 PopulateGpuOptions();
-                _toastService.ShowSuccess("Список видеокарт обновлен");
+                _toastService.ShowSuccess(_loc.GetString("Str_Gpu_ListUpdated"));
             });
 
             AutoTuneHardwareCommand = new RelayCommand(ExecuteAutoTuneHardware);
             ExportPortableCommand = new AsyncRelayCommand(ExecuteExportPortableAsync);
+            EnablePortableModeCommand = new RelayCommand(ExecuteEnablePortableMode);
+            DisablePortableModeCommand = new RelayCommand(ExecuteDisablePortableMode);
+            RestartToApplyPortableModeCommand = new AsyncRelayCommand(ExecuteRestartToApplyPortableModeAsync);
             OpenDataFolderCommand = new RelayCommand(ExecuteOpenDataFolder);
             ChangeLanguageCommand = new RelayCommand<string>(ExecuteChangeLanguage);
 
@@ -402,6 +556,10 @@ namespace MinecraftLauncher.ViewModels
         public void Cleanup()
         {
             _themeService.ThemeChanged -= OnThemeChanged;
+
+            // Фоновый подсчёт кэша мог завершиться после ухода со страницы
+            // и обновить свойства уже невидимого ViewModel.
+            IsClosed = true;
         }
 
         public void LoadFromSettings()
@@ -415,8 +573,9 @@ namespace MinecraftLauncher.ViewModels
             _hideServerIp = s.HideServerIp;
             _ramMb = s.RamMb;
             _javaPath = s.JavaPath;
-            _jvmPreset = s.JvmPreset;
+            _jvmPreset = JvmOptimizationHelper.NormalizePresetName(s.JvmPreset);
             _customJvmArgs = s.CustomJvmArgs;
+            _useOptimizedJvmArgs = s.UseOptimizedJvmArgs;
             _isFullScreen = s.IsFullScreen;
             _screenWidth = s.ScreenWidth;
             _screenHeight = s.ScreenHeight;
@@ -426,12 +585,19 @@ namespace MinecraftLauncher.ViewModels
             _showSplashOnStartup = s.ShowSplashOnStartup;
             _updateChannel = string.IsNullOrWhiteSpace(s.UpdateChannel) ? "stable" : s.UpdateChannel;
             _updateMirror = string.IsNullOrWhiteSpace(s.UpdateMirror) ? "auto" : s.UpdateMirror;
+            _mirrorPreference = MirrorService.PreferenceToString(MirrorService.ParsePreference(s.MirrorPreference));
             _bandwidthLimitMbps = s.BandwidthLimitMbps;
+
+            // Синхронизируем рантайм с настройками: MirrorService — синглтон,
+            // и он должен знать предпочтение ещё до первого запроса.
+            MirrorService.Instance.Preference = MirrorService.ParsePreference(s.MirrorPreference);
 
             OnPropertyChanged(string.Empty);
 
             PopulateGpuOptions();
             UpdateCacheInfo();
+            _ = RefreshJvmPreviewAsync();
+            _ = RefreshSourcesStatusAsync();
 
             Accounts.Clear();
             foreach (var acc in s.Accounts)
@@ -439,14 +605,92 @@ namespace MinecraftLauncher.ViewModels
                 acc.AvatarImage = AvatarHelper.GetDefaultAvatar();
                 Accounts.Add(acc);
 
-                _ = Task.Run(async () =>
+                // Задача запускается без await, поэтому её исключение наблюдалось бы
+                // только через UnobservedTaskException. Ошибки сети при загрузке
+                // аватара молча терялись.
+                _ = LoadAvatarAsync(acc);
+            }
+        }
+
+        /// <summary>
+        /// Пересчитывает предпросмотр аргументов JVM.
+        ///
+        /// Проба опций запускает javaw.exe, поэтому делается на фоне и не блокирует
+        /// UI. Результат кэшируется в JavaService по пути, так что при переборе
+        /// пресетов новый процесс не создаётся.
+        /// </summary>
+        private async Task RefreshJvmPreviewAsync()
+        {
+            try
+            {
+                string javaPath = JavaPath;
+
+                int javaMajor = await Task.Run(() =>
                 {
-                    var img = await AvatarHelper.GetAvatarAsync(acc.Nickname, acc.Uuid);
-                    if (img != null)
+                    if (!string.IsNullOrWhiteSpace(javaPath) && File.Exists(javaPath))
                     {
-                        Application.Current.Dispatcher.Invoke(() => acc.AvatarImage = img);
+                        return JavaService.DetectJavaMajorVersion(javaPath);
                     }
+
+                    // Путь не задан: лаунчер сам скачает Java по требованиям версии
+                    // игры. Для предпросмотра этого достаточно.
+                    string mcVersion = _settingsService.Settings.LastSelectedVersion;
+                    return string.IsNullOrWhiteSpace(mcVersion)
+                        ? JavaCompatibilityService.DefaultJavaVersion
+                        : JavaCompatibilityService.GetRequiredJavaVersionCore(mcVersion);
                 });
+
+                var supportedFlags = string.IsNullOrWhiteSpace(javaPath)
+                    ? null
+                    : await JavaService.GetSupportedFlagsAsync(javaPath);
+
+                string? warning;
+                var flags = JvmOptimizationHelper.GetOptimizedJvmArguments(
+                    JvmPreset,
+                    RamMb,
+                    javaMajor,
+                    CustomJvmArgs,
+                    UseOptimizedJvmArgs,
+                    supportedFlags,
+                    out warning);
+
+                int ram = RamMb;
+                string memoryArgs = $"-Xmx{ram}M -Xms{Math.Max(512, ram / 2)}M";
+                string text = string.Join(' ', flags.Prepend(memoryArgs));
+
+                if (IsClosed) return;
+
+                _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    ResolvedJvmArgs = text;
+                    JvmArgsWarning = warning ?? "";
+                }));
+            }
+            catch (Exception ex)
+            {
+                CrashLogWriter.Write("SettingsViewModel", "Failed to build JVM arguments preview", ex);
+            }
+        }
+
+        private async Task LoadAvatarAsync(AccountProfile acc)
+        {
+            try
+            {
+                var img = await AvatarHelper.GetAvatarAsync(acc.Nickname, acc.Uuid);
+
+                if (img == null || IsClosed) return;
+
+                // Присваивание через "_ =" подавляет предупреждение CS4014:
+                // результат намеренно не ожидается, задача наблюдает свои ошибки сама.
+                _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    acc.AvatarImage = img;
+                }));
+            }
+            catch (Exception ex)
+            {
+                // Аватар не критичен: оставляем дефолтный и пишем в лог.
+                CrashLogWriter.Write("AvatarLoad", $"Failed to load avatar for '{acc.Nickname}'", ex);
             }
         }
 
@@ -473,6 +717,7 @@ namespace MinecraftLauncher.ViewModels
             s.JavaPath = JavaPath;
             s.JvmPreset = JvmPreset;
             s.CustomJvmArgs = CustomJvmArgs;
+            s.UseOptimizedJvmArgs = UseOptimizedJvmArgs;
             s.IsFullScreen = IsFullScreen;
             s.ScreenWidth = ScreenWidth;
             s.ScreenHeight = ScreenHeight;
@@ -482,8 +727,13 @@ namespace MinecraftLauncher.ViewModels
             s.ShowSplashOnStartup = ShowSplashOnStartup;
             s.UpdateChannel = UpdateChannel;
             s.UpdateMirror = UpdateMirror;
+            s.MirrorPreference = MirrorService.PreferenceToString(MirrorService.ParsePreference(MirrorPreference));
             s.BandwidthLimitMbps = BandwidthLimitMbps;
-            _settingsService.Save(s);
+
+            // SaveSettings вызывается из сеттера любого свойства, поэтому обычный
+            // Save писал и сериализовал settings.json на UI-потоке при каждом
+            // нажатии чекбокса. Отложенная запись убирает это.
+            _settingsService.SaveDebounced();
         }
 
         public void PopulateGpuOptions()
@@ -493,22 +743,22 @@ namespace MinecraftLauncher.ViewModels
             GpuOptions.Add(new GpuOptionItem
             {
                 Id = "HighPerformance",
-                Title = "Высокая производительность (Дискретная)",
-                Subtitle = "Максимальный FPS на производительном GPU"
+                Title = _loc.GetString("Str_Gpu_HighPerf"),
+                Subtitle = _loc.GetString("Str_Gpu_HighPerfSub")
             });
 
             GpuOptions.Add(new GpuOptionItem
             {
                 Id = "PowerSaving",
-                Title = "Энергосбережение (Встроенная)",
-                Subtitle = "Минимальный нагрев и энергопотребление"
+                Title = _loc.GetString("Str_Gpu_PowerSaving"),
+                Subtitle = _loc.GetString("Str_Gpu_PowerSavingSub")
             });
 
             GpuOptions.Add(new GpuOptionItem
             {
                 Id = "Default",
-                Title = "По умолчанию Windows (Автовыбор)",
-                Subtitle = "Автоматический выбор системы"
+                Title = _loc.GetString("Str_Gpu_Default"),
+                Subtitle = _loc.GetString("Str_Gpu_DefaultSub")
             });
 
             var detectedGpus = GpuService.Instance.GetAvailableGpus();
@@ -518,7 +768,10 @@ namespace MinecraftLauncher.ViewModels
                 {
                     Id = gpu.Name,
                     Title = gpu.DisplayName,
-                    Subtitle = $"Драйвер {gpu.DriverVersion} | {(gpu.IsDiscrete ? "Дискретная" : "Встроенная")}"
+                    Subtitle = _loc.Format(
+                        "Str_Gpu_DriverLine",
+                        gpu.DriverVersion,
+                        _loc.GetString(gpu.IsDiscrete ? "Str_Gpu_KindDiscrete" : "Str_Gpu_KindIntegrated"))
                 });
             }
 
@@ -539,54 +792,70 @@ namespace MinecraftLauncher.ViewModels
             if (string.Equals(_gpuPreference, "HighPerformance", StringComparison.OrdinalIgnoreCase))
             {
                 ActiveGpuSummary = discreteGpu != null
-                    ? $"Высокая производительность: {discreteGpu.DisplayName}"
-                    : "Режим: Высокая производительность";
-                ActiveGpuDetails = "Windows и видеодрайвер направят процесс игры на дискретный графический чип.";
+                    ? _loc.Format("Str_Gpu_SummaryHighPerf", discreteGpu.DisplayName)
+                    : _loc.GetString("Str_Gpu_ModeHighPerf");
+                ActiveGpuDetails = _loc.GetString("Str_Gpu_DetailHighPerf");
             }
             else if (string.Equals(_gpuPreference, "PowerSaving", StringComparison.OrdinalIgnoreCase))
             {
                 var integratedGpu = detectedGpus.FirstOrDefault(g => !g.IsDiscrete);
                 ActiveGpuSummary = integratedGpu != null
-                    ? $"Энергосбережение: {integratedGpu.DisplayName}"
-                    : "Режим: Энергосбережение";
-                ActiveGpuDetails = "Используется встроенный видеоадаптер для экономии батареи.";
+                    ? _loc.Format("Str_Gpu_SummaryPowerSaving", integratedGpu.DisplayName)
+                    : _loc.GetString("Str_Gpu_ModePowerSaving");
+                ActiveGpuDetails = _loc.GetString("Str_Gpu_DetailPowerSaving");
             }
             else if (string.Equals(_gpuPreference, "Default", StringComparison.OrdinalIgnoreCase))
             {
                 ActiveGpuSummary = primaryGpu != null
-                    ? $"Автовыбор Windows ({primaryGpu.Name})"
-                    : "Режим: По умолчанию Windows";
-                ActiveGpuDetails = "Операционная система сама определяет используемый видеоадаптер.";
+                    ? _loc.Format("Str_Gpu_SummaryDefault", primaryGpu.Name)
+                    : _loc.GetString("Str_Gpu_ModeDefault");
+                ActiveGpuDetails = _loc.GetString("Str_Gpu_DetailDefault");
             }
             else
             {
                 var specificGpu = detectedGpus.FirstOrDefault(g => string.Equals(g.Name, _gpuPreference, StringComparison.OrdinalIgnoreCase));
                 if (specificGpu != null)
                 {
-                    ActiveGpuSummary = $"Выбран адаптер: {specificGpu.DisplayName}";
-                    ActiveGpuDetails = $"Драйвер: {specificGpu.DriverVersion} | Видеопамять: {specificGpu.VramFormatted}";
+                    ActiveGpuSummary = _loc.Format("Str_Gpu_SummarySpecific", specificGpu.DisplayName);
+                    ActiveGpuDetails = _loc.Format("Str_Gpu_DetailSpecific", specificGpu.DriverVersion, specificGpu.VramFormatted);
                 }
                 else
                 {
-                    ActiveGpuSummary = $"Выбран адаптер: {_gpuPreference}";
-                    ActiveGpuDetails = "Указан индивидуальный видеоадаптер.";
+                    ActiveGpuSummary = _loc.Format("Str_Gpu_SummarySpecific", _gpuPreference);
+                    ActiveGpuDetails = _loc.GetString("Str_Gpu_DetailUnknown");
                 }
             }
         }
 
-        private void UpdateCacheInfo()
+        /// <summary>
+        /// Обновляет индикатор размера кэша.
+        ///
+        /// Раньше подсчёт шёл на UI-потоке прямо из LoadFromSettings, то есть
+        /// рекурсивный обход каталогов блокировал интерфейс при открытии настроек.
+        /// Теперь считаем в Task.Run и обновляем текст по завершении.
+        /// </summary>
+        private async void UpdateCacheInfo()
         {
-            long bytes = CacheCleanerHelper.CalculateCacheSize(_settingsService.Settings.GamePath);
+            string gamePath = _settingsService.Settings.GamePath;
+
+            long bytes = await Task.Run(() => CacheCleanerHelper.CalculateCacheSize(gamePath));
+
             double mb = bytes / (1024.0 * 1024.0);
-            CacheInfoText = $"Размер кэша и логов: {mb:F1} МБ";
+
+            // Страница могла быть закрыта, пока шёл подсчёт.
+            if (IsClosed) return;
+
+            CacheInfoText = _loc.Format("Str_Cache_Size", $"{mb:F1}");
         }
+
+        private bool IsClosed { get; set; }
 
         private void ExecuteBrowseJava()
         {
             var dlg = new OpenFileDialog
             {
-                Filter = "Java Executable (javaw.exe;java.exe)|javaw.exe;java.exe|All files (*.*)|*.*",
-                Title = "Выберите исполняемый файл Java"
+                Filter = _loc.GetString("Str_Dialog_JavaFilter"),
+                Title = _loc.GetString("Str_Dialog_JavaTitle")
             };
 
             if (dlg.ShowDialog() == true)
@@ -599,8 +868,8 @@ namespace MinecraftLauncher.ViewModels
         {
             var dlg = new OpenFileDialog
             {
-                Filter = "Изображения (*.jpg;*.jpeg;*.png)|*.jpg;*.jpeg;*.png",
-                Title = "Выберите фоновое изображение"
+                Filter = _loc.GetString("Str_Dialog_ImageFilter"),
+                Title = _loc.GetString("Str_Dialog_WallpaperTitle")
             };
 
             if (dlg.ShowDialog() == true)
@@ -609,11 +878,22 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
-        private void ExecuteCleanCache()
+        private async void ExecuteCleanCache()
         {
-            double freedMb = CacheCleanerHelper.CleanCache(_settingsService.Settings.GamePath);
+            string gamePath = _settingsService.Settings.GamePath;
+
+            // Удаление каталогов — дисковая операция, раньше выполнялась на UI-потоке.
+            double freedMb = await Task.Run(() => CacheCleanerHelper.CleanCache(gamePath));
+
             UpdateCacheInfo();
-            _toastService.ShowSuccess($"Освобождено {freedMb:F1} МБ дискового пространства.", "Очистка кэша");
+
+            if (freedMb < 0.05)
+            {
+                _toastService.ShowInfo(_loc.GetString("Str_Cache_NothingToClean"), _loc.GetString("Str_T_Cache"));
+                return;
+            }
+
+            _toastService.ShowSuccess(_loc.Format("Str_Cache_Freed", $"{freedMb:F1}"), _loc.GetString("Str_T_Cache"));
         }
 
         private void ExecuteAddOfflineAccount()
@@ -621,14 +901,14 @@ namespace MinecraftLauncher.ViewModels
             string nick = OfflineNicknameInput.Trim();
             if (string.IsNullOrWhiteSpace(nick))
             {
-                _toastService.ShowWarning("Введите никнейм для создания оффлайн-аккаунта.", "Аккаунт");
+                _toastService.ShowWarning(_loc.GetString("Str_Offline_NickRequired"), _loc.GetString("Str_T_Account"));
                 return;
             }
 
             var s = _settingsService.Settings;
             if (s.Accounts.Any(a => string.Equals(a.Nickname, nick, StringComparison.OrdinalIgnoreCase)))
             {
-                _toastService.ShowWarning("Аккаунт с таким никнеймом уже добавлен.", "Аккаунт");
+                _toastService.ShowWarning(_loc.GetString("Str_Offline_NickExists"), _loc.GetString("Str_T_Account"));
                 return;
             }
 
@@ -645,35 +925,37 @@ namespace MinecraftLauncher.ViewModels
 
             LoadFromSettings();
             OfflineNicknameInput = "";
-            _toastService.ShowSuccess($"Аккаунт '{nick}' успешно добавлен!", "Аккаунт");
+            _toastService.ShowSuccess(_loc.Format("Str_Offline_AddedOk", nick), _loc.GetString("Str_T_Account"));
         }
 
         private async Task ExecuteLoginMicrosoftAsync()
         {
             try
             {
-                _toastService.ShowInfo("Открывается окно авторизации Microsoft...", "Вход Microsoft");
+                _toastService.ShowInfo(_loc.GetString("Str_MsLoginOpening"), _loc.GetString("Str_MsLogin"));
 
-                var loginHandler = JELoginHandlerBuilder.BuildDefault();
-                var session = await loginHandler.AuthenticateInteractively();
+                // Через сервис, а не через JELoginHandlerBuilder.BuildDefault():
+                // встроенный обработчик держит refresh-токен в памяти, и после
+                // закрытия лаунчера продлевать сессию было бы нечем.
+                var session = await MicrosoftAuthService.Instance.LoginInteractivelyAsync();
 
-                if (session != null && !string.IsNullOrEmpty(session.Username))
+                if (session != null && session.IsUsable)
                 {
                     var s = _settingsService.Settings;
                     var existing = s.Accounts.FirstOrDefault(a => a.Nickname == session.Username);
 
                     if (existing != null)
                     {
-                        existing.AccessToken = session.AccessToken ?? "";
-                        existing.Uuid = session.UUID ?? "";
+                        existing.AccessToken = session.AccessToken;
+                        existing.Uuid = session.Uuid;
                     }
                     else
                     {
                         s.Accounts.Add(new AccountProfile
                         {
                             Nickname = session.Username,
-                            AccessToken = session.AccessToken ?? "",
-                            Uuid = session.UUID ?? ""
+                            AccessToken = session.AccessToken,
+                            Uuid = session.Uuid
                         });
                     }
 
@@ -681,12 +963,12 @@ namespace MinecraftLauncher.ViewModels
                     _settingsService.Save(s);
                     LoadFromSettings();
 
-                    _toastService.ShowSuccess($"Вы вошли как {session.Username}!", "Microsoft Login");
+                    _toastService.ShowSuccess(_loc.Format("Str_MsLoginSuccess", session.Username), _loc.GetString("Str_T_OAuth"));
                 }
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка входа Microsoft: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_MsLoginError", ex.Message), _loc.GetString("Str_T_Error"));
             }
         }
 
@@ -699,13 +981,24 @@ namespace MinecraftLauncher.ViewModels
             if (toRemove != null)
             {
                 s.Accounts.Remove(toRemove);
+
+                // Удаление аккаунта Microsoft должно убирать и сохранённый
+                // refresh-токен: иначе секрет, позволяющий войти без пароля,
+                // остаётся лежать на диске. Сброс общий — по одному аккаунту
+                // библиотека удалять не даёт.
+                if (!string.IsNullOrEmpty(account.AccessToken) &&
+                    !string.Equals(account.AccessToken, Services.LaunchEngine.Models.LaunchOptions.OfflineAccessToken, StringComparison.OrdinalIgnoreCase))
+                {
+                    MicrosoftAuthService.Instance.SignOutAll();
+                }
+
                 if (s.ActiveAccount == account.Nickname)
                 {
                     s.ActiveAccount = s.Accounts.FirstOrDefault()?.Nickname ?? "";
                 }
                 _settingsService.Save(s);
                 LoadFromSettings();
-                _toastService.ShowInfo($"Аккаунт '{account.Nickname}' удален.", "Аккаунты");
+                _toastService.ShowInfo(_loc.Format("Str_Offline_DeletedToast", account.Nickname), _loc.GetString("Str_T_Accounts"));
             }
         }
 
@@ -714,6 +1007,21 @@ namespace MinecraftLauncher.ViewModels
             if (!string.IsNullOrEmpty(preset))
             {
                 _themeService.ApplyAccentPreset(preset);
+                OnPropertyChanged(nameof(SelectedAccentPreset));
+            }
+        }
+
+        /// <summary>
+        /// Какое имя пресета считать выбранным.
+        /// Нужно, чтобы подсветить активный вариант: раньше выбор акцента
+        /// нигде не отображался, и нельзя было понять, какой применён.
+        /// </summary>
+        public string SelectedAccentPreset
+        {
+            get
+            {
+                string preset = _settingsService.Settings.AccentPreset;
+                return string.IsNullOrWhiteSpace(preset) ? "sapphire" : preset.ToLowerInvariant();
             }
         }
 
@@ -723,7 +1031,7 @@ namespace MinecraftLauncher.ViewModels
             IsCheckingUpdates = true;
             try
             {
-                _toastService.ShowInfo("Проверка наличия обновлений...", "Обновления");
+                _toastService.ShowInfo(_loc.GetString("Str_Update_CheckingLong"), _loc.GetString("Str_T_Updates"));
                 var release = await UpdateService.Instance.CheckForUpdatesAsync(isManual: true);
                 if (release != null && release.HasUpdate)
                 {
@@ -738,12 +1046,12 @@ namespace MinecraftLauncher.ViewModels
                 }
                 else
                 {
-                    _toastService.ShowSuccess($"У вас установлена актуальная версия {UpdateService.CurrentVersion}", "Обновления");
+                    _toastService.ShowSuccess(_loc.Format("Str_Update_Current", UpdateService.CurrentVersion), _loc.GetString("Str_T_Updates"));
                 }
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Не удалось проверить обновления: {ex.Message}", "Ошибка");
+                _toastService.ShowError(_loc.Format("Str_Update_CheckError", ex.Message), _loc.GetString("Str_T_Error"));
             }
             finally
             {
@@ -757,20 +1065,20 @@ namespace MinecraftLauncher.ViewModels
             {
                 var sfd = new Microsoft.Win32.SaveFileDialog
                 {
-                    Title = "Сохранить диагностический отчёт",
-                    Filter = "ZIP-архив (*.zip)|*.zip",
+                    Title = _loc.GetString("Str_Dialog_DiagnosticTitle"),
+                    Filter = _loc.GetString("Str_Dialog_ZipFilter"),
                     FileName = $"qlauncher-report-{DateTime.Now:yyyyMMdd_HHmmss}.zip"
                 };
 
                 if (sfd.ShowDialog() == true)
                 {
                     string zipPath = await DiagnosticReportService.Instance.GenerateReportZipAsync(sfd.FileName);
-                    _toastService.ShowSuccess($"Диагностический отчёт сохранён:\n{Path.GetFileName(zipPath)}", "Диагностика");
+                    _toastService.ShowSuccess(_loc.Format("Str_Diagnostic_SavedPlain", Path.GetFileName(zipPath)), _loc.GetString("Str_T_Diagnostics"));
                 }
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка при создании отчёта: {ex.Message}", "Диагностика");
+                _toastService.ShowError(_loc.Format("Str_Diagnostic_ErrorPlain", ex.Message), _loc.GetString("Str_T_Diagnostics"));
             }
         }
 
@@ -799,20 +1107,30 @@ namespace MinecraftLauncher.ViewModels
                     optimalRam = 6144;
 
                 RamMb = optimalRam;
-                JvmPreset = "aikar";
 
-                var discreteGpu = GpuOptions.FirstOrDefault(g => g.Id == "HighPerformance" || g.Subtitle.Contains("Дискретная"));
+                // "Auto" вместо жёсткого пресета: сборщик подбирается под объём
+                // памяти и под версию Java, которую реально скачает лаунчер.
+                JvmPreset = JvmOptimizationHelper.AutoPresetName;
+                UseOptimizedJvmArgs = true;
+
+                // Отбор дискретной карты по Id, а не по русской подписи в Subtitle:
+                // подпись меняется при смене языка, Id — нет.
+                var discreteGpu = GpuOptions.FirstOrDefault(g => g.Id == "HighPerformance");
                 if (discreteGpu != null)
                 {
                     SelectedGpuOption = discreteGpu;
                 }
 
                 SaveSettings();
-                _toastService.ShowSuccess($"Настройки оптимизированы: RAM {optimalRam} МБ, профиль Aikar G1GC, приоритет дискретного GPU.", "Авто-оптимизация");
+                _toastService.ShowSuccess(
+                    _loc.Format("Str_AutoTune_Done", optimalRam),
+                    _loc.GetString("Str_T_AutoTune"));
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Не удалось выполнить авто-оптимизацию: {ex.Message}", "Ошибка");
+                _toastService.ShowError(
+                    _loc.Format("Str_AutoTune_Error", ex.Message),
+                    _loc.GetString("Str_T_Error"));
             }
         }
 
@@ -820,24 +1138,136 @@ namespace MinecraftLauncher.ViewModels
         {
             try
             {
+                // По умолчанию предлагаем полный перенос: пустой пакет на флешке
+                // придётся заново настраивать. Если пользователю нужна «чистая»
+                // копия для раздачи, снимаем галочку.
+                bool includeGameData = _settingsService.Settings.GamePath.Length > 0;
+
+                var result = System.Windows.MessageBox.Show(
+                    _loc.GetString("Str_Export_QuestionRu"),
+                    _loc.GetString("Str_Export_DialogTitleRu"),
+                    includeGameData ? MessageBoxButton.OKCancel : MessageBoxButton.OK,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Cancel)
+                {
+                    includeGameData = false;
+                }
+                else if (result != MessageBoxResult.OK)
+                {
+                    return;
+                }
+
                 var sfd = new Microsoft.Win32.SaveFileDialog
                 {
-                    Title = "Сохранить портативный пакет QLauncher",
-                    Filter = "ZIP-архив (*.zip)|*.zip",
+                    Title = _loc.GetString("Str_SaveFile_Title"),
+                    Filter = _loc.GetString("Str_Dialog_ZipFilter"),
                     FileName = "QLauncher-Portable.zip"
                 };
 
                 if (sfd.ShowDialog() == true)
                 {
-                    _toastService.ShowInfo("Упаковка портативной версии...", "Портативный режим");
-                    string path = await LauncherPathHelper.ExportPortablePackageAsync(sfd.FileName);
-                    _toastService.ShowSuccess($"Портативная версия успешно экспортирована:\n{Path.GetFileName(path)}", "Портативный режим");
+                    _toastService.ShowInfo(_loc.GetString("Str_Portable_Exporting"), _loc.GetString("Str_T_PortableTitle"));
+                    string path = await LauncherPathHelper.ExportPortablePackageAsync(sfd.FileName, includeGameData);
+                    _toastService.ShowSuccess(
+                        _loc.Format("Str_Portable_Exported", Path.GetFileName(path)),
+                        _loc.GetString("Str_T_PortableTitle"));
                 }
             }
             catch (Exception ex)
             {
-                _toastService.ShowError($"Ошибка экспорта портативной версии: {ex.Message}", "Ошибка");
+                _toastService.ShowError(
+                    _loc.Format("Str_Portable_ExportError", ex.Message),
+                    _loc.GetString("Str_T_Error"));
             }
+        }
+
+        private void ExecuteEnablePortableMode()
+        {
+            if (LauncherPathHelper.EnablePortableMode())
+            {
+                // Раньше здесь стоял выбор строки через IsRussianLanguage: две
+                // копии текста на каждое сообщение. Теперь язык определяется
+                // ресурсами, поэтому отдельные варианты под каждый язык не нужны.
+                _toastService.ShowSuccess(
+                    _loc.GetString("Str_Portable_EnabledRu"),
+                    _loc.GetString("Str_T_PortableTitle"));
+
+                // settings.json сейчас читается из %APPDATA%, а после перезапуска
+                // уже из ./data. Запись идёт по старому пути, поэтому сохраняем
+                // настройки вручную до перезапуска — иначе перенесённый файл
+                // окажется старым.
+                _settingsService.Save();
+                RaisePortableStateChanged();
+            }
+            else
+            {
+                _toastService.ShowError(
+                    _loc.GetString("Str_Portable_EnableFailed"),
+                    _loc.GetString("Str_T_Error"));
+            }
+        }
+
+        private void ExecuteDisablePortableMode()
+        {
+            if (LauncherPathHelper.DisablePortableMode())
+            {
+                _toastService.ShowSuccess(
+                    _loc.GetString("Str_Portable_DisabledRu"),
+                    _loc.GetString("Str_T_PortableTitle"));
+
+                RaisePortableStateChanged();
+            }
+            else
+            {
+                _toastService.ShowError(
+                    _loc.GetString("Str_Portable_DisableFailed"),
+                    _loc.GetString("Str_T_Error"));
+            }
+        }
+
+        /// <summary>
+        /// Сигнализирует UI об изменении портативного режима.
+        /// Отдельный метод, потому что список свойств повторялся в двух
+        /// обработчиках и раньше легко расходился.
+        /// </summary>
+        private void RaisePortableStateChanged()
+        {
+            OnPropertyChanged(nameof(IsPortableMode));
+            OnPropertyChanged(nameof(CanEnablePortableMode));
+            OnPropertyChanged(nameof(CanDisablePortableMode));
+            OnPropertyChanged(nameof(PortableModeStatusText));
+            OnPropertyChanged(nameof(DataDirectoryPath));
+            OnPropertyChanged(nameof(CurrentVersionText));
+        }
+
+        private async Task ExecuteRestartToApplyPortableModeAsync()
+        {
+            string exePath = Environment.ProcessPath ?? "";
+            if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
+            {
+                _toastService.ShowError(_loc.GetString("Str_Restart_ExeFailed"), _loc.GetString("Str_T_Error"));
+                return;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = exePath,
+                    UseShellExecute = true
+                });
+
+                Application.Current.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                _toastService.ShowError(
+                    _loc.Format("Str_Restart_Failed", ex.Message),
+                    _loc.GetString("Str_T_Error"));
+            }
+
+            await Task.CompletedTask;
         }
 
         private void ExecuteOpenDataFolder()
@@ -864,7 +1294,12 @@ namespace MinecraftLauncher.ViewModels
                 OnPropertyChanged(nameof(IsEnglishLanguage));
                 OnPropertyChanged(nameof(PortableModeStatusText));
                 OnPropertyChanged(nameof(CurrentVersionText));
-                _toastService.ShowSuccess(lang == "en" ? "Language changed to English" : "Язык интерфейса изменён на Русский", "Language");
+                // Ключ выбирается по новому языку, а не по текущему: к моменту показа
+                // подтверждения SetLanguage уже переключил словарь.
+                _toastService.ShowSuccess(
+                    LocalizationService.Instance.GetString(
+                        lang == "en" ? "Str_Lang_ChangedToEn" : "Str_Lang_ChangedToRu"),
+                    LocalizationService.Instance.GetString("Str_T_Lang"));
             }
         }
     }

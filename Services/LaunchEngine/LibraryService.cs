@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Services.LaunchEngine.Models;
 
 namespace MinecraftLauncher.Services.LaunchEngine
@@ -18,6 +19,60 @@ namespace MinecraftLauncher.Services.LaunchEngine
             AllowAutoRedirect = true
         });
 
+        /// <summary>
+        /// Переставляет кандидатов так, чтобы недоступные хосты оказались в конце.
+        ///
+        /// Идея из PineconeMC (PineconeNetworkCheck): если maven.fabricmc.net
+        /// недоступен из сети пользователя, каждый библиотечный файл начинался
+        /// с попытки достучаться до него и тратил таймаут. Здесь мы сортируем
+        /// список по результату проверки хоста, сохраняя взаимный порядок
+        /// доступных кандидатов, чтобы официальный источник оставался первым
+        /// по умолчанию.
+        ///
+        /// При включённом OfficialOnly список не переставляется вовсе.
+        /// </summary>
+        private static List<string> OrderMavenCandidates(List<string> candidates, string relativePath)
+        {
+            if (candidates.Count < 2 || MirrorService.Instance.Preference == MirrorMode.OfficialOnly)
+            {
+                return candidates;
+            }
+
+            // Официальные кандидаты по умолчанию: адрес из манифеста плюс
+            // репозиторий Mojang.
+            var official = new List<string>(candidates.Count);
+            string? mirror = null;
+
+            foreach (string candidate in candidates)
+            {
+                if (MirrorService.GetHost(candidate) == MirrorService.BmclapiHost)
+                {
+                    mirror = candidate;
+                }
+                else
+                {
+                    official.Add(candidate);
+                }
+            }
+
+            if (mirror == null)
+            {
+                return candidates;
+            }
+
+            bool officialReachable = official.Exists(url => MirrorService.IsHostReachable(MirrorService.GetHost(url)));
+            bool mirrorReachable = MirrorService.IsHostReachable(MirrorService.BmclapiHost);
+
+            if (mirrorReachable && !officialReachable)
+            {
+                var reordered = new List<string>(official.Count + 1) { mirror };
+                reordered.AddRange(official);
+                return reordered;
+            }
+
+            return candidates;
+        }
+
         public async Task<List<string>> EnsureLibrariesAsync(
             string gameRootPath,
             MojangVersionInfo versionInfo,
@@ -29,7 +84,8 @@ namespace MinecraftLauncher.Services.LaunchEngine
             Directory.CreateDirectory(librariesRoot);
             Directory.CreateDirectory(nativesExtractDir);
 
-            var downloadTasks = new List<(List<string> candidateUrls, string localPath, bool isNative)>();
+            // Ожидаемый SHA-1 из манифеста Mojang: null, если манифест его не содержит.
+            var downloadTasks = new List<(List<string> candidateUrls, string localPath, bool isNative, string? expectedSha1)>();
 
             foreach (var lib in versionInfo.Libraries)
             {
@@ -51,7 +107,8 @@ namespace MinecraftLauncher.Services.LaunchEngine
                             $"https://repo1.maven.org/maven2/{cleanRel}",
                             $"https://bmclapi2.bangbang93.com/maven/{cleanRel}"
                         };
-                        downloadTasks.Add((candidates, localPath, false));
+                        candidates = OrderMavenCandidates(candidates, cleanRel);
+                        downloadTasks.Add((candidates, localPath, false, lib.Downloads.Artifact.Sha1));
                     }
                 }
                 else if (!string.IsNullOrEmpty(lib.Name))
@@ -76,7 +133,9 @@ namespace MinecraftLauncher.Services.LaunchEngine
                         candidates.Add($"https://repo1.maven.org/maven2/{cleanRel}");
                         candidates.Add($"https://bmclapi2.bangbang93.com/maven/{cleanRel}");
 
-                        downloadTasks.Add((candidates, localPath, false));
+                        // У этой ветки манифест не даёт хеша (артефакт строится из координаты),
+                            // поэтому сверять нечего.
+                        downloadTasks.Add((OrderMavenCandidates(candidates, cleanRel), localPath, false, null));
                     }
                 }
 
@@ -91,12 +150,14 @@ namespace MinecraftLauncher.Services.LaunchEngine
                         if (!File.Exists(nativePath) || new FileInfo(nativePath).Length == 0)
                         {
                             string cleanRel = nativeRel.Replace('\\', '/');
-                            var candidates = new List<string>
-                            {
-                                nativeArtifact.Url,
-                                $"https://bmclapi2.bangbang93.com/maven/{cleanRel}"
-                            };
-                            downloadTasks.Add((candidates, nativePath, true));
+                            var candidates = OrderMavenCandidates(
+                                new List<string>
+                                {
+                                    nativeArtifact.Url,
+                                    $"https://bmclapi2.bangbang93.com/maven/{cleanRel}"
+                                },
+                                cleanRel);
+                            downloadTasks.Add((candidates, nativePath, true, nativeArtifact.Sha1));
                         }
                         else
                         {
@@ -120,7 +181,7 @@ namespace MinecraftLauncher.Services.LaunchEngine
                         await semaphore.WaitAsync();
                         try
                         {
-                            await DownloadFileWithFallbackAsync(item.candidateUrls, item.localPath);
+                            await DownloadFileWithFallbackAsync(item.candidateUrls, item.localPath, item.expectedSha1);
                             if (item.isNative && File.Exists(item.localPath))
                             {
                                 ExtractNativeJar(item.localPath, nativesExtractDir);
@@ -131,7 +192,7 @@ namespace MinecraftLauncher.Services.LaunchEngine
                             progress?.Report(new LaunchProgress
                             {
                                 Phase = LaunchPhase.DownloadingLibraries,
-                                StatusText = $"Загрузка библиотек ({cur}/{total})...",
+                                StatusText = LocalizationService.Instance.Format("Str_Launch_DownloadLibraries", cur, total),
                                 Percentage = pct
                             });
                         }
@@ -186,7 +247,9 @@ namespace MinecraftLauncher.Services.LaunchEngine
 
                 if (criticalMissing)
                 {
-                    throw new InvalidOperationException($"Не удалось загрузить важные библиотеки: {string.Join(", ", missingLibraries.GetRange(0, Math.Min(3, missingLibraries.Count)))}. Проверьте подключение к интернету.");
+                    throw new InvalidOperationException(LocalizationService.Instance.Format(
+                    "Str_Library_CriticalFailed",
+                    string.Join(", ", missingLibraries.GetRange(0, Math.Min(3, missingLibraries.Count)))));
                 }
             }
 
@@ -259,7 +322,10 @@ namespace MinecraftLauncher.Services.LaunchEngine
             catch { }
         }
 
-        private static async Task DownloadFileWithFallbackAsync(IEnumerable<string> candidateUrls, string destinationPath)
+        private static async Task DownloadFileWithFallbackAsync(
+            IEnumerable<string> candidateUrls,
+            string destinationPath,
+            string? expectedSha1 = null)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
 
@@ -269,16 +335,38 @@ namespace MinecraftLauncher.Services.LaunchEngine
 
                 try
                 {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    // Таймаут покрывает и подключение, и чтение тела: библиотеки
+                    // весят десятки мегабайт, и 10 секунд на всё обрывали загрузку.
+                    using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
                     var response = await HttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
                     if (response.IsSuccessStatusCode)
                     {
-                        byte[] data = await response.Content.ReadAsByteArrayAsync(cts.Token);
-                        if (data.Length > 0)
+                        // Чанковое чтение с лимитом скорости: библиотеки — это
+                        // основной объём загрузки при первом запуске версии.
+                        await using var responseStream = await response.Content.ReadAsStreamAsync(cts.Token);
+                        using var buffer = new MemoryStream();
+                        byte[] chunk = new byte[81920];
+
+                        int read;
+                        while ((read = await responseStream.ReadAsync(chunk, cts.Token)) > 0)
                         {
-                            await File.WriteAllBytesAsync(destinationPath, data);
-                            return;
+                            await buffer.WriteAsync(chunk.AsMemory(0, read), cts.Token);
+                            await BandwidthLimiter.ThrottleAsync(read, cts.Token);
                         }
+
+                        byte[] data = buffer.ToArray();
+                        if (data.Length == 0) continue;
+
+                        // JAR попадает в classpath и исполняется, поэтому сверяем хеш
+                        // из манифеста Mojang. Раньше Sha1 в модели объявлялся, но не
+                        // проверялся никогда — подмена файла проходила незамеченной.
+                        if (!string.IsNullOrEmpty(expectedSha1) && !HashHelper.VerifySha1(data, expectedSha1))
+                        {
+                            continue;
+                        }
+
+                        await File.WriteAllBytesAsync(destinationPath, data);
+                        return;
                     }
                 }
                 catch { }

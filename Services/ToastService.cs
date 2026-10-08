@@ -7,10 +7,18 @@ namespace MinecraftLauncher.Services
     public interface IToastService
     {
         void RegisterContainer(Panel container);
-        void ShowSuccess(string message, string title = "Успех");
-        void ShowError(string message, string title = "Ошибка");
-        void ShowWarning(string message, string title = "Внимание");
-        void ShowInfo(string message, string title = "Информация");
+
+        /// <summary>title передаётся ключом ресурса, а не готовой строкой.</summary>
+        void ShowSuccess(string message, string titleKey = "Str_Toast_Success");
+
+        /// <summary>title передаётся ключом ресурса, а не готовой строкой.</summary>
+        void ShowError(string message, string titleKey = "Str_Toast_Error");
+
+        /// <summary>title передаётся ключом ресурса, а не готовой строкой.</summary>
+        void ShowWarning(string message, string titleKey = "Str_Toast_Warning");
+
+        /// <summary>title передаётся ключом ресурса, а не готовой строкой.</summary>
+        void ShowInfo(string message, string titleKey = "Str_Toast_Info");
     }
 
     public class ToastService : IToastService
@@ -24,21 +32,28 @@ namespace MinecraftLauncher.Services
             _toastContainer = container;
         }
 
-        public void ShowSuccess(string message, string title = "Успех") =>
-            ShowToast(title, message, ToastType.Success);
+        public void ShowSuccess(string message, string titleKey = "Str_Toast_Success") =>
+            ShowToast(titleKey, message, ToastType.Success);
 
-        public void ShowError(string message, string title = "Ошибка") =>
-            ShowToast(title, message, ToastType.Error);
+        public void ShowError(string message, string titleKey = "Str_Toast_Error") =>
+            ShowToast(titleKey, message, ToastType.Error);
 
-        public void ShowWarning(string message, string title = "Внимание") =>
-            ShowToast(title, message, ToastType.Warning);
+        public void ShowWarning(string message, string titleKey = "Str_Toast_Warning") =>
+            ShowToast(titleKey, message, ToastType.Warning);
 
-        public void ShowInfo(string message, string title = "Информация") =>
-            ShowToast(title, message, ToastType.Info);
+        public void ShowInfo(string message, string titleKey = "Str_Toast_Info") =>
+            ShowToast(titleKey, message, ToastType.Info);
 
-        private void ShowToast(string title, string message, ToastType type)
+        /// <summary>
+        /// titleKey — ключ ресурса. Раньше здесь стояли русские строки по умолчанию
+        /// ("Успех", "Ошибка", ...), то есть при английском интерфейсе заголовок
+        /// тоста оставался русским, даже если сообщение было переведено.
+        /// </summary>
+        private void ShowToast(string titleKey, string message, ToastType type)
         {
             if (_toastContainer == null) return;
+
+            string title = LocalizationService.Instance.GetString(titleKey);
 
             Application.Current.Dispatcher.Invoke(() =>
             {

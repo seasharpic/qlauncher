@@ -1,13 +1,17 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Windows;
 using MinecraftLauncher.Common;
+using MinecraftLauncher.Services;
 
 namespace MinecraftLauncher.ViewModels
 {
     public class GameConsoleViewModel : ViewModelBase
     {
-        private string _processStatusText = "Ожидание запуска игры...";
+        // Локализация для строк, которые собираются в коде.
+        private readonly ILocalizationService _loc = LocalizationService.Instance;
+
+        private string _processStatusText = LocalizationService.Instance.GetString("Str_Console_Starting");
         private bool _autoScroll = true;
 
         public string ProcessStatusText
@@ -35,34 +39,72 @@ namespace MinecraftLauncher.ViewModels
             CopyLogCommand = new RelayCommand(() => RequestCopy?.Invoke());
         }
 
+        private Process? _attachedProcess;
+        private readonly object _gate = new();
+
+        /// <summary>
+        /// Наблюдение за процессом игры для окна консоли.
+        ///
+        /// Чтение пайпов теперь всегда включено: если раньше консоль не открывали,
+        /// никто не подписывался на вывод, буфер пайпа переполнялся, и процесс игры
+        /// блокировался. Само чтение выполняет MainViewModel — здесь только
+        /// подписка на событие ProcessOutputLine.
+        /// </summary>
         public void AttachProcess(Process process)
         {
-            ProcessStatusText = $"Игра запущена (PID: {process.Id})";
+            DetachProcess();
 
-            process.OutputDataReceived += (_, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    LogLineReceived?.Invoke(e.Data, false);
-                }
-            };
+            _attachedProcess = process;
+            ProcessStatusText = _loc.Format("Str_Console_Running", process.Id);
 
-            process.ErrorDataReceived += (_, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    LogLineReceived?.Invoke(e.Data, true);
-                }
-            };
+            process.Exited += OnProcessExited;
+        }
 
-            process.Exited += (_, _) =>
+        private void OnProcessExited(object? sender, EventArgs e)
+        {
+            if (_attachedProcess is not { } process) return;
+
+            int exitCode;
+            try
             {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    ProcessStatusText = $"Процесс завершился с кодом {process.ExitCode}";
-                    LogLineReceived?.Invoke($"--- Процесс игры завершен (Exit Code: {process.ExitCode}) ---", process.ExitCode != 0);
-                });
-            };
+                exitCode = process.ExitCode;
+            }
+            catch (InvalidOperationException)
+            {
+                return;
+            }
+
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                ProcessStatusText = _loc.Format("Str_Console_Exited", exitCode);
+                LogLineReceived?.Invoke(_loc.Format("Str_Console_GameExited", exitCode), exitCode != 0);
+            }));
+        }
+
+        public void DetachProcess()
+        {
+            if (_attachedProcess is { } process)
+            {
+                process.Exited -= OnProcessExited;
+            }
+
+            _attachedProcess = null;
+        }
+
+        /// <summary>
+        /// Привязывает окно консоли к потоку вывода, который читает MainViewModel.
+        /// Собственных подписок на OutputDataReceived больше нет, чтобы не было
+        /// двойного чтения одних и тех же пайпов.
+        /// </summary>
+        public void SubscribeToOutput(Action<string, bool> handler)
+        {
+            LogLineReceived -= handler;
+            LogLineReceived += handler;
+        }
+
+        public void UnsubscribeFromOutput(Action<string, bool> handler)
+        {
+            LogLineReceived -= handler;
         }
     }
 }

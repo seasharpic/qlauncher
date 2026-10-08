@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -38,6 +38,11 @@ namespace MinecraftLauncher.Services
     public class UpdateService : IUpdateService
     {
         private static readonly HttpClient HttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+
+        // Локализация для строк, которые собираются в коде: бейджи типа релиза
+        // и заголовки ченджлога раньше были жёстко на русском.
+        private static readonly ILocalizationService L = LocalizationService.Instance;
+
         public const string CurrentVersion = "v2.0.0";
 
         public static UpdateService Instance { get; } = new UpdateService();
@@ -424,24 +429,24 @@ namespace MinecraftLauncher.Services
 
         private static string GetReleaseTypeBadge(string newTag, string currentTag, bool isPrerelease)
         {
-            if (isPrerelease) return "Предварительная сборка";
+            if (isPrerelease) return L.GetString("Str_Release_Prerelease");
 
             string cleanLatest = newTag.TrimStart('v', 'V').Trim();
             string cleanCurrent = currentTag.TrimStart('v', 'V').Trim();
 
             if (Version.TryParse(cleanLatest, out var latest) && Version.TryParse(cleanCurrent, out var current))
             {
-                if (latest.Major > current.Major) return "Крупное обновление";
-                if (latest.Minor > current.Minor) return "Новый функционал";
-                return "Исправление ошибок";
+                if (latest.Major > current.Major) return L.GetString("Str_Release_Major");
+                if (latest.Minor > current.Minor) return L.GetString("Str_Release_Features");
+                return L.GetString("Str_Release_Fix");
             }
 
-            return "Обновление";
+            return L.GetString("Str_Release_Generic");
         }
 
         private static string BuildCleanChangelog(List<JsonElement> releases)
         {
-            if (releases.Count == 0) return "Список изменений не предоставлен.";
+            if (releases.Count == 0) return L.GetString("Str_Release_ChangelogEmpty");
 
             var sb = new StringBuilder();
 
@@ -452,7 +457,7 @@ namespace MinecraftLauncher.Services
 
                 if (releases.Count > 1)
                 {
-                    sb.AppendLine($"[Релиз {tag}]");
+                    sb.AppendLine(L.Format("Str_Release_ChangelogTag", tag));
                 }
 
                 // Очистка от эмодзи и форматирование списков
@@ -495,9 +500,9 @@ namespace MinecraftLauncher.Services
 
         private static string FormatBytes(long bytes)
         {
-            if (bytes <= 0) return "Размер не указан";
+            if (bytes <= 0) return L.GetString("Str_Update_SizeUnknown");
             double mb = bytes / (1024.0 * 1024.0);
-            return $"{mb:F1} МБ";
+            return L.Format("Str_Size_Mb", $"{mb:F1}");
         }
     }
 }

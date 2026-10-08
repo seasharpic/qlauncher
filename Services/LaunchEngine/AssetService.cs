@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Services.LaunchEngine.Models;
 
 namespace MinecraftLauncher.Services.LaunchEngine
@@ -38,14 +39,24 @@ namespace MinecraftLauncher.Services.LaunchEngine
                 progress?.Report(new LaunchProgress
                 {
                     Phase = LaunchPhase.DownloadingAssets,
-                    StatusText = "Загрузка индекса ресурсов игры...",
+                    StatusText = LocalizationService.Instance.GetString("Str_Launch_DownloadIndex"),
                     Percentage = 62
                 });
 
-                string mirrorIndexUrl = versionInfo.AssetIndex.Url.Replace("https://piston-meta.mojang.com", "https://bmclapi2.bangbang93.com")
-                                                                  .Replace("https://launchermeta.mojang.com", "https://bmclapi2.bangbang93.com");
-                string? indexJson = await FetchStringWithFallbackAsync(versionInfo.AssetIndex.Url, mirrorIndexUrl);
+                string mirrorIndexUrl = MirrorService.BuildMojangMirrorUrl(versionInfo.AssetIndex.Url);
+                // Порядок источников задаёт MirrorService: официальный Mojang
+                // первым, зеркало запасным (или наоборот, если официальный хост
+                // не отвечает).
+                string? indexJson = await FetchStringWithFallbackAsync(
+                    MirrorService.Instance.BuildCandidates(versionInfo.AssetIndex.Url, mirrorIndexUrl));
                 if (string.IsNullOrEmpty(indexJson)) return;
+
+                // Индекс задаёт ожидаемый хеш каждого ассета, поэтому сверяем и его
+                // самого: иначе зеркало может подменить список объектов.
+                if (!string.IsNullOrEmpty(versionInfo.AssetIndex.Sha1) && !HashHelper.VerifySha1(System.Text.Encoding.UTF8.GetBytes(indexJson), versionInfo.AssetIndex.Sha1))
+                {
+                    return;
+                }
 
                 await File.WriteAllTextAsync(indexFilePath, indexJson);
             }
@@ -93,14 +104,17 @@ namespace MinecraftLauncher.Services.LaunchEngine
                             string primaryUrl = $"{PrimaryResourceHost}/{sub}/{obj.hash}";
                             string mirrorUrl = $"{MirrorResourceHost}/{sub}/{obj.hash}";
 
-                            await DownloadFileWithFallbackAsync(primaryUrl, mirrorUrl, obj.localPath);
+                            await DownloadFileWithFallbackAsync(
+                                MirrorService.Instance.BuildCandidates(primaryUrl, mirrorUrl),
+                                obj.localPath,
+                                obj.hash);
 
                             int cur = Interlocked.Increment(ref completed);
                             int pct = 65 + (int)((cur / (double)total) * 25);
                             progress?.Report(new LaunchProgress
                             {
                                 Phase = LaunchPhase.DownloadingAssets,
-                                StatusText = $"Загрузка ресурсов и звуков ({cur}/{total})...",
+                                StatusText = LocalizationService.Instance.Format("Str_Launch_DownloadAssets", cur, total),
                                 Percentage = pct
                             });
                         }
@@ -115,51 +129,45 @@ namespace MinecraftLauncher.Services.LaunchEngine
             }
         }
 
-        private static async Task<string?> FetchStringWithFallbackAsync(string primaryUrl, string? fallbackUrl)
+        private static async Task<string?> FetchStringWithFallbackAsync(IReadOnlyList<string> candidates)
         {
-            try
+            foreach (string url in candidates)
             {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                return await HttpClient.GetStringAsync(primaryUrl, cts.Token);
-            }
-            catch
-            {
-                if (!string.IsNullOrEmpty(fallbackUrl))
+                try
                 {
-                    try
-                    {
-                        using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                        return await HttpClient.GetStringAsync(fallbackUrl, cts2.Token);
-                    }
-                    catch { }
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    return await HttpClient.GetStringAsync(url, cts.Token);
+                }
+                catch
+                {
+                    // Этот кандидат не ответил — пробуем следующий.
                 }
             }
+
             return null;
         }
 
-        private static async Task DownloadFileWithFallbackAsync(string primaryUrl, string? fallbackUrl, string destinationPath)
+        /// <summary>
+        /// expectedHash — SHA-1 ассета. В манифесте Mojang это хеш одновременно
+        /// является именем файла, поэтому сверка почти бесплатна, а подмена файла
+        /// на зеркале больше не проходит незамеченной.
+        /// </summary>
+        private static async Task DownloadFileWithFallbackAsync(IReadOnlyList<string> candidates, string destinationPath, string? expectedHash = null)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
 
-            try
+            byte[]? data = await SecureHttp.TryDownloadBytesAsync(
+                candidates,
+                TimeSpan.FromMinutes(1));
+
+            if (data == null || data.Length == 0) return;
+
+            if (!string.IsNullOrEmpty(expectedHash) && !HashHelper.VerifySha1(data, expectedHash))
             {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-                byte[] data = await HttpClient.GetByteArrayAsync(primaryUrl, cts.Token);
-                await File.WriteAllBytesAsync(destinationPath, data);
+                return;
             }
-            catch
-            {
-                if (!string.IsNullOrEmpty(fallbackUrl))
-                {
-                    try
-                    {
-                        using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-                        byte[] data = await HttpClient.GetByteArrayAsync(fallbackUrl, cts2.Token);
-                        await File.WriteAllBytesAsync(destinationPath, data);
-                    }
-                    catch { }
-                }
-            }
+
+            await File.WriteAllBytesAsync(destinationPath, data);
         }
     }
 }

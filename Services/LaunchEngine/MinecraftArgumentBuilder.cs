@@ -13,14 +13,53 @@ namespace MinecraftLauncher.Services.LaunchEngine
             MojangVersionInfo versionInfo,
             LaunchOptions options,
             List<string> classpathJars,
-            string nativesDirectory)
+            string nativesDirectory,
+            IReadOnlySet<string>? supportedJvmFlags = null,
+            IReadOnlyList<string>? approvedJvmFlags = null)
         {
             var args = new List<string>();
 
             args.Add($"-Xmx{options.RamMb}M");
             args.Add($"-Xms{Math.Max(512, options.RamMb / 2)}M");
 
-            var presetFlags = JvmOptimizationHelper.GetOptimizedJvmArguments(options.RamMb, options.JvmPreset, options.CustomJvmArgs);
+            // Версию JVM узнаём до подбора флагов: от неё зависит, какой сборщик
+            // мусора вообще можно использовать.
+            int javaMajorVer = JavaService.DetectJavaMajorVersion(options.JavaPath);
+
+            string? gcWarning;
+            IReadOnlyList<string> presetFlags;
+
+            if (approvedJvmFlags != null)
+            {
+                // Флаги уже проверены на реальной JVM (см.
+                // JavaService.ValidateJvmArgsAsync) и отфильтрованы по её ответу,
+                // поэтому пересчитывать их здесь незачем.
+                presetFlags = approvedJvmFlags;
+                gcWarning = null;
+            }
+            else
+            {
+                presetFlags = JvmOptimizationHelper.GetOptimizedJvmArguments(
+                    options.JvmPreset,
+                    options.RamMb,
+                    javaMajorVer,
+                    options.CustomJvmArgs,
+                    options.UseOptimizedJvmArgs,
+                    supportedJvmFlags,
+                    out gcWarning);
+            }
+
+            if (!string.IsNullOrEmpty(gcWarning))
+            {
+                // Не ошибка: понижение пресета это штатное поведение. Но в лог
+                // пишем обязательно — по журналу видно, почему в игре ZGC вместо
+                // выбранного пользователем G1GC.
+                CrashLogWriter.Write(
+                    "JvmOptimizationHelper",
+                    $"GC preset '{options.JvmPreset}' adjusted for Java {javaMajorVer}: {gcWarning}",
+                    null);
+            }
+
             foreach (var flag in presetFlags)
             {
                 if (!string.IsNullOrWhiteSpace(flag) && !args.Contains(flag))
@@ -33,7 +72,6 @@ namespace MinecraftLauncher.Services.LaunchEngine
             var variables = BuildVariableMap(versionInfo, options, classpathStr, nativesDirectory);
 
             bool hasClasspathArg = false;
-            int javaMajorVer = JavaService.DetectJavaMajorVersion(options.JavaPath);
 
             if (versionInfo.Arguments?.Jvm != null && versionInfo.Arguments.Jvm.Count > 0)
             {
@@ -53,17 +91,24 @@ namespace MinecraftLauncher.Services.LaunchEngine
                 }
             }
 
+            // Эти фолбэки должны быть независимы от hasClasspathArg. Раньше они стояли
+            // внутри if (!hasClasspathArg), поэтому для версий, которые задают
+            // "-cp ${classpath}" сами, но не задают -Djava.library.path, папка
+            // natives не подставлялась, и LWJGL не находил нативные библиотеки.
+            // Списки независимы: проверяем каждый отдельно.
+            if (!args.Exists(a => a.StartsWith("-Djava.library.path=", StringComparison.Ordinal)))
+            {
+                args.Add($"-Djava.library.path={nativesDirectory}");
+            }
+
+            if (!args.Exists(a => a.StartsWith("-Dminecraft.launcher.brand=", StringComparison.Ordinal)))
+            {
+                args.Add("-Dminecraft.launcher.brand=QLauncher");
+                args.Add("-Dminecraft.launcher.version=2.0.0");
+            }
+
             if (!hasClasspathArg)
             {
-                if (!args.Exists(a => a.StartsWith("-Djava.library.path=")))
-                {
-                    args.Add($"-Djava.library.path={nativesDirectory}");
-                }
-                if (!args.Exists(a => a.StartsWith("-Dminecraft.launcher.brand=")))
-                {
-                    args.Add("-Dminecraft.launcher.brand=QLauncher");
-                    args.Add("-Dminecraft.launcher.version=2.0.0");
-                }
                 args.Add("-cp");
                 args.Add(classpathStr);
             }
@@ -114,6 +159,24 @@ namespace MinecraftLauncher.Services.LaunchEngine
             return args;
         }
 
+        /// <summary>
+        /// Стабильный UUID для офлайн-игрока: одинаковый ник всегда даёт один и тот же
+        /// UUID, поэтому мир и инвентарь не "теряются" между запусками.
+        /// Формат 32 hex-символа без дефисов, как ожидает Minecraft.
+        /// </summary>
+        private static string DeterministicOfflineUuid(string playerName)
+        {
+            if (string.IsNullOrWhiteSpace(playerName))
+            {
+                return Guid.NewGuid().ToString("N");
+            }
+
+            byte[] bytes = System.Security.Cryptography.MD5.HashData(
+                System.Text.Encoding.UTF8.GetBytes("OfflinePlayer:" + playerName));
+
+            return Convert.ToHexString(bytes).ToLowerInvariant();
+        }
+
         private static Dictionary<string, string> BuildVariableMap(
             MojangVersionInfo versionInfo,
             LaunchOptions options,
@@ -126,8 +189,19 @@ namespace MinecraftLauncher.Services.LaunchEngine
 
             string assetsRoot = Path.Combine(options.GameRootPath, "assets");
             string assetIndex = versionInfo.AssetIndex?.Id ?? versionInfo.Assets ?? "legacy";
-            string uuid = string.IsNullOrEmpty(options.Uuid) ? Guid.NewGuid().ToString("N") : options.Uuid;
-            string token = string.IsNullOrEmpty(options.AccessToken) ? "offline" : options.AccessToken;
+            // Новый UUID на каждый запуск менял личность офлайн-игрока между сессиями.
+            // Для гостя используем детерминированный UUID от его ника.
+            string uuid = !string.IsNullOrEmpty(options.Uuid)
+                ? options.Uuid
+                : DeterministicOfflineUuid(options.PlayerName);
+
+            bool isOnlineAuth = options.IsOnlineAuth;
+
+            // Известный остаточный риск: Minecraft принимает access_token только через
+            // аргумент командной строки, поэтому токен виден другим процессам и
+            // пользователям системы (Win32_Process, диспетчер задач). Обойти это
+            // на стороне лаунчера нельзя — это ограничение протокола игры.
+            string token = isOnlineAuth ? options.AccessToken : "0";
 
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -139,9 +213,11 @@ namespace MinecraftLauncher.Services.LaunchEngine
                 ["assets_index_name"] = assetIndex,
                 ["auth_uuid"] = uuid,
                 ["auth_access_token"] = token,
-                ["clientid"] = "00000000402b5328",
+                ["clientid"] = isOnlineAuth ? "00000000402b5328" : "",
                 ["auth_xuid"] = "0",
-                ["user_type"] = "mojang",
+                // Раньше было жёстко "mojang" даже для офлайна с токеном "offline",
+                // из-за чего сервер сессий отвечал AuthenticationFailedException.
+                ["user_type"] = isOnlineAuth ? "mojang" : "legacy",
                 ["version_type"] = versionInfo.Type ?? "release",
                 ["natives_directory"] = nativesDir,
                 ["library_directory"] = Path.Combine(options.GameRootPath, "libraries"),

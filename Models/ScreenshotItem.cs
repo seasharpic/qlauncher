@@ -1,4 +1,4 @@
-namespace MinecraftLauncher.Models
+﻿namespace MinecraftLauncher.Models
 {
     public class ScreenshotItem
     {
@@ -24,14 +24,14 @@ namespace MinecraftLauncher.Models
         public string ActiveMirror { get; set; } = "GitHub";
         public string ReleaseDateFormatted { get; set; } = "";
         public string Author { get; set; } = "dyagyatis";
-        public string ReleaseTypeBadge { get; set; } = "Обновление";
+        public string ReleaseTypeBadge { get; set; } = Services.LocalizationService.Instance.GetString("Str_Release_Generic");
         public string FormattedChangelog { get; set; } = "";
     }
 
     public class CrashAnalysisResult
     {
         public bool HasCrash { get; set; }
-        public string Title { get; set; } = "Вылет игры";
+        public string Title { get; set; } = Services.LocalizationService.Instance.GetString("Str_Crash_Title");
         public string Summary { get; set; } = "";
         public string Recommendation { get; set; } = "";
         public string LogSnippet { get; set; } = "";

@@ -79,21 +79,49 @@ namespace MinecraftLauncher.Services
                     // 2. Последние логи игры и лаунчера (с санитизацией токенов)
                     try
                     {
-                        string logsDir = Path.Combine(settings.GamePath, "logs");
-                        if (Directory.Exists(logsDir))
+                        // Логи модпака лежат в instances/<pack>, а не в корне. Раньше читался
+                        // неверный каталог, и для сборок отчёт оказывался пустым.
+                        // Собираем логи из всех известных расположений.
+                        var logsDirs = new List<string> { Path.Combine(settings.GamePath, "logs") };
+
+                        foreach (var pack in settings.Modpacks)
                         {
-                            var logFiles = Directory.GetFiles(logsDir, "*.log")
-                                .OrderByDescending(File.GetLastWriteTime)
-                                .Take(3);
-
-                            foreach (var logFile in logFiles)
+                            if (!string.IsNullOrWhiteSpace(pack.FolderPath))
                             {
-                                string content = File.ReadAllText(logFile);
-                                string sanitized = SanitizeLogContent(content);
+                                logsDirs.Add(Path.Combine(pack.FolderPath, "logs"));
+                            }
+                        }
 
-                                var logEntry = zip.CreateEntry($"logs/{Path.GetFileName(logFile)}", CompressionLevel.Optimal);
-                                using var writer = new StreamWriter(logEntry.Open(), Encoding.UTF8);
-                                writer.Write(sanitized);
+                        foreach (string logsDir in logsDirs.Distinct())
+                        {
+                            if (!Directory.Exists(logsDir)) continue;
+
+                            try
+                            {
+                                var logFiles = Directory.GetFiles(logsDir, "*.log")
+                                    .OrderByDescending(File.GetLastWriteTime)
+                                    .Take(3);
+
+                                foreach (var logFile in logFiles)
+                                {
+                                    string content = File.ReadAllText(logFile);
+                                    string sanitized = SanitizeLogContent(content);
+
+                                    // Имя каталога-источника попадает в отчёт, иначе
+                                    // логи из разных сборок перетирали бы друг друга.
+                                    string sourceTag = SanitizeLogContent(Path.GetFileName(logsDir.TrimEnd(Path.DirectorySeparatorChar)));
+
+                                    var logEntry = zip.CreateEntry(
+                                        $"logs/{sourceTag}/{Path.GetFileName(logFile)}",
+                                        CompressionLevel.Optimal);
+
+                                    using var writer = new StreamWriter(logEntry.Open(), Encoding.UTF8);
+                                    writer.Write(sanitized);
+                                }
+                            }
+                            catch
+                            {
+                                // Ошибки чтения логов одного расположения не прерывают отчёт.
                             }
                         }
                     }
@@ -112,7 +140,32 @@ namespace MinecraftLauncher.Services
             if (string.IsNullOrEmpty(log)) return "";
             // Вырезаем возможные токены сессии и приватные ключи
             string cleaned = log;
-            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, "(?i)(accessToken|token|session|auth_token|uuid)[\"=:\\s]+[a-zA-Z0-9_-]{20,}", "$1=REDACTED");
+
+            // Порог {20,} был слишком строгим: короткий токен проходил насквозь,
+            // при этом логи Minecraft токен в таком виде не пишут, так что regex
+            // в основном вычищал безобидные UUID. Убираем оба класса отдельно.
+            cleaned = System.Text.RegularExpressions.Regex.Replace(
+                cleaned,
+                "(?i)(accessToken|access_token|auth_access_token|session|clientToken|refreshToken)\\s*[\"=:]\\s*[\"']?[^\"'\\s,}]+[\"']?",
+                "$1=REDACTED");
+
+            cleaned = System.Text.RegularExpressions.Regex.Replace(
+                cleaned,
+                "(?i)(?<=[\"=:]\\s?)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+                "REDACTED-UUID");
+
+            // Абсолютные пути выдают имя пользователя Windows — это ровно тот PII,
+            // который пользователь публикует, когда просит помощь.
+            cleaned = System.Text.RegularExpressions.Regex.Replace(
+                cleaned,
+                @"[A-Za-z]:\\Users\\[^\\\s""]+",
+                @"C:\Users\<user>");
+
+            cleaned = System.Text.RegularExpressions.Regex.Replace(
+                cleaned,
+                @"/home/[^/\s""]+",
+                "/home/<user>");
+
             return cleaned;
         }
     }
