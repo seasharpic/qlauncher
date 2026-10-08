@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using MinecraftLauncher.Common;
 using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Services;
@@ -16,11 +17,15 @@ namespace MinecraftLauncher
 {
     public partial class MainWindow : Window
     {
+        // Локализация для строк, которые собираются в коде.
+        private static readonly ILocalizationService _loc = LocalizationService.Instance;
+
         public MainViewModel ViewModel { get; }
 
         private double _normalLeft, _normalTop, _normalWidth, _normalHeight;
         private bool _isCustomMaximized;
         private GameConsoleWindow? _consoleWindow;
+        private Action? _themeChangedHandler;
 
         public MainWindow()
         {
@@ -39,10 +44,39 @@ namespace MinecraftLauncher
 
             MainFrame.Navigated += MainFrame_Navigated;
 
-            ThemeService.Instance.ThemeChanged += () => Dispatcher.Invoke(UpdateThemeUi);
+            // Раньше обработчик не отписывался, а ThemeService — синглтон на всё время
+        // жизни процесса: MainWindow удерживался в памяти до конца работы лаунчера.
+        // Отписываемся при закрытии окна.
+        _themeChangedHandler = () => Dispatcher.Invoke(UpdateThemeUi);
+        ThemeService.Instance.ThemeChanged += _themeChangedHandler;
+
             UpdateThemeUi();
 
             Loaded += MainWindow_Loaded;
+            Closing += MainWindow_Closing;
+        }
+
+        /// <summary>
+        /// Очистка при закрытии окна: отписка от синглтонов, остановка таймеров
+        /// и закрытие Discord RPC. Раньше обработчик темы не отписывался, таймеры
+        /// не останавливались, а выход через трей вообще не трогал StopRpc —
+        /// сокет оставался открытым до конца процесса.
+        /// </summary>
+        private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (_themeChangedHandler != null)
+            {
+                ThemeService.Instance.ThemeChanged -= _themeChangedHandler;
+                _themeChangedHandler = null;
+            }
+
+            ViewModel?.Dispose();
+
+            _consoleWindow?.UnbindOutput();
+            _consoleWindow?.ViewModel?.DetachProcess();
+            _consoleWindow?.Close();
+
+            DiscordService.Instance.StopRpc();
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -51,7 +85,7 @@ namespace MinecraftLauncher
 
             if (!string.IsNullOrEmpty(App.JustUpdatedVersion))
             {
-                ToastService.Instance.ShowSuccess($"QLauncher успешно обновлен до {App.JustUpdatedVersion}!", "Обновление");
+                ToastService.Instance.ShowSuccess(_loc.Format("Str_Update_AppliedToast", App.JustUpdatedVersion), _loc.GetString("Str_T_Updates"));
                 App.JustUpdatedVersion = null;
             }
 
@@ -91,7 +125,7 @@ namespace MinecraftLauncher
                 {
                     if (ViewModel.IsShortcutOverlayVisible)
                     {
-                        ViewModel.DiscordService.SetPageState("Создание ярлыка", "Быстрый запуск");
+                        ViewModel.DiscordService.SetPageState(_loc.GetString("Str_Discord_ShortcutDetails"), _loc.GetString("Str_Discord_ShortcutState"));
                     }
                     else
                     {
@@ -115,6 +149,7 @@ namespace MinecraftLauncher
                 if (_consoleWindow == null || !_consoleWindow.IsLoaded)
                 {
                     _consoleWindow = new GameConsoleWindow();
+                    _consoleWindow.BindOutput(ViewModel);
                 }
 
                 _consoleWindow.AttachProcess(process);
@@ -212,23 +247,23 @@ namespace MinecraftLauncher
             switch (content)
             {
                 case SettingsPage:
-                    ViewModel.DiscordService.SetPageState("В настройках", "Настройки лаунчера");
+                    ViewModel.DiscordService.SetPageState(_loc.GetString("Str_Discord_PageSettingsDetails"), _loc.GetString("Str_Discord_PageSettingsState"));
                     break;
                 case ModpacksPage:
-                    ViewModel.DiscordService.SetPageState("Каталог сборок", "Выбирает модпак");
+                    ViewModel.DiscordService.SetPageState(_loc.GetString("Str_Discord_PageModpacksDetails"), _loc.GetString("Str_Discord_PageModpacksState"));
                     break;
                 case ModsPage:
-                    ViewModel.DiscordService.SetPageState("Менеджер модов", "Поиск дополнений");
+                    ViewModel.DiscordService.SetPageState(_loc.GetString("Str_Discord_PageModsDetails"), _loc.GetString("Str_Discord_PageModsState"));
                     break;
                 case ScreenshotsPage:
-                    ViewModel.DiscordService.SetPageState("Галерея скриншотов", "Просматривает снимки");
+                    ViewModel.DiscordService.SetPageState(_loc.GetString("Str_Discord_PageScreenshotsDetails"), _loc.GetString("Str_Discord_PageScreenshotsState"));
                     break;
                 case ProfileManagerPage profilePage:
-                    string packName = profilePage.ViewModel?.Profile?.Name ?? "Модпак";
-                    ViewModel.DiscordService.SetPageState("Управление сборкой", $"Редактирует «{packName}»");
+                    string packName = profilePage.ViewModel?.Profile?.Name ?? _loc.GetString("Str_Discord_DefaultPack");
+                    ViewModel.DiscordService.SetPageState(_loc.GetString("Str_Discord_PageProfileDetails"), _loc.Format("Str_Discord_PageProfileState", packName));
                     break;
                 default:
-                    ViewModel.DiscordService.SetPageState("В лаунчере", "Просмотр раздела");
+                    ViewModel.DiscordService.SetPageState(_loc.GetString("Str_Discord_PageHomeDetails"), _loc.GetString("Str_Discord_PageHomeState"));
                     break;
             }
         }
@@ -270,7 +305,7 @@ namespace MinecraftLauncher
 
         private void AnimateOpenModpackOverlay()
         {
-            ViewModel.DiscordService.SetPageState("Создание сборки", "Настраивает параметры");
+            ViewModel.DiscordService.SetPageState(_loc.GetString("Str_Discord_PageModpacksDetails"), _loc.GetString("Str_Discord_PageModpacksState"));
 
             ModpackOverlay.Visibility = Visibility.Visible;
             ModpackOverlay.IsHitTestVisible = true;
@@ -371,7 +406,7 @@ namespace MinecraftLauncher
             if (ThemeToggleBtn != null)
             {
                 ThemeToggleBtn.Content = ThemeService.Instance.IsDarkTheme ? "\uE706" : "\uE708";
-                ThemeToggleBtn.ToolTip = ThemeService.Instance.IsDarkTheme ? "Переключить на светлую тему" : "Переключить на тёмную тему";
+                ThemeToggleBtn.ToolTip = ThemeService.Instance.IsDarkTheme ? _loc.GetString("Str_Theme_ToggleToLight") : _loc.GetString("Str_Theme_ToggleToDark");
             }
         }
 
@@ -382,6 +417,21 @@ namespace MinecraftLauncher
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e) =>
             AnimateNavigate(new SettingsPage());
+
+        /// <summary>
+        /// Открывает настройки сразу на разделе аккаунтов.
+        /// </summary>
+        private void AccountManagerButton_Click(object sender, RoutedEventArgs e)
+        {
+            AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
+
+            var page = new SettingsPage();
+            AnimateNavigate(page);
+
+            // Прокрутка после навигации: до попадания страницы в дерево окна
+            // размеры ещё не вычислены, и BringIntoView ничего не делает.
+            Dispatcher.BeginInvoke(new Action(() => page.ScrollToAccounts()), DispatcherPriority.Loaded);
+        }
 
         private void NavHome_Click(object sender, RoutedEventArgs e)
         {
@@ -413,6 +463,7 @@ namespace MinecraftLauncher
             if (_consoleWindow == null || !_consoleWindow.IsLoaded)
             {
                 _consoleWindow = new GameConsoleWindow();
+                _consoleWindow.BindOutput(ViewModel);
             }
             _consoleWindow.Show();
             _consoleWindow.Activate();
@@ -420,7 +471,7 @@ namespace MinecraftLauncher
 
         private void VersionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (VersionComboBox.SelectedItem is string selectedStr && selectedStr.Contains("Создать новую сборку"))
+            if (VersionComboBox.SelectedItem is string selectedStr && MainViewModel.IsCreateModpackEntry(selectedStr))
             {
                 OpenModpackOverlay();
                 string lastVer = SettingsService.Instance.Settings.LastSelectedVersion;
@@ -430,7 +481,7 @@ namespace MinecraftLauncher
                 }
                 else
                 {
-                    var fallback = ViewModel.Versions.FirstOrDefault(v => !v.Contains("Создать новую сборку"));
+                    var fallback = ViewModel.Versions.FirstOrDefault(v => !MainViewModel.IsCreateModpackEntry(v));
                     if (!string.IsNullOrEmpty(fallback))
                     {
                         ViewModel.SelectedVersion = fallback;
@@ -484,6 +535,41 @@ namespace MinecraftLauncher
             }
         }
 
+        /// <summary>
+        /// Импорт перетащенного .mrpack.
+        ///
+        /// Раньше список settings.Modpacks пополнялся из фонового потока, пока UI
+        /// его перебирал, и Save писал снятую до этого ссылку. Теперь мутация
+        /// и сохранение идут на UI-потоке, а сама распаковка и скачивание —
+        /// в Task.Run.
+        /// </summary>
+        private async Task ImportMrPackAsync(string file)
+        {
+            try
+            {
+                ToastService.Instance.ShowInfo(_loc.GetString("Str_DragDrop_Importing"), _loc.GetString("Str_T_ImportTitle"));
+
+                // Тот же общий сервис, что и у кнопок импорта: третья копия
+                // логики заменена вызовом единственной реализации.
+                var profile = await ModpackImportService.Instance.ImportAsync(
+                    file,
+                    SettingsService.Instance.Settings.GamePath);
+
+                var settings = SettingsService.Instance.Settings;
+                settings.Modpacks.Add(profile);
+                SettingsService.Instance.Save();
+
+                await ViewModel.LoadVersionsAsync();
+                ViewModel.SelectedVersion = $"⭐ {profile.Name} ({profile.Loader})";
+                ToastService.Instance.ShowSuccess(_loc.Format("Str_Import_Done", profile.Name), _loc.GetString("Str_T_ImportTitle"));
+            }
+            catch (Exception ex)
+            {
+                CrashLogWriter.Write("DragDropImport", $"Failed to import mrpack '{file}'", ex);
+                ToastService.Instance.ShowError(_loc.Format("Str_Import_Error", ex.Message), _loc.GetString("Str_T_Error"));
+            }
+        }
+
         private void Window_Drop(object sender, DragEventArgs e)
         {
             if (DragDropOverlay != null) DragDropOverlay.Visibility = Visibility.Collapsed;
@@ -523,27 +609,10 @@ namespace MinecraftLauncher
                 string ext = Path.GetExtension(file).ToLowerInvariant();
                 if (ext == ".mrpack")
                 {
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            Dispatcher.Invoke(() => ToastService.Instance.ShowInfo("Импорт перетащенной сборки .mrpack...", "Импорт"));
-                            var profile = await Services.LaunchEngine.MrPackInstaller.InstallMrPackAsync(file, settings.GamePath);
-                            settings.Modpacks.Add(profile);
-                            SettingsService.Instance.Save(settings);
-                            await Dispatcher.InvokeAsync(async () =>
-                            {
-                                await ViewModel.LoadVersionsAsync();
-                                ViewModel.SelectedVersion = $"⭐ {profile.Name} ({profile.Loader})";
-                                ToastService.Instance.ShowSuccess($"Сборка '{profile.Name}' успешно установлена!", "Импорт");
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            Dispatcher.Invoke(() => ToastService.Instance.ShowError($"Ошибка импорта: {ex.Message}", "Ошибка"));
-                        }
-                    });
-                    return;
+                    _ = ImportMrPackAsync(file);
+                    // Раньше здесь стоял return, и всё, что шло после .mrpack
+                    // в списке перетаскивания, молча терялось без уведомления.
+                    continue;
                 }
                 else if (ext == ".jar")
                 {
@@ -601,10 +670,10 @@ namespace MinecraftLauncher
             {
                 AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
                 var parts = new System.Collections.Generic.List<string>();
-                if (modsCount > 0) parts.Add($"{modsCount} модов");
-                if (shadersCount > 0) parts.Add($"{shadersCount} шейдеров");
-                if (resourcesCount > 0) parts.Add($"{resourcesCount} текстур-паков");
-                ToastService.Instance.ShowSuccess($"Успешно импортировано: {string.Join(", ", parts)}", "Импорт");
+                if (modsCount > 0) parts.Add(_loc.Format("Str_Mods_Count", modsCount));
+                if (shadersCount > 0) parts.Add(_loc.Format("Str_Shaders_Count", shadersCount));
+                if (resourcesCount > 0) parts.Add(_loc.Format("Str_ResourcePacks_Count", resourcesCount));
+                ToastService.Instance.ShowSuccess(_loc.Format("Str_DragDrop_ImportedSummary", string.Join(", ", parts)), _loc.GetString("Str_T_ImportTitle"));
             }
         }
 
@@ -646,7 +715,9 @@ namespace MinecraftLauncher
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            DiscordService.Instance.StopRpc();
+            // Раньше Shutdown вызывался и здесь, и в Closed обработчиках App,
+            // и в SplashScreenWindow. Теперь очистка сосредоточена в MainWindow_Closing,
+            // здесь только завершаем приложение.
             Application.Current.Shutdown();
         }
 
@@ -698,7 +769,12 @@ namespace MinecraftLauncher
 
         private void LauncherTrayIcon_TrayMouseDoubleClick(object sender, RoutedEventArgs e) => RestoreLauncher();
         private void TrayRestore_Click(object sender, RoutedEventArgs e) => RestoreLauncher();
-        private void TrayExit_Click(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
+        private void TrayExit_Click(object sender, RoutedEventArgs e)
+        {
+            // Выход через трей раньше вообще не вызывал DiscordService.StopRpc(),
+            // поэтому RPC-сокет оставался открытым до конца процесса.
+            Application.Current.Shutdown();
+        }
 
         private void RestoreLauncher()
         {

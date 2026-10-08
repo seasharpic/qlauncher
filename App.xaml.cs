@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Services;
@@ -18,27 +19,53 @@ namespace MinecraftLauncher
 
             DispatcherUnhandledException += (s, args) =>
             {
+                // args.Handled = true оставляем: лаунчер продолжает работать после
+                // ошибки в UI. Но теперь попутно пишем в лог потокобезопасно и
+                // показываем пользователю не только Message, но и тип: раньше
+                // "Object reference not set" без контекста ни о чём не говорил.
+                CrashLogWriter.Write("DispatcherUnhandledException", "Unhandled UI exception", args.Exception);
+
                 try
                 {
-                    string crashLog = Path.Combine(LauncherPathHelper.GetDefaultDataDirectory(), "launcher-crash.log");
-                    File.AppendAllText(crashLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] DispatcherUnhandledException:\n{args.Exception}\n\n");
-                    MessageBox.Show($"Произошла ошибка в работе приложения:\n{args.Exception.Message}\n\nЖурнал ошибки записан в:\n{crashLog}", "QLauncher", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(
+                        $"An error occurred while running the application:\n\n" +
+                        $"{args.Exception.GetType().Name}: {args.Exception.Message}\n\n" +
+                        $"Details were written to:\n{CrashLogWriter.LogFile}",
+                        "QLauncher",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
                 }
                 catch { }
+
                 args.Handled = true;
             };
 
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
-                try
-                {
-                    string crashLog = Path.Combine(LauncherPathHelper.GetDefaultDataDirectory(), "launcher-crash.log");
-                    File.AppendAllText(crashLog, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] AppDomain UnhandledException:\n{args.ExceptionObject}\n\n");
-                }
-                catch { }
+                var exception = args.ExceptionObject as Exception;
+                CrashLogWriter.Write(
+                    "AppDomainUnhandledException",
+                    "Fatal unhandled exception on background thread",
+                    exception);
+            };
+
+            TaskScheduler.UnobservedTaskException += (s, args) =>
+            {
+                // Раньше исключения из fire-and-forget задач (Task.Run без await)
+                // терялись без следа — например, ошибки загрузки версий.
+                CrashLogWriter.Write("UnobservedTaskException", "Background task faulted", args.Exception);
+                args.SetObserved();
             };
 
             LauncherPathHelper.CleanupOldBackupsAndTemp();
+
+            // Определяем, какие источники загрузки доступны, и заранее
+            // переставляем зеркала. Проверка идёт в фоне и не блокирует
+            // показ окна: пока результата нет, загрузка идёт как раньше —
+            // официальный источник первым.
+            MirrorService.Instance.Preference = MirrorService.ParsePreference(
+                SettingsService.Instance.Settings.MirrorPreference);
+            _ = Task.Run(() => MirrorService.Instance.ProbeAsync());
 
             bool noSplashArg = e.Args.Any(a => string.Equals(a, "--no-splash", StringComparison.OrdinalIgnoreCase));
 
@@ -63,6 +90,10 @@ namespace MinecraftLauncher
                 {
                     ThemeService.Instance.SetTheme(false);
                 }
+
+                // Акцент применяется после темы: SetTheme переносит текущие
+                // значения акцента на новую палитру кистей.
+                ThemeService.Instance.RestoreAccentFromSettings();
 
                 if (noSplashArg || !settings.ShowSplashOnStartup)
                 {

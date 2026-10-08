@@ -1,4 +1,4 @@
-<Window x:Class="MinecraftLauncher.MainWindow"
+﻿<Window x:Class="MinecraftLauncher.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:tb="http://www.hardcodet.net/taskbar"
@@ -67,9 +67,9 @@
             <tb:TaskbarIcon x:Name="LauncherTrayIcon" IconSource="/logo.png" ToolTipText="QLauncher" Visibility="Collapsed" TrayMouseDoubleClick="LauncherTrayIcon_TrayMouseDoubleClick">
                 <tb:TaskbarIcon.ContextMenu>
                     <ContextMenu Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1">
-                        <MenuItem Header="Развернуть лаунчер" Click="TrayRestore_Click" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <MenuItem Header="{DynamicResource Str_Tray_Restore}" Click="TrayRestore_Click" Foreground="{DynamicResource PrimaryTextBrush}"/>
                         <Separator Background="{DynamicResource WindowBorderBrush}"/>
-                        <MenuItem Header="Закрыть QLauncher" Click="TrayExit_Click" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <MenuItem Header="{DynamicResource Str_Tray_Exit}" Click="TrayExit_Click" Foreground="{DynamicResource PrimaryTextBrush}"/>
                     </ContextMenu>
                 </tb:TaskbarIcon.ContextMenu>
             </tb:TaskbarIcon>
@@ -95,8 +95,8 @@
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button x:Name="ThemeToggleBtn" Content="&#xE706;" Style="{DynamicResource CaptionButtonStyle}" Click="ThemeToggleBtn_Click" ToolTip="Сменить тему"/>
-                            <Button Content="&#xE713;" Style="{DynamicResource CaptionButtonStyle}" Click="SettingsButton_Click" ToolTip="Настройки"/>
+                            <Button x:Name="ThemeToggleBtn" Content="&#xE706;" Style="{DynamicResource CaptionButtonStyle}" Click="ThemeToggleBtn_Click" ToolTip="{DynamicResource Str_Tooltip_ToggleTheme}"/>
+                            <Button Content="&#xE713;" Style="{DynamicResource CaptionButtonStyle}" Click="SettingsButton_Click" ToolTip="{DynamicResource Str_Tooltip_Settings}"/>
                             <Button Content="&#xE921;" Style="{DynamicResource CaptionButtonStyle}" Click="MinimizeButton_Click"/>
                             <Button Content="&#xE922;" Style="{DynamicResource CaptionButtonStyle}" Click="MaximizeButton_Click"/>
                             <Button x:Name="CloseBtn" Content="&#xE8BB;" Style="{DynamicResource CloseButtonStyle}" Click="CloseButton_Click" />
@@ -114,32 +114,32 @@
                                     <TextBlock Text="{DynamicResource Str_Nav_Home}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavTabButtonStyle}" Click="NavModpacks_Click" Margin="0,0,4,0" ToolTip="Управление и выбор сборок">
+                            <Button Style="{StaticResource NavTabButtonStyle}" Click="NavModpacks_Click" Margin="0,0,4,0" ToolTip="{DynamicResource Str_Tooltip_NavModpacks}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="&#xE7FC;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{DynamicResource Str_Nav_Modpacks}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavTabButtonStyle}" Click="NavMods_Click" Margin="0,0,4,0" ToolTip="Каталог модов, ресурс-паков и шейдеров">
+                            <Button Style="{StaticResource NavTabButtonStyle}" Click="NavMods_Click" Margin="0,0,4,0" ToolTip="{DynamicResource Str_Tooltip_NavMods}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="&#xE74C;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{DynamicResource Str_Nav_Mods}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavTabButtonStyle}" Click="NavScreenshots_Click" Margin="0,0,4,0" ToolTip="Галерея скриншотов">
+                            <Button Style="{StaticResource NavTabButtonStyle}" Click="NavScreenshots_Click" Margin="0,0,4,0" ToolTip="{DynamicResource Str_Tooltip_NavScreenshots}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{DynamicResource Str_Nav_Screenshots}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavTabButtonStyle}" Click="NavConsole_Click" Margin="0,0,4,0" ToolTip="Консоль отладки и журналы">
+                            <Button Style="{StaticResource NavTabButtonStyle}" Click="NavConsole_Click" Margin="0,0,4,0" ToolTip="{DynamicResource Str_Tooltip_NavConsole}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="&#xE756;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{DynamicResource Str_Nav_Console}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Grid>
-                                <Button x:Name="QuickFolderBtn" Style="{StaticResource NavTabButtonStyle}" Click="QuickFolderButton_Click" ToolTip="Быстрый доступ к папкам игры">
+                                <Button x:Name="QuickFolderBtn" Style="{StaticResource NavTabButtonStyle}" Click="QuickFolderButton_Click" ToolTip="{DynamicResource Str_Tooltip_QuickFolder}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="{DynamicResource Str_Nav_QuickFolder}" VerticalAlignment="Center"/>
@@ -154,37 +154,37 @@
                                             <Button Style="{StaticResource PopupMenuItemStyle}" Click="OpenFolder_Mods">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="&#xE74C;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Папка модов (mods)" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_Mods}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
                                             <Button Style="{StaticResource PopupMenuItemStyle}" Click="OpenFolder_ResourcePacks">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="&#xE790;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Папка ресурс-паков (resourcepacks)" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_ResourcePacks}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
                                             <Button Style="{StaticResource PopupMenuItemStyle}" Click="OpenFolder_ShaderPacks">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="&#xE781;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Папка шейдеров (shaderpacks)" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_ShaderPacks}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
                                             <Button Style="{StaticResource PopupMenuItemStyle}" Click="OpenFolder_Saves">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="&#xE809;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Папка сохранений (saves)" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_Saves}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
                                             <Button Style="{StaticResource PopupMenuItemStyle}" Click="OpenFolder_Screenshots">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Папка скриншотов (screenshots)" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_Screenshots}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
                                             <Button Style="{StaticResource PopupMenuItemStyle}" Click="OpenFolder_Logs">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Папка логов (logs)" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_Logs}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
 
@@ -193,7 +193,7 @@
                                             <Button Style="{StaticResource PopupMenuItemStyle}" Click="OpenFolder_Root">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Коренная папка (.minecraft / .qlauncher)" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_Root}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
                                         </StackPanel>
@@ -225,7 +225,7 @@
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="Новости" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="24" HorizontalAlignment="Center" Margin="0,15,0,15" FontFamily="Inter"/>
+                                <TextBlock Grid.Row="0" Text="{DynamicResource Str_News_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="24" HorizontalAlignment="Center" Margin="0,15,0,15" FontFamily="Inter"/>
                                 <Border Grid.Row="0" BorderBrush="{DynamicResource HoverOverlayBrush}" BorderThickness="0,0,0,1" VerticalAlignment="Bottom"/>
 
                                 <ScrollViewer Grid.Row="1" Margin="15,10,15,15" VerticalScrollBarVisibility="Auto"
@@ -252,9 +252,9 @@
                                             Visibility="{Binding HasNews, Converter={StaticResource InverseBoolToVisConverter}}">
                                     <TextBlock Text="&#xE789;" FontFamily="Segoe MDL2 Assets" FontSize="36" 
                                                Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" Opacity="0.3" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Нет свежих новостей" Foreground="{DynamicResource PrimaryTextBrush}" 
+                                    <TextBlock Text="{DynamicResource Str_News_Empty}" Foreground="{DynamicResource PrimaryTextBrush}" 
                                                FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center"/>
-                                    <TextBlock Text="Подпишитесь на наш канал @QLauncher_MC" 
+                                    <TextBlock Text="{DynamicResource Str_News_EmptyHint}" 
                                                Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" 
                                                TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0" Opacity="0.7"/>
                                 </StackPanel>
@@ -265,12 +265,12 @@
                         <Border Grid.Column="1" Background="{DynamicResource PanelBrush}" CornerRadius="20" ClipToBounds="True">
                             <Grid>
                                 <Grid VerticalAlignment="Top" Margin="20,14,20,0" Height="36">
-                                    <TextBlock Text="Серверы" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="22" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Bold" FontFamily="Inter"/>
+                                    <TextBlock Text="{DynamicResource Str_Servers_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="22" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Bold" FontFamily="Inter"/>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                        <Button Command="{Binding RefreshServersCommand}" Style="{StaticResource DarkButtonStyle}" Width="32" Height="32" Padding="0" Margin="0,0,6,0" ToolTip="Обновить статус">
+                                        <Button Command="{Binding RefreshServersCommand}" Style="{StaticResource DarkButtonStyle}" Width="32" Height="32" Padding="0" Margin="0,0,6,0" ToolTip="{DynamicResource Str_Servers_RefreshStatus}">
                                             <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="13"/>
                                         </Button>
-                                        <Button Command="{Binding OpenAddServerOverlayCommand}" Style="{StaticResource DarkButtonStyle}" Width="32" Height="32" Padding="0" ToolTip="Добавить сервер">
+                                        <Button Command="{Binding OpenAddServerOverlayCommand}" Style="{StaticResource DarkButtonStyle}" Width="32" Height="32" Padding="0" ToolTip="{DynamicResource Str_Servers_Join}">
                                             <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="13"/>
                                         </Button>
                                     </StackPanel>
@@ -285,28 +285,28 @@
                                                 <Border Background="Transparent" CornerRadius="8" Margin="0,0,0,12" Padding="2">
                                                     <Border.ContextMenu>
                                                         <ContextMenu>
-                                                            <MenuItem Header="Скопировать IP" 
+                                                            <MenuItem Header="{DynamicResource Str_Servers_CopyIp}" 
                                                                       Command="{Binding DataContext.CopyServerIpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                       CommandParameter="{Binding Ip}">
                                                                 <MenuItem.Icon>
                                                                     <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                                                 </MenuItem.Icon>
                                                             </MenuItem>
-                                                            <MenuItem Header="Подключиться" 
+                                                            <MenuItem Header="{DynamicResource Str_Servers_Connect}" 
                                                                       Command="{Binding DataContext.ConnectServerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                       CommandParameter="{Binding Ip}">
                                                                 <MenuItem.Icon>
                                                                     <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                                                 </MenuItem.Icon>
                                                             </MenuItem>
-                                                            <MenuItem Header="Обновить статус" 
+                                                            <MenuItem Header="{DynamicResource Str_Servers_RefreshStatus}" 
                                                                       Command="{Binding DataContext.RefreshServersCommand, RelativeSource={RelativeSource AncestorType=Window}}">
                                                                 <MenuItem.Icon>
                                                                     <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                                                 </MenuItem.Icon>
                                                             </MenuItem>
                                                             <Separator/>
-                                                            <MenuItem Header="Удалить сервер" 
+                                                            <MenuItem Header="{DynamicResource Str_Servers_Delete}" 
                                                                       Command="{Binding DataContext.DeleteServerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                       CommandParameter="{Binding}">
                                                                 <MenuItem.Icon>
@@ -341,10 +341,10 @@
                                                             </Grid>
                                                         </StackPanel>
 
-                                                        <Button Grid.Column="1" Content="Войти" 
+                                                        <Button Grid.Column="1" Content="{DynamicResource Str_Servers_Join}" 
                                                                 Command="{Binding DataContext.ConnectServerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                 CommandParameter="{Binding Ip}"
-                                                                Padding="8,4" Margin="8,0,0,0" Style="{DynamicResource DarkButtonStyle}" FontSize="11" ToolTip="Подключиться к серверу"/>
+                                                                Padding="8,4" Margin="8,0,0,0" Style="{DynamicResource DarkButtonStyle}" FontSize="11" ToolTip="{DynamicResource Str_Servers_ConnectTooltip}"/>
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>
@@ -357,9 +357,9 @@
                                             Visibility="{Binding HasServers, Converter={StaticResource InverseBoolToVisConverter}}">
                                     <TextBlock Text="&#xE753;" FontFamily="Segoe MDL2 Assets" FontSize="36" 
                                                Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" Opacity="0.3" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Список пуст" Foreground="{DynamicResource PrimaryTextBrush}" 
+                                    <TextBlock Text="{DynamicResource Str_Servers_Empty}" Foreground="{DynamicResource PrimaryTextBrush}" 
                                                FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center"/>
-                                    <TextBlock Text="Добавьте сервер в игре или включите авто-добавление в настройках" 
+                                    <TextBlock Text="{DynamicResource Str_Servers_EmptyHint}" 
                                                Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" 
                                                TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0" Opacity="0.7"/>
                                 </StackPanel>
@@ -377,7 +377,14 @@
                                 <ColumnDefinition Width="180"/>
                             </Grid.ColumnDefinitions>
 
-                            <ComboBox x:Name="NicknameComboBox" Grid.Column="0" Height="45" Margin="0,0,12,0" 
+                            <Grid Grid.Column="0" Height="45" Margin="0,0,12,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <ComboBox x:Name="NicknameComboBox" Height="45"
                                       Style="{StaticResource CustomComboBoxStyle}" Background="{DynamicResource InputNicknameBgBrush}" 
                                       Padding="10,0,0,0" VerticalContentAlignment="Center" 
                                       ItemsSource="{Binding Accounts}" SelectedItem="{Binding SelectedAccount, Mode=TwoWay}"
@@ -388,7 +395,7 @@
                                             <Border Width="24" Height="24" CornerRadius="12" Margin="0,0,10,0" ClipToBounds="True">
                                                 <Image Source="{Binding AvatarImage}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
                                             </Border>
-                                            <Grid x:Name="MsLogo" Width="14" Height="14" Margin="0,0,8,0" VerticalAlignment="Center" ToolTip="Аккаунт Microsoft">
+                                            <Grid x:Name="MsLogo" Width="14" Height="14" Margin="0,0,8,0" VerticalAlignment="Center" ToolTip="{DynamicResource Str_Tooltip_MsAccount}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition/>
                                                     <ColumnDefinition/>
@@ -412,35 +419,45 @@
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
-                            </ComboBox>
+                                </ComboBox>
+
+                                <!-- Менеджер аккаунтов: в самом селекторе можно только
+    выбрать, к кому зайти, а добавить или удалить аккаунт было нужно
+    вручную искать в настройках. -->
+                                <Button x:Name="AccountManagerButton" Grid.Column="2" Width="45" Height="45"
+                                        Content="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                        Click="AccountManagerButton_Click"
+                                        Style="{StaticResource DarkButtonStyle}"
+                                        ToolTip="{DynamicResource Str_Action_AccountManager}"/>
+                            </Grid>
 
                             <ComboBox x:Name="VersionComboBox" SelectionChanged="VersionComboBox_SelectionChanged" 
                                       ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion, Mode=TwoWay}"
                                       Grid.Column="1" Height="45" Margin="0,0,15,0" Style="{StaticResource CustomComboBoxStyle}" Padding="15,0,0,0" VerticalContentAlignment="Center">
                                 <ComboBox.ContextMenu>
                                     <ContextMenu>
-                                        <MenuItem Header="Открыть папку сборки" 
+                                        <MenuItem Header="{DynamicResource Str_Version_OpenFolder}" 
                                                   Command="{Binding OpenQuickFolderCommand}" 
                                                   CommandParameter="">
                                             <MenuItem.Icon>
                                                 <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                             </MenuItem.Icon>
                                         </MenuItem>
-                                        <MenuItem Header="Открыть папку mods" 
+                                        <MenuItem Header="{DynamicResource Str_Version_OpenMods}" 
                                                   Command="{Binding OpenQuickFolderCommand}" 
                                                   CommandParameter="mods">
                                             <MenuItem.Icon>
                                                 <TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                             </MenuItem.Icon>
                                         </MenuItem>
-                                        <MenuItem Header="Создать ярлык на рабочем столе" 
+                                        <MenuItem Header="{DynamicResource Str_Version_CreateShortcut}" 
                                                   Command="{Binding OpenShortcutOverlayCommand}">
                                             <MenuItem.Icon>
                                                 <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                             </MenuItem.Icon>
                                         </MenuItem>
                                         <Separator/>
-                                        <MenuItem Header="Создать новую сборку" 
+                                        <MenuItem Header="{DynamicResource Str_Version_CreateNew}" 
                                                   Command="{Binding OpenModpackOverlayCommand}">
                                             <MenuItem.Icon>
                                                 <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
@@ -464,12 +481,12 @@
                                                 <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                             </MenuItem.Icon>
                                         </MenuItem>
-                                        <MenuItem Header="Открыть папку игры" Command="{Binding OpenQuickFolderCommand}" CommandParameter="">
+                                        <MenuItem Header="{DynamicResource Str_Version_OpenGameFolder}" Command="{Binding OpenQuickFolderCommand}" CommandParameter="">
                                             <MenuItem.Icon>
                                                 <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                             </MenuItem.Icon>
                                         </MenuItem>
-                                        <MenuItem Header="Создать ярлык на рабочем столе" Command="{Binding OpenShortcutOverlayCommand}">
+                                        <MenuItem Header="{DynamicResource Str_Version_CreateShortcut}" Command="{Binding OpenShortcutOverlayCommand}">
                                             <MenuItem.Icon>
                                                 <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}"/>
                                             </MenuItem.Icon>
@@ -503,10 +520,10 @@
                             <DropShadowEffect Color="Black" Direction="270" ShadowDepth="4" Opacity="0.5" BlurRadius="20"/>
                         </Border.Effect>
                         <Grid Margin="28,24,28,24">
-                            <TextBlock Text="Создать сборку" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Top" FontFamily="Inter"/>
+                            <TextBlock Text="{DynamicResource Str_Create_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Top" FontFamily="Inter"/>
 
                             <StackPanel Margin="0,42,0,0">
-                                <TextBlock Text="Название сборки" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
+                                <TextBlock Text="{DynamicResource Str_Create_Name}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
                                 <TextBox Text="{Binding NewModpackName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="40" Style="{StaticResource CustomTextBoxStyle}" Margin="0,0,0,12" Padding="15,0"/>
 
                                 <Grid Margin="0,0,0,12">
@@ -516,20 +533,24 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                        <TextBlock Text="Версия игры" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
+                                        <TextBlock Text="{DynamicResource Str_Create_GameVersion}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
                                         <ComboBox x:Name="ModpackVersionBox" ItemsSource="{Binding VanillaVersions}" SelectedItem="{Binding NewModpackVersion, Mode=TwoWay}" Height="40" Style="{StaticResource CustomComboBoxStyle}" Padding="15,0,0,0" VerticalContentAlignment="Center"/>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                                        <TextBlock Text="Провайдер" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
-                                        <ComboBox Height="40" Style="{StaticResource CustomComboBoxStyle}" Padding="15,0,0,0" VerticalContentAlignment="Center">
+                                        <TextBlock Text="{DynamicResource Str_Create_Provider}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
+                                        <ComboBox Height="40" Style="{StaticResource CustomComboBoxStyle}" Padding="15,0,0,0" VerticalContentAlignment="Center"
+                                                      IsEnabled="False" ToolTip="{DynamicResource Str_Provider_Soon}">
                                             <ComboBoxItem Content="Modrinth" IsSelected="True"/>
-                                            <ComboBoxItem Content="CurseForge"/>
+                                            <!-- Источника CurseForge в проекте нет: выбор проходил
+молча, а пользователю возвращался Modrinth. Пока помечаем как
+недоступный, чтобы список не врёл. -->
+                                            <ComboBoxItem Content="{DynamicResource Str_Provider_CurseForgeSoon}"/>
                                         </ComboBox>
                                     </StackPanel>
                                 </Grid>
 
-                                <TextBlock Text="Загрузчик модов" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,6" FontFamily="Inter"/>
+                                <TextBlock Text="{DynamicResource Str_Create_Loader}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,6" FontFamily="Inter"/>
 
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
@@ -546,8 +567,8 @@
                                             </Grid.ColumnDefinitions>
                                             <Image Source="/Assets/Loaders/vanilla.png" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="Чистая игра" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13"/>
-                                                <TextBlock Text="Официальный Minecraft" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,1,0,0"/>
+                                                <TextBlock Text="{DynamicResource Str_Loader_VanillaName}" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13"/>
+                                                <TextBlock Text="{DynamicResource Str_Loader_VanillaDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,1,0,0"/>
                                             </StackPanel>
                                         </Grid>
                                     </RadioButton>
@@ -562,7 +583,7 @@
                                             <Image Source="/Assets/Loaders/fabric.png" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="Fabric" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13"/>
-                                                <TextBlock Text="Высокий FPS и моды" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,1,0,0"/>
+                                                <TextBlock Text="{DynamicResource Str_Loader_FabricDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,1,0,0"/>
                                             </StackPanel>
                                         </Grid>
                                     </RadioButton>
@@ -585,7 +606,7 @@
                                             <Image Source="/Assets/Loaders/forge.png" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,7,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="Forge" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12"/>
-                                                <TextBlock Text="Для модов" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="9"/>
+                                                <TextBlock Text="{DynamicResource Str_Loader_Soon}" Foreground="#E8A33D" FontSize="9" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Grid>
                                     </RadioButton>
@@ -600,7 +621,7 @@
                                             <Image Source="/Assets/Loaders/neoforge.png" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,7,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="NeoForge" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12"/>
-                                                <TextBlock Text="Новый Forge" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="9"/>
+                                                <TextBlock Text="{DynamicResource Str_Loader_Soon}" Foreground="#E8A33D" FontSize="9" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Grid>
                                     </RadioButton>
@@ -615,23 +636,23 @@
                                             <Image Source="/Assets/Loaders/quilt.png" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,7,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="Quilt" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12"/>
-                                                <TextBlock Text="База Fabric" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="9"/>
+                                                <TextBlock Text="{DynamicResource Str_Loader_QuiltDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="9"/>
                                             </StackPanel>
                                         </Grid>
                                     </RadioButton>
                                 </Grid>
 
                                 <StackPanel Visibility="{Binding IsFabricSelected, Converter={StaticResource BoolToVisConverter}}">
-                                    <TextBlock Text="Автоматически установить:" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,0,0,5" FontWeight="Bold" FontFamily="Inter"/>
-                                    <CheckBox Content="Sodium (Глобальная оптимизация FPS)" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding InstallSodium, Mode=TwoWay}" Margin="0,0,0,4"/>
-                                    <CheckBox Content="Iris (Поддержка шейдеров)" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding InstallIris, Mode=TwoWay}"/>
+                                    <TextBlock Text="{DynamicResource Str_Create_AutoInstall}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,0,0,5" FontWeight="Bold" FontFamily="Inter"/>
+                                    <CheckBox Content="{DynamicResource Str_Create_Sodium}" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding InstallSodium, Mode=TwoWay}" Margin="0,0,0,4"/>
+                                    <CheckBox Content="{DynamicResource Str_Create_Iris}" Style="{StaticResource CustomCheckBox}" IsChecked="{Binding InstallIris, Mode=TwoWay}"/>
                                 </StackPanel>
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-                                <Button Content="Отмена" Width="100" Height="42" Style="{StaticResource DarkButtonStyle}" Margin="0,0,8,0" Command="{Binding CloseModpackOverlayCommand}" FontFamily="Inter"/>
-                                <Button Content="Импорт .zip" Width="120" Height="42" Style="{StaticResource DarkButtonStyle}" Margin="0,0,8,0" Command="{Binding ImportZipModpackCommand}" FontFamily="Inter" ToolTip="Импортировать сборку из Zip файла"/>
-                                <Button Content="Создать" Width="120" Height="42" Style="{StaticResource PlayButtonStyle}" Command="{Binding CreateModpackCommand}" FontFamily="Inter"/>
+                                <Button Content="{DynamicResource Str_Action_Cancel}" Width="100" Height="42" Style="{StaticResource DarkButtonStyle}" Margin="0,0,8,0" Command="{Binding CloseModpackOverlayCommand}" FontFamily="Inter"/>
+                                <Button Content="{DynamicResource Str_Create_ImportZip}" Width="120" Height="42" Style="{StaticResource DarkButtonStyle}" Margin="0,0,8,0" Command="{Binding ImportZipModpackCommand}" FontFamily="Inter" ToolTip="{DynamicResource Str_Create_ImportZipTooltip}"/>
+                                <Button Content="{DynamicResource Str_Create_Submit}" Width="120" Height="42" Style="{StaticResource PlayButtonStyle}" Command="{Binding CreateModpackCommand}" FontFamily="Inter"/>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -669,19 +690,19 @@
                         <DropShadowEffect Color="Black" Direction="270" ShadowDepth="4" Opacity="0.5" BlurRadius="20"/>
                     </Border.Effect>
                     <Grid Margin="30">
-                        <TextBlock Text="Ярлык быстрого входа" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Top" FontFamily="Inter"/>
+                        <TextBlock Text="{DynamicResource Str_Shortcut_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Top" FontFamily="Inter"/>
 
                         <StackPanel Margin="0,50,0,0">
-                            <TextBlock Text="Выберите сборку/версию" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
+                            <TextBlock Text="{DynamicResource Str_Shortcut_PickVersion}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
                             <ComboBox ItemsSource="{Binding Versions}" SelectedItem="{Binding ShortcutVersion, Mode=TwoWay}" Height="42" Style="{StaticResource CustomComboBoxStyle}" Margin="0,0,0,15" Padding="15,0,0,0" VerticalContentAlignment="Center"/>
 
-                            <TextBlock Text="IP-адрес сервера" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
+                            <TextBlock Text="{DynamicResource Str_Shortcut_IpLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
                             <TextBox Text="{Binding ShortcutIp, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="42" Style="{StaticResource CustomTextBoxStyle}" Margin="0,0,0,15" Padding="15,0"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-                            <Button Content="Отмена" Width="110" Height="42" Style="{StaticResource DarkButtonStyle}" Margin="0,0,10,0" Command="{Binding CloseShortcutOverlayCommand}" FontFamily="Inter"/>
-                            <Button Content="Создать" Width="140" Height="42" Style="{StaticResource PlayButtonStyle}" Command="{Binding CreateShortcutCommand}" FontFamily="Inter"/>
+                            <Button Content="{DynamicResource Str_Action_Cancel}" Width="110" Height="42" Style="{StaticResource DarkButtonStyle}" Margin="0,0,10,0" Command="{Binding CloseShortcutOverlayCommand}" FontFamily="Inter"/>
+                            <Button Content="{DynamicResource Str_Create_Submit}" Width="140" Height="42" Style="{StaticResource PlayButtonStyle}" Command="{Binding CreateShortcutCommand}" FontFamily="Inter"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -699,10 +720,10 @@
                         <TextBlock Text="{DynamicResource Str_Action_AddServer}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Top" FontFamily="Inter"/>
 
                         <StackPanel Margin="0,46,0,0">
-                            <TextBlock Text="Название сервера" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
+                            <TextBlock Text="{DynamicResource Str_AddServer_NameLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
                             <TextBox Text="{Binding NewServerName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="40" Style="{StaticResource CustomTextBoxStyle}" Margin="0,0,0,14" Padding="14,0"/>
 
-                            <TextBlock Text="IP-адрес или домен сервера" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
+                            <TextBlock Text="{DynamicResource Str_AddServer_IpLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5" FontFamily="Inter"/>
                             <TextBox Text="{Binding NewServerIp, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Height="40" Style="{StaticResource CustomTextBoxStyle}" Margin="0,0,0,14" Padding="14,0"/>
                         </StackPanel>
 
