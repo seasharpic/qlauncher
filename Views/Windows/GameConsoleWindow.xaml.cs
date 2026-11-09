@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Services;
 using MinecraftLauncher.ViewModels;
 
@@ -25,6 +26,7 @@ namespace MinecraftLauncher.Views.Windows
             ViewModel.LogLineReceived += OnLogLineReceived;
             ViewModel.RequestClear += OnRequestClear;
             ViewModel.RequestCopy += OnRequestCopy;
+            ViewModel.RequestShare += OnRequestShare;
         }
 
         public void AttachProcess(Process process)
@@ -142,6 +144,37 @@ namespace MinecraftLauncher.Views.Windows
             var textRange = new TextRange(LogRichTextBox.Document.ContentStart, LogRichTextBox.Document.ContentEnd);
             Clipboard.SetText(textRange.Text);
             ToastService.Instance.ShowSuccess(_loc.GetString("Str_Console_LogCopied"), _loc.GetString("Str_T_Console"));
+        }
+
+        /// <summary>
+        /// Публикует лог на mclo.gs и копирует короткую ссылку в буфер.
+        /// </summary>
+        private async void OnRequestShare()
+        {
+            var textRange = new TextRange(LogRichTextBox.Document.ContentStart, LogRichTextBox.Document.ContentEnd);
+            string text = textRange.Text;
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                ToastService.Instance.ShowInfo(_loc.GetString("Str_Console_LogEmpty"), _loc.GetString("Str_T_Console"));
+                return;
+            }
+
+            try
+            {
+                string url = await LogShareService.UploadLogAsync(text).ConfigureAwait(true);
+                Clipboard.SetText(url);
+                ToastService.Instance.ShowSuccess(
+                    _loc.Format("Str_Console_LogShared", url),
+                    _loc.GetString("Str_T_Console"));
+            }
+            catch (Exception ex)
+            {
+                CrashLogWriter.Write("GameConsoleWindow", "Log share failed", ex);
+                ToastService.Instance.ShowError(
+                    _loc.Format("Str_Console_LogShareError", ex.Message),
+                    _loc.GetString("Str_T_Error"));
+            }
         }
 
         private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)

@@ -58,6 +58,7 @@
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <Button Content="{DynamicResource Str_Console_CopyAll}" Command="{Binding CopyLogCommand}" Height="32" Width="130" Margin="0,0,8,0" Style="{StaticResource DarkButtonStyle}" FontSize="13"/>
+                        <Button Content="{DynamicResource Str_Console_ShareLog}" Command="{Binding ShareLogCommand}" Height="32" Width="150" Margin="0,0,8,0" Style="{StaticResource DarkButtonStyle}" FontSize="13"/>
                         <Button Content="{DynamicResource Str_Console_Clear}" Command="{Binding ClearLogCommand}" Height="32" Width="90" Style="{StaticResource DarkButtonStyle}" FontSize="13"/>
                     </StackPanel>
                 </Grid>

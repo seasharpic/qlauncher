@@ -29,14 +29,17 @@ namespace MinecraftLauncher.ViewModels
         public event Action<string, bool>? LogLineReceived;
         public event Action? RequestClear;
         public event Action? RequestCopy;
+        public event Action? RequestShare;
 
         public RelayCommand ClearLogCommand { get; }
         public RelayCommand CopyLogCommand { get; }
+        public RelayCommand ShareLogCommand { get; }
 
         public GameConsoleViewModel()
         {
             ClearLogCommand = new RelayCommand(() => RequestClear?.Invoke());
             CopyLogCommand = new RelayCommand(() => RequestCopy?.Invoke());
+            ShareLogCommand = new RelayCommand(() => RequestShare?.Invoke());
         }
 
         private Process? _attachedProcess;
