@@ -71,7 +71,7 @@
     <sys:String x:Key="Str_Settings_UpdateChannel">Update Channel</sys:String>
     <sys:String x:Key="Str_Settings_UpdateMirror">Download Mirror</sys:String>
     <sys:String x:Key="Str_Settings_BandwidthLimit">Download Bandwidth Limit</sys:String>
-    <sys:String x:Key="Str_Settings_SourcesTitle">DOWNLOAD SOURCES</sys:String>
+    <sys:String x:Key="Str_Settings_SourcesTitle">MINECRAFT DOWNLOAD SOURCES</sys:String>
     <sys:String x:Key="Str_Settings_SourcesDesc">Checks whether Mojang, Fabric, Quilt, Maven and Adoptium servers are reachable, so the launcher doesn't wait on blocked addresses. Downloaded files are always verified by hash, regardless of the source.</sys:String>
     <sys:String x:Key="Str_Settings_SourcePreference">Source order</sys:String>
     <sys:String x:Key="Str_Settings_ExportDiagnostic">Export Diagnostic Report</sys:String>
@@ -191,6 +191,33 @@
     <sys:String x:Key="Str_Mods_Category_Shader">Shaders</sys:String>
     <sys:String x:Key="Str_Mods_SearchBtn">Search</sys:String>
     <sys:String x:Key="Str_Mods_InstallBtn">Install</sys:String>
+    <!-- Mod browser keys: two catalogs, filters, version-aware install -->
+    <sys:String x:Key="Str_Mods_Source">Source</sys:String>
+    <sys:String x:Key="Str_Mods_Source_Modrinth">Modrinth</sys:String>
+    <sys:String x:Key="Str_Mods_Source_CurseForge">CurseForge</sys:String>
+    <sys:String x:Key="Str_Mods_Category">Category</sys:String>
+    <sys:String x:Key="Str_Mods_Category_All">All categories</sys:String>
+    <sys:String x:Key="Str_Mods_Loader">Loader</sys:String>
+    <sys:String x:Key="Str_Mods_Loader_Auto">Auto (from modpack)</sys:String>
+    <sys:String x:Key="Str_Mods_Sort">Sort by</sys:String>
+    <sys:String x:Key="Str_Mods_Sort_Relevance">Relevance</sys:String>
+    <sys:String x:Key="Str_Mods_Sort_Downloads">Downloads</sys:String>
+    <sys:String x:Key="Str_Mods_Sort_Updated">Recently updated</sys:String>
+    <sys:String x:Key="Str_Mods_Version">Minecraft version</sys:String>
+    <sys:String x:Key="Str_Mods_LoadMore">Show more</sys:String>
+    <sys:String x:Key="Str_Mods_EmptyState">Type a query and press Search</sys:String>
+    <sys:String x:Key="Str_Mods_NoResults">Nothing found. Try changing the filters.</sys:String>
+    <sys:String x:Key="Str_Mods_LoadingMore">Loading more...</sys:String>
+    <sys:String x:Key="Str_Mods_CfKeyTooltip">CurseForge API token</sys:String>
+    <sys:String x:Key="Str_Mods_CfKeyLabel">CurseForge token:</sys:String>
+    <sys:String x:Key="Str_Mods_CfKeySave">Save</sys:String>
+    <sys:String x:Key="Str_Mods_CfKeyNeed">CurseForge requires a personal API token. Paste it using the key button next to the filters.</sys:String>
+    <sys:String x:Key="Str_Mods_KeySaved">CurseForge token saved (encrypted with DPAPI).</sys:String>
+    <sys:String x:Key="Str_Mods_InstalledWithDeps">File '{0}' and {1} dependencies saved to '{2}'!</sys:String>
+    <sys:String x:Key="Str_Mods_NothingSaved">No files were downloaded.</sys:String>
+    <sys:String x:Key="Str_Mods_NoCompatibleFile">No compatible file found for Minecraft {0}.</sys:String>
+    <sys:String x:Key="Str_Mods_HashMismatch">Hash of file '{0}' did not match — download cancelled.</sys:String>
+    <sys:String x:Key="Str_Mods_DownloadTitle">Downloading: {0}</sys:String>
 
     <!-- Profile manager page -->
     <sys:String x:Key="Str_Profile_NewPack">New modpack</sys:String>
@@ -225,7 +252,7 @@
     <!-- Settings page -->
     <sys:String x:Key="Str_Settings_SectionGeneral">GENERAL</sys:String>
     <sys:String x:Key="Str_Settings_LanguageCard">Language</sys:String>
-    <sys:String x:Key="Str_Settings_SectionJava">JAVA &amp; MEMORY</sys:String>
+    <sys:String x:Key="Str_Settings_SectionJava">JAVA, MEMORY &amp; GRAPHICS</sys:String>
     <sys:String x:Key="Str_Settings_Browse">Browse...</sys:String>
     <sys:String x:Key="Str_Settings_BrowseWallpaper">Choose...</sys:String>
     <sys:String x:Key="Str_Settings_ResetWallpaper">Reset</sys:String>
@@ -244,7 +271,24 @@
     <sys:String x:Key="Str_Settings_AddOffline">Add offline</sys:String>
     <sys:String x:Key="Str_Settings_MsAccount">Sign in with Microsoft</sys:String>
     <sys:String x:Key="Str_Settings_LoginMicrosoft">Sign in with Microsoft</sys:String>
+
+    <sys:String x:Key="Str_Settings_ElyAccount">Ely.by Account</sys:String>
+    <sys:String x:Key="Str_Settings_LoginEly">Sign in with Ely.by</sys:String>
+    <sys:String x:Key="Str_Settings_LoginElyBrowser">Device code (passwordless)</sys:String>
+    <sys:String x:Key="Str_Ely_LoginRequired">Enter your Ely.by e-mail/username and password.</sys:String>
+    <sys:String x:Key="Str_Ely_TotpNeeded">This account is protected with 2FA: enter the code from your authenticator app and try again.</sys:String>
+    <sys:String x:Key="Str_Ely_LoginSuccess">You are signed in as {0} (Ely.by)!</sys:String>
+    <sys:String x:Key="Str_Ely_LoginError">Ely.by sign-in failed: {0}</sys:String>
+    <sys:String x:Key="Str_Ely_AuthFailedGeneric">invalid e-mail/username or password.</sys:String>
+    <sys:String x:Key="Str_Ely_SessionExpired">Ely.by session expired. Please sign in again in Settings.</sys:String>
+    <sys:String x:Key="Str_Ely_Injector">Downloading Ely.by skin library (authlib-injector)...</sys:String>
+    <sys:String x:Key="Str_Ely_Refreshing">Refreshing Ely.by session...</sys:String>
+    <sys:String x:Key="Str_Ely_DeviceHint">On the opened Ely.by page, enter the code: {0} — the password is never asked.</sys:String>
+    <sys:String x:Key="Str_Ely_DeviceExpired">The device code has expired. Please try signing in again.</sys:String>
+    <sys:String x:Key="Str_Ely_DeviceDenied">Sign-in was denied on the Ely.by page.</sys:String>
+    <sys:String x:Key="Str_Ely_DeviceStartFailed">Ely.by did not issue a device code. Check your connection and try again.</sys:String>
     <sys:String x:Key="Str_Settings_SectionUpdates">UPDATES &amp; SOURCES</sys:String>
+    <sys:String x:Key="Str_Settings_SectionUpdatesAndAbout">UPDATES &amp; ABOUT</sys:String>
     <sys:String x:Key="Str_Settings_UpdatesDesc">Automatic search for new releases and mirror switching</sys:String>
     <sys:String x:Key="Str_Settings_CheckNow">Check now</sys:String>
     <sys:String x:Key="Str_Settings_ChannelLabel">Update channel</sys:String>
@@ -299,6 +343,10 @@
     <sys:String x:Key="Str_Console_Title">Minecraft Launch Console</sys:String>
     <sys:String x:Key="Str_Console_AutoScroll">Auto-scroll</sys:String>
     <sys:String x:Key="Str_Console_CopyAll">Copy all</sys:String>
+    <sys:String x:Key="Str_Console_ShareLog">Share log</sys:String>
+    <sys:String x:Key="Str_Console_LogShared">Short link copied: {0}</sys:String>
+    <sys:String x:Key="Str_Console_LogShareError">Failed to upload the log: {0}</sys:String>
+    <sys:String x:Key="Str_Console_LogEmpty">The log is empty — nothing to share.</sys:String>
     <sys:String x:Key="Str_Console_Clear">Clear</sys:String>
 
     <!-- Message box, splash, toast defaults -->
@@ -439,6 +487,7 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Sources_AllReachable">All sources are reachable.</sys:String>
     <sys:String x:Key="Str_T_Modrinth">Modrinth</sys:String>
     <sys:String x:Key="Str_T_ModrinthApi">Modrinth API</sys:String>
+    <sys:String x:Key="Str_T_CurseForge">CurseForge</sys:String>
     <sys:String x:Key="Str_T_Install">Install</sys:String>
     <sys:String x:Key="Str_Mods_SearchError">Search failed: {0}</sys:String>
     <sys:String x:Key="Str_Mods_NoVersions">No versions found for this project.</sys:String>
@@ -464,6 +513,13 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Pack_ShortcutError">Could not create the shortcut: {0}</sys:String>
     <sys:String x:Key="Str_Mods_UpToDate">All mods are up to date.</sys:String>
     <sys:String x:Key="Str_Mods_UpdateChecking">Checking for mod updates on Modrinth...</sys:String>
+    <sys:String x:Key="Str_Mods_RowUpdate">Update available: {0}</sys:String>
+    <sys:String x:Key="Str_Mods_RowUnknown">Not found in catalogs</sys:String>
+    <sys:String x:Key="Str_Mods_UpdateFound">Updates available: {0}. Use "Update all".</sys:String>
+    <sys:String x:Key="Str_Profile_UpdateAll">Update all</sys:String>
+    <sys:String x:Key="Str_Mods_UpdatedCount">Updated: {0}, failed: {1}</sys:String>
+    <sys:String x:Key="Str_Mods_UpdateFailed">Failed to update {0} — the file did not download or the SHA-1 mismatched.</sys:String>
+    <sys:String x:Key="Str_Mods_UpdatedOne">Updated: {0} → {1}</sys:String>
     <sys:String x:Key="Str_Mods_UpdatesFound">Updates found: {0}. All mods are already installed!</sys:String>
     <sys:String x:Key="Str_Mods_UpdatesCheckError">Could not check for updates: {0}</sys:String>
     <sys:String x:Key="Str_Mod_DeleteQuestion">Delete the mod file '{0}'?</sys:String>
@@ -581,8 +637,105 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Mods_HintMod">Mods and modpacks to expand gameplay</sys:String>
     <sys:String x:Key="Str_Mods_HintResourcePack">Search texture and resource packs to install into the resourcepacks folder</sys:String>
     <sys:String x:Key="Str_Mods_HintShader">Search shaders (OptiFine / Iris) to install into the shaderpacks folder</sys:String>
+    <sys:String x:Key="Str_Mods_HintDataPack">Datapacks: new mechanics and recipes, datapacks folder</sys:String>
+    <sys:String x:Key="Str_Mods_HintPlugin">Server plugins (Bukkit/Spigot/Paper), plugins folder</sys:String>
+    <sys:String x:Key="Str_Mods_HintModpack">Full modpacks: open them from the top (⭐), no install needed here</sys:String>
+    <sys:String x:Key="Str_Mods_HintWorld">Ready-made CurseForge worlds: view only, Modrinth has no worlds</sys:String>
+    <sys:String x:Key="Str_Mods_HintCustomization">CurseForge customization — lucky blocks and more: view only</sys:String>
+    <sys:String x:Key="Str_Mods_HintAddons">CurseForge addons (Bedrock content): category lookup may take a moment</sys:String>
+
+    <!-- Content types in the catalog filter -->
+    <sys:String x:Key="Str_Mods_Type_ResourcePack">Resource Packs</sys:String>
+    <sys:String x:Key="Str_Mods_Type_Shader">Shaders</sys:String>
+    <sys:String x:Key="Str_Mods_Type_DataPack">Datapacks</sys:String>
+    <sys:String x:Key="Str_Mods_Type_Plugin">Plugins</sys:String>
+    <sys:String x:Key="Str_Mods_Type_Modpack">Modpacks</sys:String>
+    <sys:String x:Key="Str_Mods_Type_World">Worlds</sys:String>
+    <sys:String x:Key="Str_Mods_Type_Customization">Customization</sys:String>
+    <sys:String x:Key="Str_Mods_Type_Addons">Addons</sys:String>
+
+    <!-- Card captions -->
+    <sys:String x:Key="Str_Mods_Card_Downloads">Downloads: {0}</sys:String>
+    <sys:String x:Key="Str_Mods_Card_Updated">Updated {0}</sys:String>
+    <sys:String x:Key="Str_Mods_Card_MetaEmpty">No versions listed</sys:String>
+
+    <!-- Modrinth categories (slug → translation; unknown ones stay English) -->
+    <sys:String x:Key="Str_Mods_Cat_Adventure">Adventure</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Cursed">Cursed</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Decoration">Decoration</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Economy">Economy</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Education">Education</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Equipment">Equipment</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Food">Food</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Games">Games</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Library">Library</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Magic">Magic</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Management">Management</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Miscellaneous">Miscellaneous</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Optimization">Optimization</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Social">Social</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Storage">Storage</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Technology">Technology</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Transportation">Transportation</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Utility">Utility</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Worldgen">World Gen</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_GameMechanics">Game mechanics</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_MiniGame">Mini-games</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Audio">Audio</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Blocks">Blocks</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Combat">Combat</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Entities">Entities</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Environment">Environment</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Locale">Localization</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Modded">Modded</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Themed">Themed</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Tweaks">Tweaks</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_VanillaLike">Vanilla-like</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Atmosphere">Atmosphere</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Bloom">Bloom</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_ColoredLighting">Colored lighting</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Foliage">Foliage</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_PathTracing">Path tracing</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Pbr">PBR</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Reflections">Reflections</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Shadows">Shadows</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Animated">Animated</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_CoreShaders">Core Shaders</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_FallbackFonts">Fallback Fonts</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Fonts">Fonts</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Gui">GUI</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Icons">Icons</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Items">Items</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Mobs">Mobs</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Models">Models</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Noise">Noise</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Realistic">Realistic</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Readable">Readable</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Simplified">Simplified</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Sounds">Sounds</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Stylized">Stylized</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Textures">Textures</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_VanillaTweaks">Vanilla Tweaks</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Cartoony">Cartoony</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Fantasy">Fantasy</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_SemiRealistic">Semi-Realistic</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Vanilla">Vanilla</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Lore">Lore</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Gameplay">Gameplay</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Chat">Chat</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Protection">Protection</sys:String>
+
+    <!-- Mod detail page -->
+    <sys:String x:Key="Str_Mods_NoInstall">This content type is not installed from here — there is no target folder for it.</sys:String>
+    <sys:String x:Key="Str_Detail_OpenPage">Open in catalog</sys:String>
+    <sys:String x:Key="Str_Detail_Description">Description</sys:String>
+    <sys:String x:Key="Str_Detail_Files">Recent files</sys:String>
+    <sys:String x:Key="Str_Detail_Loading">Loading the mod page...</sys:String>
+    <sys:String x:Key="Str_Detail_DescriptionUnavailable">Description unavailable: the catalog is unreachable or the project was not found.</sys:String>
+
     <sys:String x:Key="Str_Mods_Loading">Loading...</sys:String>
     <sys:String x:Key="Str_Mods_Searching">Searching Modrinth...</sys:String>
+    <sys:String x:Key="Str_Mods_SearchingCf">Searching CurseForge...</sys:String>
     <sys:String x:Key="Str_Mods_SearchingTitle">Searching for "{0}"...</sys:String>
     <sys:String x:Key="Str_Mods_UnknownTitle">Untitled</sys:String>
     <sys:String x:Key="Str_Mods_UnknownAuthor">Unknown author</sys:String>

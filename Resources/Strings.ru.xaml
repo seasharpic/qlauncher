@@ -32,7 +32,7 @@
     <sys:String x:Key="Str_Action_Back">Назад</sys:String>
 
     <!-- Settings -->
-    <sys:String x:Key="Str_Settings_Title">Настройки</sys:String>
+    <sys:String x:Key="Str_Settings_Title">Параметры</sys:String>
     <sys:String x:Key="Str_Settings_Language">Язык интерфейса / Language</sys:String>
     <sys:String x:Key="Str_Settings_Theme">Режим темы</sys:String>
     <sys:String x:Key="Str_Settings_ThemeLight">Светлая</sys:String>
@@ -71,7 +71,7 @@
     <sys:String x:Key="Str_Settings_UpdateChannel">Канал обновлений</sys:String>
     <sys:String x:Key="Str_Settings_UpdateMirror">Зеркало загрузки</sys:String>
     <sys:String x:Key="Str_Settings_BandwidthLimit">Ограничение скорости загрузки</sys:String>
-    <sys:String x:Key="Str_Settings_SourcesTitle">ИСТОЧНИКИ ЗАГРУЗКИ</sys:String>
+    <sys:String x:Key="Str_Settings_SourcesTitle">ИСТОЧНИКИ ЗАГРУЗКИ MINECRAFT</sys:String>
     <sys:String x:Key="Str_Settings_SourcesDesc">Проверяет доступность серверов Mojang, Fabric, Quilt, Maven и Adoptium, чтобы не тратить время на попытки достучаться до заблокированного адреса. Скачанные файлы всегда сверяются по хешу, независимо от источника.</sys:String>
     <sys:String x:Key="Str_Settings_SourcePreference">Порядок источников</sys:String>
     <sys:String x:Key="Str_Settings_ExportDiagnostic">Экспорт диагностического отчёта</sys:String>
@@ -99,7 +99,7 @@
 
     <!-- Title bar and navigation tooltips -->
     <sys:String x:Key="Str_Tooltip_ToggleTheme">Сменить тему</sys:String>
-    <sys:String x:Key="Str_Tooltip_Settings">Настройки</sys:String>
+    <sys:String x:Key="Str_Tooltip_Settings">Параметры</sys:String>
     <sys:String x:Key="Str_Tooltip_NavModpacks">Управление и выбор сборок</sys:String>
     <sys:String x:Key="Str_Tooltip_NavMods">Каталог модов, ресурс-паков и шейдеров</sys:String>
     <sys:String x:Key="Str_Tooltip_NavScreenshots">Галерея скриншотов</sys:String>
@@ -175,13 +175,13 @@
     <sys:String x:Key="Str_Modpacks_Empty">У вас пока нет созданных сборок. Нажмите 'Новая сборка' для создания!</sys:String>
     <sys:String x:Key="Str_Modpacks_ActiveBadge">Активна</sys:String>
     <sys:String x:Key="Str_Modpacks_Menu_Play">Выбрать сборку</sys:String>
-    <sys:String x:Key="Str_Modpacks_Menu_Manage">Настройки сборки</sys:String>
+    <sys:String x:Key="Str_Modpacks_Menu_Manage">Параметры сборки</sys:String>
     <sys:String x:Key="Str_Modpacks_Menu_OpenFolder">Открыть папку сборки</sys:String>
     <sys:String x:Key="Str_Modpacks_Menu_OpenMods">Открыть папку mods</sys:String>
     <sys:String x:Key="Str_Modpacks_Menu_Shortcut">Создать ярлык на рабочем столе</sys:String>
     <sys:String x:Key="Str_Modpacks_Menu_Clone">Клонировать сборку</sys:String>
     <sys:String x:Key="Str_Modpacks_Menu_Delete">Удалить сборку</sys:String>
-    <sys:String x:Key="Str_Modpacks_CardManageTooltip">Настройки и управление сборкой</sys:String>
+    <sys:String x:Key="Str_Modpacks_CardManageTooltip">Параметры и управление сборкой</sys:String>
     <sys:String x:Key="Str_Modpacks_SelectBtn">Выбрать</sys:String>
 
     <!-- Mods page -->
@@ -191,6 +191,33 @@
     <sys:String x:Key="Str_Mods_Category_Shader">Шейдеры</sys:String>
     <sys:String x:Key="Str_Mods_SearchBtn">Искать</sys:String>
     <sys:String x:Key="Str_Mods_InstallBtn">Установить</sys:String>
+    <!-- Ключи мод-браузера: два каталога, фильтры и установка под версию -->
+    <sys:String x:Key="Str_Mods_Source">Источник</sys:String>
+    <sys:String x:Key="Str_Mods_Source_Modrinth">Modrinth</sys:String>
+    <sys:String x:Key="Str_Mods_Source_CurseForge">CurseForge</sys:String>
+    <sys:String x:Key="Str_Mods_Category">Категория</sys:String>
+    <sys:String x:Key="Str_Mods_Category_All">Все категории</sys:String>
+    <sys:String x:Key="Str_Mods_Loader">Загрузчик</sys:String>
+    <sys:String x:Key="Str_Mods_Loader_Auto">Авто (по сборке)</sys:String>
+    <sys:String x:Key="Str_Mods_Sort">Сортировка</sys:String>
+    <sys:String x:Key="Str_Mods_Sort_Relevance">По релевантности</sys:String>
+    <sys:String x:Key="Str_Mods_Sort_Downloads">По скачиваниям</sys:String>
+    <sys:String x:Key="Str_Mods_Sort_Updated">По обновлению</sys:String>
+    <sys:String x:Key="Str_Mods_Version">Версия Minecraft</sys:String>
+    <sys:String x:Key="Str_Mods_LoadMore">Показать ещё</sys:String>
+    <sys:String x:Key="Str_Mods_EmptyState">Введите запрос и нажмите «Искать»</sys:String>
+    <sys:String x:Key="Str_Mods_NoResults">Ничего не найдено. Попробуйте изменить фильтры.</sys:String>
+    <sys:String x:Key="Str_Mods_LoadingMore">Загружаю ещё...</sys:String>
+    <sys:String x:Key="Str_Mods_CfKeyTooltip">Токен CurseForge</sys:String>
+    <sys:String x:Key="Str_Mods_CfKeyLabel">Токен CurseForge:</sys:String>
+    <sys:String x:Key="Str_Mods_CfKeySave">Сохранить</sys:String>
+    <sys:String x:Key="Str_Mods_CfKeyNeed">Для CurseForge нужен личный API-токен. Вставьте его по кнопке ключа рядом с фильтрами.</sys:String>
+    <sys:String x:Key="Str_Mods_KeySaved">Токен CurseForge сохранён (шифруется DPAPI).</sys:String>
+    <sys:String x:Key="Str_Mods_InstalledWithDeps">Файл '{0}' и {1} зависимост(и/ей) сохранены в '{2}'!</sys:String>
+    <sys:String x:Key="Str_Mods_NothingSaved">Не удалось скачать ни один файл.</sys:String>
+    <sys:String x:Key="Str_Mods_NoCompatibleFile">Для Minecraft {0} подходящего файла не нашлось.</sys:String>
+    <sys:String x:Key="Str_Mods_HashMismatch">Хеш файла '{0}' не совпал с ожидаемым — скачивание отменено.</sys:String>
+    <sys:String x:Key="Str_Mods_DownloadTitle">Загрузка: {0}</sys:String>
 
     <!-- Profile manager page -->
     <sys:String x:Key="Str_Profile_NewPack">Новая сборка</sys:String>
@@ -225,7 +252,7 @@
     <!-- Settings page -->
     <sys:String x:Key="Str_Settings_SectionGeneral">ОСНОВНЫЕ</sys:String>
     <sys:String x:Key="Str_Settings_LanguageCard">Язык</sys:String>
-    <sys:String x:Key="Str_Settings_SectionJava">JAVA И ПАМЯТЬ</sys:String>
+    <sys:String x:Key="Str_Settings_SectionJava">JAVA, ПАМЯТЬ И ГРАФИКА</sys:String>
     <sys:String x:Key="Str_Settings_Browse">Обзор...</sys:String>
     <sys:String x:Key="Str_Settings_BrowseWallpaper">Выбрать...</sys:String>
     <sys:String x:Key="Str_Settings_ResetWallpaper">Сбросить</sys:String>
@@ -244,7 +271,24 @@
     <sys:String x:Key="Str_Settings_AddOffline">Добавить оффлайн</sys:String>
     <sys:String x:Key="Str_Settings_MsAccount">Войдите через Microsoft</sys:String>
     <sys:String x:Key="Str_Settings_LoginMicrosoft">Войти через Microsoft</sys:String>
+
+    <sys:String x:Key="Str_Settings_ElyAccount">Аккаунт Ely.by</sys:String>
+    <sys:String x:Key="Str_Settings_LoginEly">Войти через Ely.by</sys:String>
+    <sys:String x:Key="Str_Settings_LoginElyBrowser">Device Code (без пароля)</sys:String>
+    <sys:String x:Key="Str_Ely_LoginRequired">Введите логин и пароль аккаунта Ely.by.</sys:String>
+    <sys:String x:Key="Str_Ely_TotpNeeded">Аккаунт защищён 2FA: введите код из приложения аутентификации и повторите вход.</sys:String>
+    <sys:String x:Key="Str_Ely_LoginSuccess">Вы вошли как {0} (Ely.by)!</sys:String>
+    <sys:String x:Key="Str_Ely_LoginError">Ошибка входа Ely.by: {0}</sys:String>
+    <sys:String x:Key="Str_Ely_AuthFailedGeneric">неверный логин или пароль.</sys:String>
+    <sys:String x:Key="Str_Ely_SessionExpired">Сессия Ely.by истекла. Войдите в аккаунт заново в настройках.</sys:String>
+    <sys:String x:Key="Str_Ely_Injector">Загрузка библиотеки скинов Ely.by (authlib-injector)...</sys:String>
+    <sys:String x:Key="Str_Ely_Refreshing">Продление сессии Ely.by...</sys:String>
+    <sys:String x:Key="Str_Ely_DeviceHint">На открывшейся странице Ely.by введите код: {0} — пароль нигде не запрашивается.</sys:String>
+    <sys:String x:Key="Str_Ely_DeviceExpired">Время действия кода истекло. Попробуйте войти через браузер ещё раз.</sys:String>
+    <sys:String x:Key="Str_Ely_DeviceDenied">Вход был отклонён на странице Ely.by.</sys:String>
+    <sys:String x:Key="Str_Ely_DeviceStartFailed">Ely.by не выдал код подтверждения. Проверьте сеть и попробуйте снова.</sys:String>
     <sys:String x:Key="Str_Settings_SectionUpdates">ОБНОВЛЕНИЯ И ИСТОЧНИКИ</sys:String>
+    <sys:String x:Key="Str_Settings_SectionUpdatesAndAbout">ОБНОВЛЕНИЯ И О ПРОГРАММЕ</sys:String>
     <sys:String x:Key="Str_Settings_UpdatesDesc">Автоматический поиск новых релизов и переключение зеркал</sys:String>
     <sys:String x:Key="Str_Settings_CheckNow">Проверить сейчас</sys:String>
     <sys:String x:Key="Str_Settings_ChannelLabel">Канал обновлений</sys:String>
@@ -299,6 +343,10 @@
     <sys:String x:Key="Str_Console_Title">Консоль отладки Minecraft</sys:String>
     <sys:String x:Key="Str_Console_AutoScroll">Автопрокрутка</sys:String>
     <sys:String x:Key="Str_Console_CopyAll">Копировать всё</sys:String>
+    <sys:String x:Key="Str_Console_ShareLog">Поделиться логом</sys:String>
+    <sys:String x:Key="Str_Console_LogShared">Короткая ссылка скопирована: {0}</sys:String>
+    <sys:String x:Key="Str_Console_LogShareError">Не удалось опубликовать лог: {0}</sys:String>
+    <sys:String x:Key="Str_Console_LogEmpty">Лог пустой — публиковать нечего.</sys:String>
     <sys:String x:Key="Str_Console_Clear">Очистить</sys:String>
 
     <!-- Message box, splash, toast defaults -->
@@ -362,7 +410,7 @@
     <sys:String x:Key="Str_Delete_Done">Сборка '{0}' удалена.</sys:String>
     <sys:String x:Key="Str_Delete_PackRequired">Выберите кастомную сборку для удаления.</sys:String>
     <sys:String x:Key="Str_Server_IpCopied">IP адрес '{0}' скопирован в буфер</sys:String>
-    <sys:String x:Key="Str_AutoTune_Done">Настройки оптимизированы: RAM {0} МБ, сборщик мусора по профилю, приоритет дискретного GPU.</sys:String>
+    <sys:String x:Key="Str_AutoTune_Done">Параметры оптимизированы: RAM {0} МБ, сборщик мусора по профилю, приоритет дискретного GPU.</sys:String>
     <sys:String x:Key="Str_T_Servers">Серверы</sys:String>
     <sys:String x:Key="Str_Pack_Created">Сборка '{0}' создана!</sys:String>
     <sys:String x:Key="Str_T_Monitoring">Мониторинг</sys:String>
@@ -439,6 +487,7 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Sources_AllReachable">Все источники доступны.</sys:String>
     <sys:String x:Key="Str_T_Modrinth">Modrinth</sys:String>
     <sys:String x:Key="Str_T_ModrinthApi">Modrinth API</sys:String>
+    <sys:String x:Key="Str_T_CurseForge">CurseForge</sys:String>
     <sys:String x:Key="Str_T_Install">Установка</sys:String>
     <sys:String x:Key="Str_Mods_SearchError">Ошибка поиска: {0}</sys:String>
     <sys:String x:Key="Str_Mods_NoVersions">Для данного проекта не найдено версий.</sys:String>
@@ -464,6 +513,13 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Pack_ShortcutError">Ошибка создания ярлыка: {0}</sys:String>
     <sys:String x:Key="Str_Mods_UpToDate">Все моды в актуальной версии.</sys:String>
     <sys:String x:Key="Str_Mods_UpdateChecking">Проверка обновлений модов на Modrinth...</sys:String>
+    <sys:String x:Key="Str_Mods_RowUpdate">Есть обновление: {0}</sys:String>
+    <sys:String x:Key="Str_Mods_RowUnknown">Не найден в каталогах</sys:String>
+    <sys:String x:Key="Str_Mods_UpdateFound">Доступно обновлений: {0}. Нажмите «Обновить всё».</sys:String>
+    <sys:String x:Key="Str_Profile_UpdateAll">Обновить всё</sys:String>
+    <sys:String x:Key="Str_Mods_UpdatedCount">Обновлено: {0}, не удалось: {1}</sys:String>
+    <sys:String x:Key="Str_Mods_UpdateFailed">Не удалось обновить {0} — файл не скачался или не совпал SHA-1.</sys:String>
+    <sys:String x:Key="Str_Mods_UpdatedOne">Обновлено: {0} → {1}</sys:String>
     <sys:String x:Key="Str_Mods_UpdatesFound">Обновлений найдено: {0}. Все моды уже установлены!</sys:String>
     <sys:String x:Key="Str_Mods_UpdatesCheckError">Не удалось проверить обновления: {0}</sys:String>
     <sys:String x:Key="Str_Mod_DeleteQuestion">Удалить файл мода '{0}'?</sys:String>
@@ -509,11 +565,11 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Console_LogCopied">Журнал скопирован в буфер обмена.</sys:String>
     <sys:String x:Key="Str_T_Console">Консоль</sys:String>
     <sys:String x:Key="Str_Profile_DeletedPlain">Сборка успешно удалена.</sys:String>
-    <sys:String x:Key="Str_Settings_Exported">Настройки экспортированы, токены удалены</sys:String>
+    <sys:String x:Key="Str_Settings_Exported">Параметры экспортированы, токены удалены</sys:String>
     <sys:String x:Key="Str_Settings_ExportError">Ошибка экспорта: {0}</sys:String>
-    <sys:String x:Key="Str_Settings_Imported">Настройки успешно импортированы!</sys:String>
+    <sys:String x:Key="Str_Settings_Imported">Параметры успешно импортированы!</sys:String>
     <sys:String x:Key="Str_Settings_ImportError">Ошибка импорта: {0}</sys:String>
-    <sys:String x:Key="Str_Settings_Reset">Настройки сброшены до стандартных значений.</sys:String>
+    <sys:String x:Key="Str_Settings_Reset">Параметры сброшены до стандартных значений.</sys:String>
     <sys:String x:Key="Str_T_Reset">Сброс</sys:String>
     <sys:String x:Key="Str_Release_Prerelease">Предварительная сборка</sys:String>
     <sys:String x:Key="Str_Release_Major">Крупное обновление</sys:String>
@@ -581,8 +637,105 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Mods_HintMod">Моды и модпаки для расширения игрового процесса</sys:String>
     <sys:String x:Key="Str_Mods_HintResourcePack">Поиск текстурпаков и ресурспаков для загрузки в папку resourcepacks</sys:String>
     <sys:String x:Key="Str_Mods_HintShader">Поиск шейдеров (OptiFine / Iris) для загрузки в папку shaderpacks</sys:String>
+    <sys:String x:Key="Str_Mods_HintDataPack">Дата-паки: новые механики и рецепты, папка datapacks</sys:String>
+    <sys:String x:Key="Str_Mods_HintPlugin">Плагины для серверов (Bukkit/Spigot/Paper), папка plugins</sys:String>
+    <sys:String x:Key="Str_Mods_HintModpack">Сборки целиком: открывайте сверху (⭐), установка отсюда не требуется</sys:String>
+    <sys:String x:Key="Str_Mods_HintWorld">Готовые миры из CurseForge: только просмотр, Modrinth миров не держит</sys:String>
+    <sys:String x:Key="Str_Mods_HintCustomization">Кастомизация CurseForge — лаки-блоки и прочее: только просмотр</sys:String>
+    <sys:String x:Key="Str_Mods_HintAddons">Аддоны CurseForge (Bedrock-контент): поиск категории может занять время</sys:String>
+
+    <!-- Типы контента в фильтре каталога -->
+    <sys:String x:Key="Str_Mods_Type_ResourcePack">Ресурспаки</sys:String>
+    <sys:String x:Key="Str_Mods_Type_Shader">Шейдеры</sys:String>
+    <sys:String x:Key="Str_Mods_Type_DataPack">Дата-паки</sys:String>
+    <sys:String x:Key="Str_Mods_Type_Plugin">Плагины</sys:String>
+    <sys:String x:Key="Str_Mods_Type_Modpack">Модпаки</sys:String>
+    <sys:String x:Key="Str_Mods_Type_World">Миры</sys:String>
+    <sys:String x:Key="Str_Mods_Type_Customization">Кастомизация</sys:String>
+    <sys:String x:Key="Str_Mods_Type_Addons">Аддоны</sys:String>
+
+    <!-- Подписи карточек -->
+    <sys:String x:Key="Str_Mods_Card_Downloads">Скачиваний: {0}</sys:String>
+    <sys:String x:Key="Str_Mods_Card_Updated">Обновлено {0}</sys:String>
+    <sys:String x:Key="Str_Mods_Card_MetaEmpty">Версии не указаны</sys:String>
+
+    <!-- Категории Modrinth (slug → перевод; незнакомые останутся английскими) -->
+    <sys:String x:Key="Str_Mods_Cat_Adventure">Приключения</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Cursed">Проклятые</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Decoration">Декорации</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Economy">Экономика</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Education">Образование</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Equipment">Снаряжение</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Food">Еда</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Games">Мини-игры</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Library">Библиотеки</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Magic">Магия</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Management">Управление</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Miscellaneous">Разное</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Optimization">Оптимизация</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Social">Социальное</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Storage">Хранение</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Technology">Технологии</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Transportation">Транспорт</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Utility">Утилиты</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Worldgen">Генерация мира</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_GameMechanics">Игровая механика</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_MiniGame">Мини-игры</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Audio">Аудио</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Blocks">Блоки</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Combat">Бой</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Entities">Сущности</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Environment">Окружение</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Locale">Локализация</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Modded">Модификации</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Themed">Тематические</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Tweaks">Правки</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_VanillaLike">В стиле ванили</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Atmosphere">Атмосфера</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Bloom">Свечение</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_ColoredLighting">Цветное освещение</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Foliage">Растительность</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_PathTracing">Пат-трейсинг</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Pbr">PBR</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Reflections">Отражения</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Shadows">Тени</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Animated">Анимированные</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_CoreShaders">Основные шейдеры</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_FallbackFonts">Резервные шрифты</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Fonts">Шрифты</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Gui">Интерфейс</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Icons">Иконки</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Items">Предметы</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Mobs">Мобы</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Models">Модели</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Noise">Шум</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Realistic">Реалистичные</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Readable">Читаемые</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Simplified">Упрощённые</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Sounds">Звуки</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Stylized">Стилизованные</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Textures">Текстуры</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_VanillaTweaks">Ванильные правки</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Cartoony">Мультяшные</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Fantasy">Фэнтези</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_SemiRealistic">Полуреалистичные</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Vanilla">Ванильные</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Lore">Лор</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Gameplay">Геймплей</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Chat">Чат</sys:String>
+    <sys:String x:Key="Str_Mods_Cat_Protection">Защита</sys:String>
+
+    <!-- Страница мода -->
+    <sys:String x:Key="Str_Mods_NoInstall">Этот тип контента не устанавливается отсюда — папки для него нет.</sys:String>
+    <sys:String x:Key="Str_Detail_OpenPage">Открыть в каталоге</sys:String>
+    <sys:String x:Key="Str_Detail_Description">Описание</sys:String>
+    <sys:String x:Key="Str_Detail_Files">Последние файлы</sys:String>
+    <sys:String x:Key="Str_Detail_Loading">Загружаем страницу мода...</sys:String>
+    <sys:String x:Key="Str_Detail_DescriptionUnavailable">Описание недоступно: каталог не отвечает или проект не найден.</sys:String>
+
     <sys:String x:Key="Str_Mods_Loading">Загрузка...</sys:String>
     <sys:String x:Key="Str_Mods_Searching">Поиск по Modrinth...</sys:String>
+    <sys:String x:Key="Str_Mods_SearchingCf">Поиск по CurseForge...</sys:String>
     <sys:String x:Key="Str_Mods_SearchingTitle">Поиск «{0}»...</sys:String>
     <sys:String x:Key="Str_Mods_UnknownTitle">Без названия</sys:String>
     <sys:String x:Key="Str_Mods_UnknownAuthor">Автор неизвестен</sys:String>
@@ -638,8 +791,8 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Discord_PageConsoleState">Просмотр журнала</sys:String>
     <sys:String x:Key="Str_Discord_PageProfileDetails">Управление сборкой</sys:String>
     <sys:String x:Key="Str_Discord_PageProfileState">Редактирует «{0}»</sys:String>
-    <sys:String x:Key="Str_Discord_PageSettingsDetails">В настройках</sys:String>
-    <sys:String x:Key="Str_Discord_PageSettingsState">Настройки лаунчера</sys:String>
+    <sys:String x:Key="Str_Discord_PageSettingsDetails">В параметрах</sys:String>
+    <sys:String x:Key="Str_Discord_PageSettingsState">Параметры лаунчера</sys:String>
     <sys:String x:Key="Str_Discord_HiddenServer">Скрытый сервер</sys:String>
     <sys:String x:Key="Str_Discord_Joining">Подключение к серверу</sys:String>
     <sys:String x:Key="Str_Discord_Selecting">Выбор сервера</sys:String>
