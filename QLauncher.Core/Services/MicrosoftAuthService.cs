@@ -254,7 +254,7 @@ namespace MinecraftLauncher.Services
                 string? encrypted = File.Exists(StorePath) ? File.ReadAllText(StorePath) : null;
                 if (string.IsNullOrEmpty(encrypted)) return;
 
-                string? json = SecretProtector.Unprotect(encrypted);
+                string? json = SecretProtection.Protector?.Unprotect(encrypted);
                 if (string.IsNullOrEmpty(json)) return;
 
                 File.WriteAllText(tempPath, json);
@@ -275,7 +275,7 @@ namespace MinecraftLauncher.Services
                 if (!File.Exists(_tempPath)) return;
 
                 string json = File.ReadAllText(_tempPath);
-                string? encrypted = SecretProtector.Protect(json);
+                string? encrypted = SecretProtection.Protector?.Protect(json);
 
                 if (encrypted != null)
                 {

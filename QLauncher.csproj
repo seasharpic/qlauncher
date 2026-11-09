@@ -14,6 +14,17 @@
     <Description>Современный кастомный лаунчер Minecraft в стиле Fluent Design</Description>
   </PropertyGroup>
 
+  <!-- Платформо-независимое ядро лежит рядом; здесь собирается только
+       WPF-слой, поэтому файлы ядра из глобального включения исключаем
+       и подключаем отдельный проект. -->
+  <ItemGroup>
+    <Compile Remove="QLauncher.Core\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="QLauncher.Core\QLauncher.Core.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Remove="bg.png" />
     <None Remove="logo.ico" />

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Windows;
 
 namespace MinecraftLauncher.Services
 {
@@ -28,16 +27,35 @@ namespace MinecraftLauncher.Services
 
         /// <summary>
         /// Словарь в текущем языке. Нужен, чтобы язык можно было переключить
-        /// не только в XAML (где работает DynamicResource), но и в обычном
-        /// коде — там ресурсы не подставляются автоматически.
+        /// не только в XAML, но и в обычном коде.
         /// </summary>
         IReadOnlyDictionary<string, string> Strings { get; }
     }
 
+    /// <summary>
+    /// Платформо-независимый движок локализации. Живёт в ядре, поэтому
+    /// о WPF (Application.Current, pack:// URI) ничего не знает: словари
+    /// строк в него поставляет хост-приложение через статический
+    /// DictionarySource, а на смену языка уведомляет через LanguageMerged —
+    /// UI сам обновляет свои ресурсные словари. Логика выбора строк,
+    /// сохранения языка в настройках и всех Format-перегрузок — без изменений.
+    /// </summary>
     public class LocalizationService : ILocalizationService
     {
         private static readonly IReadOnlyDictionary<string, string> EmptyStrings =
             new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Хост отдаёт строки для кода языка. Возвращать можно null —
+        /// ядро продолжит работать с предыдущим (или пустым) словарём.
+        /// </summary>
+        public static Func<string, IReadOnlyDictionary<string, string>?>? DictionarySource { get; set; }
+
+        /// <summary>
+        /// Уведомление хосту после смены языка: UI перезаливает свой
+        /// ResourceDictionary, чтобы обновился DynamicResource в XAML.
+        /// </summary>
+        public static Action<string>? LanguageMerged { get; set; }
 
         private IReadOnlyDictionary<string, string> _strings = EmptyStrings;
 
@@ -53,41 +71,13 @@ namespace MinecraftLauncher.Services
             string code = string.Equals(languageCode, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "ru";
             CurrentLanguage = code;
 
+            // Копия текущих строк нужна коду: в XAML подстановкой занимается
+            // DynamicResource, а здесь мы обращаемся к словарю напрямую.
+            var map = DictionarySource?.Invoke(code);
+            _strings = map ?? EmptyStrings;
+
             try
             {
-                var uri = new Uri($"pack://application:,,,/Resources/Strings.{code}.xaml", UriKind.Absolute);
-                var dict = new ResourceDictionary { Source = uri };
-
-                // Копия текущих строк нужна коду: в XAML подстановкой занимается
-                // DynamicResource, а здесь мы обращаемся к словарю напрямую.
-                _strings = BuildStringMap(dict);
-
-                if (Application.Current != null && Application.Current.Resources != null)
-                {
-                    var merged = Application.Current.Resources.MergedDictionaries;
-                    ResourceDictionary? existing = null;
-                    foreach (var md in merged)
-                    {
-                        if (md.Source != null && (md.Source.OriginalString.Contains("Strings.ru.xaml") ||
-                                                  md.Source.OriginalString.Contains("Strings.en.xaml")))
-                        {
-                            existing = md;
-                            break;
-                        }
-                    }
-
-                    if (existing != null)
-                    {
-                        merged.Remove(existing);
-                    }
-                    merged.Add(dict);
-
-                    foreach (var key in dict.Keys)
-                    {
-                        Application.Current.Resources[key] = dict[key];
-                    }
-                }
-
                 var settings = SettingsService.Instance.Settings;
                 if (settings.Language != code)
                 {
@@ -97,48 +87,16 @@ namespace MinecraftLauncher.Services
             }
             catch { }
 
+            LanguageMerged?.Invoke(code);
             LanguageChanged?.Invoke();
-        }
-
-        /// <summary>
-        /// Извлекает sys:String-ключи из словаря в обычный Dictionary.
-        /// Копия нужна потому, что сам ResourceDictionary живёт только в
-        /// Application.Current.Resources, а к нему нельзя обращаться с
-        /// фонового потока.
-        /// </summary>
-        private static IReadOnlyDictionary<string, string> BuildStringMap(ResourceDictionary dict)
-        {
-            var map = new Dictionary<string, string>(StringComparer.Ordinal);
-
-            try
-            {
-                foreach (object key in dict.Keys)
-                {
-                    if (key is string name && dict[name] is string value)
-                    {
-                        map[name] = value;
-                    }
-                }
-            }
-            catch
-            {
-                return EmptyStrings;
-            }
-
-            return map.Count > 0 ? map : EmptyStrings;
         }
 
         public string GetString(string key, string fallback = "")
         {
-            // Сначала копия: она одинаково доступна с любого потока.
+            // Копия строк одинаково доступна с любого потока.
             if (_strings.TryGetValue(key, out string? cached))
             {
                 return cached;
-            }
-
-            if (Application.Current?.Resources.Contains(key) == true)
-            {
-                return Application.Current.Resources[key]?.ToString() ?? fallback;
             }
 
             return fallback;

@@ -1,6 +1,7 @@
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using MinecraftLauncher.Helpers;
+using MinecraftLauncher.Services;
 
 namespace MinecraftLauncher.Models
 {
@@ -9,13 +10,14 @@ namespace MinecraftLauncher.Models
     ///
     /// Благодаря конвертеру не нужно менять ни строки в ViewModel, ни XAML-биндинги:
     /// в памяти свойство остаётся обычной строкой, а на диск уходит только шифротекст.
+    /// Платформа (DPAPI/Keychain/libsecret) — за интерфейсом ISecretProtector из ядра.
     /// </summary>
     public class ProtectedStringConverter : JsonConverter<string>
     {
         public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             string? value = reader.TokenType == JsonTokenType.Null ? null : reader.GetString();
-            return SecretProtector.Unprotect(value) ?? "";
+            return SecretProtection.Protector?.Unprotect(value) ?? "";
         }
 
         public override void Write(Utf8JsonWriter writer, string? value, JsonSerializerOptions options)
@@ -26,10 +28,11 @@ namespace MinecraftLauncher.Models
                 return;
             }
 
-            string? protectedValue = SecretProtector.Protect(value);
+            string? protectedValue = SecretProtection.Protector?.Protect(value);
             if (protectedValue == null)
             {
-                // Не удалось зашифровать — не сохраняем секрет в открытом виде.
+                // Не удалось зашифровать (реализация не зарегистрирована или
+                // отказалась) — не сохраняем секрет в открытом виде.
                 writer.WriteStringValue("");
                 return;
             }

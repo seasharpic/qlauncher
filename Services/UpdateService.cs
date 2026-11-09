@@ -43,7 +43,7 @@ namespace MinecraftLauncher.Services
         // и заголовки ченджлога раньше были жёстко на русском.
         private static readonly ILocalizationService L = LocalizationService.Instance;
 
-        public const string CurrentVersion = "v2.0.0";
+        public const string CurrentVersion = LauncherIdentity.CurrentVersion;
 
         public static UpdateService Instance { get; } = new UpdateService();
 

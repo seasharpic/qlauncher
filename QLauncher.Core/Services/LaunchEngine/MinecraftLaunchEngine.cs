@@ -112,8 +112,11 @@ namespace MinecraftLauncher.Services.LaunchEngine
                 CreateNoWindow = true
             };
 
-            GpuService.Instance.ApplyGpuPreference(options.JavaPath, options.GpuPreference);
-            GpuService.Instance.ConfigureProcessEnvironment(startInfo, options.GpuPreference);
+            // Выбор GPU и env-переменные процесса зависят от платформы
+            // (Registry/UserGpuPreferences — только Windows): ядро зовёт хук,
+            // который хост заполняет при старте.
+            PlatformCapabilities.PrepareLaunchEnvironment?.Invoke(
+                options.JavaPath, options.GpuPreference, startInfo);
 
             foreach (var arg in arguments)
             {

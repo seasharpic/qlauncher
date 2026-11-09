@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using MinecraftLauncher.Helpers;
+using MinecraftLauncher.Models;
 
 namespace MinecraftLauncher.Services
 {
@@ -47,14 +48,14 @@ namespace MinecraftLauncher.Services
                     var sysInfo = new StringBuilder();
                     sysInfo.AppendLine("=== QLauncher System & Environment Report ===");
                     sysInfo.AppendLine($"Timestamp: {DateTime.Now:O}");
-                    sysInfo.AppendLine($"Launcher Version: {UpdateService.CurrentVersion}");
+                    sysInfo.AppendLine($"Launcher Version: {LauncherIdentity.CurrentVersion}");
                     sysInfo.AppendLine($"Portable Mode: {LauncherPathHelper.IsPortableMode}");
                     sysInfo.AppendLine($"OS: {RuntimeInformation.OSDescription} ({RuntimeInformation.OSArchitecture})");
                     sysInfo.AppendLine($"Framework: {RuntimeInformation.FrameworkDescription}");
                     sysInfo.AppendLine($"Process Architecture: {RuntimeInformation.ProcessArchitecture}");
                     sysInfo.AppendLine($"Data Directory: {LauncherPathHelper.GetDefaultDataDirectory()}");
 
-                    var gpus = GpuService.Instance.GetAvailableGpus();
+                    var gpus = PlatformCapabilities.EnumerateGpus?.Invoke() ?? new List<GpuInfo>();
                     sysInfo.AppendLine("\n=== Detected Graphics Adapters ===");
                     foreach (var gpu in gpus)
                     {

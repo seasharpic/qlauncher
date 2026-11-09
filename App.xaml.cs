@@ -17,6 +17,22 @@ namespace MinecraftLauncher
         {
             base.OnStartup(e);
 
+            // Ядро не знает о платформе: до любого доступа к настройкам
+            // (в settings.json есть DPAPI-шифрованные токены) регистрируем
+            // Windows-реализацию секретов и WPF-источники строк.
+            SecretProtection.Protector = Helpers.SecretProtector.Instance;
+            LocalizationUiBridge.Attach();
+
+            // Windows-специфичные возможности ядра: выбор дискретного GPU
+            // (Registry) и перечисление видеокарт. На другой платформе
+            // хост их не зарегистрирует, и ядро просто пропустит шаг.
+            PlatformCapabilities.PrepareLaunchEnvironment = (javaPath, preference, psi) =>
+            {
+                GpuService.Instance.ApplyGpuPreference(javaPath, preference);
+                GpuService.Instance.ConfigureProcessEnvironment(psi, preference);
+            };
+            PlatformCapabilities.EnumerateGpus = () => GpuService.Instance.GetAvailableGpus();
+
             DispatcherUnhandledException += (s, args) =>
             {
                 // args.Handled = true оставляем: лаунчер продолжает работать после

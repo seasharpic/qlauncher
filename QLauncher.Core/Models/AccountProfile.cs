@@ -1,9 +1,14 @@
 using System.Text.Json.Serialization;
-using System.Windows.Media.Imaging;
 using MinecraftLauncher.Common;
 
 namespace MinecraftLauncher.Models
 {
+    /// <summary>
+    /// Аккаунт игры (Microsoft или Ely.by). Ядро знает только данные сессии;
+    /// картинка аватарки — [JsonIgnore] и object?: хост-приложение кладёт
+    /// туда своё платформенное представление (в WPF — BitmapImage), ядро
+    /// не ссылается на UI-типы.
+    /// </summary>
     public class AccountProfile : ObservableObject
     {
         private string _nickname = "";
@@ -11,7 +16,7 @@ namespace MinecraftLauncher.Models
         private string _uuid = "";
         private bool _isElyBy;
         private string _elyOauthRefreshToken = "";
-        private BitmapImage? _avatarImage;
+        private object? _avatarImage;
 
         /// <summary>
         /// Аккаунт Ely.by. Отличается от Microsoft тем, как продлевается
@@ -33,7 +38,8 @@ namespace MinecraftLauncher.Models
 
         /// <summary>
         /// Токен сессии Mojang/Xbox. В памяти — обычная строка, на диск сериализуется
-        /// зашифрованной через DPAPI (см. <see cref="ProtectedStringConverter"/>).
+        /// зашифрованной (см. <see cref="ProtectedStringConverter"/>; реализация
+        /// шифрования — ISecretProtector, на Windows DPAPI).
         /// </summary>
         [JsonConverter(typeof(ProtectedStringConverter))]
         public string AccessToken
@@ -46,7 +52,7 @@ namespace MinecraftLauncher.Models
         /// Refresh-токен OAuth2 для аккаунтов Ely.by, вошедших через браузер
         /// (device code flow): позволяет продлевать сессию по OAuth2-гранту
         /// вместо Yggdrasil /auth/refresh. В памяти — обычная строка, на диск
-        /// сериализуется зашифрованной через DPAPI (ProtectedStringConverter).
+        /// сериализуется зашифрованной (ProtectedStringConverter).
         /// </summary>
         [JsonConverter(typeof(ProtectedStringConverter))]
         public string ElyOauthRefreshToken
@@ -61,8 +67,9 @@ namespace MinecraftLauncher.Models
             set => SetProperty(ref _uuid, value);
         }
 
+        /// <summary>UI-представление аватарки; на диск не сохраняется.</summary>
         [JsonIgnore]
-        public BitmapImage? AvatarImage
+        public object? AvatarImage
         {
             get => _avatarImage;
             set => SetProperty(ref _avatarImage, value);
