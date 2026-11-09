@@ -31,5 +31,16 @@ namespace MinecraftLauncher.Views.Pages
                 ViewModel.SearchCommand.Execute(null);
             }
         }
+
+        /// <summary>Клик по карточке: открываем страницу мода с типом этой карточки.</summary>
+        private void ModCard_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is Models.ModItem item &&
+                Window.GetWindow(this) is MainWindow mainWindow)
+            {
+                var kind = Models.ModCategoryKinds.FromKey(item.ProjectType);
+                mainWindow.AnimateNavigate(new ModDetailPage(item, kind));
+            }
+        }
     }
 }
