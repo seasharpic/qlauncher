@@ -8,6 +8,8 @@ namespace MinecraftLauncher.Models
         private string _fileName = "";
         private string _fullPath = "";
         private bool _isEnabled;
+        private string _updateText = "";
+        private bool _hasUpdate;
 
         public string FileName
         {
@@ -40,6 +42,26 @@ namespace MinecraftLauncher.Models
             ? new SolidColorBrush(Color.FromRgb(80, 220, 100))
             : new SolidColorBrush(Color.FromRgb(220, 80, 80));
         public string ActionText => Services.LocalizationService.Instance.GetString(IsEnabled ? "Str_Mod_Disable" : "Str_Mod_Enable");
+
+        /// <summary>Что нашлось при проверке обновлений: «Есть обновление: X» или «Не найден в каталогах».</summary>
+        public string UpdateText
+        {
+            get => _updateText;
+            set
+            {
+                if (SetProperty(ref _updateText, value))
+                {
+                    OnPropertyChanged(nameof(HasUpdate));
+                }
+            }
+        }
+
+        /// <summary>Каталог ответил обновлением — активен бейдж и кнопка на карточке.</summary>
+        public bool HasUpdate
+        {
+            get => _hasUpdate;
+            set => SetProperty(ref _hasUpdate, value);
+        }
     }
 
     public class ModpackCardItem : ObservableObject

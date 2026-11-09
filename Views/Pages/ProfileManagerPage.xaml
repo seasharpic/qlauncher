@@ -109,6 +109,24 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12" HorizontalAlignment="Right">
+                        <!-- Обновить всё: активен, когда проверка нашла обновления -->
+                        <Button Command="{Binding UpdateAllModsCommand}" Height="36" Padding="14,0" Margin="0,0,8,0" FontSize="13">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PlayButtonStyle}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasPendingUpdates}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource Str_Profile_UpdateAll}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
                         <Button Command="{Binding CheckModUpdatesCommand}" Height="36" Padding="14,0" Margin="0,0,8,0" Style="{DynamicResource DarkButtonStyle}" FontSize="13" ToolTip="{DynamicResource Str_Profile_CheckUpdatesTooltip}">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
@@ -192,12 +210,46 @@
 
                                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource PrimaryTextBrush}" FontWeight="Bold" FontSize="14"/>
-                                                    <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusColor}" FontSize="12" Margin="0,2,0,0"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                        <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusColor}" FontSize="12" VerticalAlignment="Center"/>
+                                                        <!-- Отчёт проверки обновлений: «Есть обновление: X» / «Не найден в каталогах» -->
+                                                        <TextBlock Text="{Binding UpdateText}" Foreground="#FFD9A0" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding UpdateText}" Value="">
+                                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </StackPanel>
                                                 </StackPanel>
 
-                                                <Button Grid.Column="1" Content="{Binding ActionText}" 
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                                                    <!-- Обновить этот мод: показывается только когда что-то нашлось -->
+                                                    <Button Content="&#xE896;" FontFamily="Segoe MDL2 Assets"
+                                                            Command="{Binding DataContext.UpdateOneModCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                            CommandParameter="{Binding}" Height="32" Width="36" Margin="0,0,8,0"
+                                                            ToolTip="{DynamicResource Str_Profile_UpdateAll}">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button" BasedOn="{StaticResource DarkButtonStyle}">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasUpdate}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                    <Button Content="{Binding ActionText}"
                                                         Command="{Binding DataContext.ToggleModCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                         CommandParameter="{Binding}" Margin="0,0,8,0" Height="32" Padding="12,0" Style="{DynamicResource DarkButtonStyle}" FontSize="13"/>
+                                                </StackPanel>
+
                                                 <Button Grid.Column="2" Content="&#xE74D;" FontFamily="Segoe MDL2 Assets" 
                                                         Command="{Binding DataContext.DeleteModCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                                         CommandParameter="{Binding}" Height="32" Width="36" Foreground="#FF6363" Style="{DynamicResource DarkButtonStyle}" ToolTip="{DynamicResource Str_Profile_Menu_Delete}"/>

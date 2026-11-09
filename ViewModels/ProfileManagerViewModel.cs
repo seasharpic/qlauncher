@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text.Json;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using MinecraftLauncher.Common;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Models;
 using MinecraftLauncher.Services;
 using MinecraftLauncher.Views.Windows;
@@ -17,7 +17,6 @@ namespace MinecraftLauncher.ViewModels
 {
     public class ProfileManagerViewModel : ViewModelBase
     {
-        private static readonly HttpClient HttpClient = new();
         private readonly ModpackProfile _profile;
         private readonly IToastService _toastService;
 
@@ -60,6 +59,15 @@ namespace MinecraftLauncher.ViewModels
             set => SetProperty(ref _isCheckingUpdates, value);
         }
 
+        private bool _hasPendingUpdates;
+
+        /// <summary>Проверка нашла обновления: показывает кнопку «Обновить всё».</summary>
+        public bool HasPendingUpdates
+        {
+            get => _hasPendingUpdates;
+            set => SetProperty(ref _hasPendingUpdates, value);
+        }
+
         public ObservableCollection<WorldBackupItem> Backups { get; } = new();
 
         public RelayCommand<LocalModItem> ToggleModCommand { get; }
@@ -75,11 +83,11 @@ namespace MinecraftLauncher.ViewModels
         public RelayCommand<WorldBackupItem> DeleteBackupCommand { get; }
         public RelayCommand ExportZipCommand { get; }
         public AsyncRelayCommand CheckModUpdatesCommand { get; }
+        public AsyncRelayCommand UpdateAllModsCommand { get; }
+        public AsyncRelayCommand<LocalModItem> UpdateOneModCommand { get; }
 
-        static ProfileManagerViewModel()
-        {
-            HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "QLauncher_ModChecker/2.0");
-        }
+        /// <summary>Обновления, найденные последней проверкой: OldPath → кандидат.</summary>
+        private List<ModUpdateCandidate> _pendingUpdates = new();
 
         public ProfileManagerViewModel(ModpackProfile profile) : this(profile, ToastService.Instance, AudioService.Instance, SettingsService.Instance)
         {
@@ -170,6 +178,8 @@ namespace MinecraftLauncher.ViewModels
             DeleteBackupCommand = new RelayCommand<WorldBackupItem>(ExecuteDeleteBackup);
             ExportZipCommand = new RelayCommand(ExecuteExportZip);
             CheckModUpdatesCommand = new AsyncRelayCommand(ExecuteCheckModUpdatesAsync);
+            UpdateAllModsCommand = new AsyncRelayCommand(ExecuteUpdateAllModsAsync);
+            UpdateOneModCommand = new AsyncRelayCommand<LocalModItem>(ExecuteUpdateOneModAsync);
 
             LoadMods();
             LoadWorlds();
@@ -239,74 +249,166 @@ namespace MinecraftLauncher.ViewModels
             }
 
             IsCheckingUpdates = true;
-            _toastService.ShowInfo(_loc.GetString("Str_Mods_UpdateChecking"), _loc.GetString("Str_T_Updates"));
 
-            int verifiedCount = 0;
-            int unknownCount = 0;
-
-            // Снимок коллекции на UI-потоке: раньше LocalMods (привязанная
-            // к UI ObservableCollection) перебиралась из пула, что давало
-            // InvalidOperationException при параллельном изменении и нарушало
-            // потоковую привязку коллекции.
-            var modsToCheck = LocalMods
-                .Where(m => m.IsEnabled && File.Exists(m.FullPath))
-                .Select(m => m.FullPath)
-                .ToList();
-
-            int verified = 0;
-            int unknown = 0;
-
-            using var semaphore = new SemaphoreSlim(6);
-
-            await Task.WhenAll(modsToCheck.Select(async path =>
+            try
             {
-                await semaphore.WaitAsync();
-                try
+                // Сброс прошлых бейджей до скана: старая галка не должна дожить
+                // до новой проверки.
+                foreach (var item in LocalMods)
                 {
-                    using var stream = File.OpenRead(path);
-                    using var sha1 = SHA1.Create();
-                    byte[] hashBytes = await sha1.ComputeHashAsync(stream);
-                    string hashStr = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                    item.HasUpdate = false;
+                    item.UpdateText = "";
+                }
 
-                    string url = $"https://api.modrinth.com/v2/version_file/{hashStr}?algorithm=sha1";
-                    var resp = await HttpClient.GetAsync(url);
+                string modsFolder = Path.Combine(_profile.FolderPath, "mods");
+                var scan = await ModUpdateService.ScanAsync(
+                    modsFolder, _profile.GameVersion, _profile.Loader).ConfigureAwait(true);
 
-                    if (resp.IsSuccessStatusCode)
+                _pendingUpdates = scan.Updates;
+                HasPendingUpdates = scan.Updates.Count > 0;
+
+                foreach (var candidate in scan.Updates)
+                {
+                    var item = LocalMods.FirstOrDefault(m =>
+                        string.Equals(
+                            Path.GetFullPath(m.FullPath),
+                            Path.GetFullPath(candidate.OldPath),
+                            StringComparison.OrdinalIgnoreCase));
+                    if (item == null) continue; // Jar перезаписан при скане — пропускаем.
+
+                    item.HasUpdate = true;
+                    item.UpdateText = _loc.Format("Str_Mods_RowUpdate", candidate.FreshName);
+                }
+
+                foreach (string unknown in scan.UnknownPaths)
+                {
+                    var item = LocalMods.FirstOrDefault(m =>
+                        string.Equals(
+                            Path.GetFullPath(m.FullPath),
+                            Path.GetFullPath(unknown),
+                            StringComparison.OrdinalIgnoreCase));
+                    if (item == null) continue;
+                    item.UpdateText = _loc.GetString("Str_Mods_RowUnknown");
+                }
+
+                if (scan.Updates.Count > 0)
+                {
+                    _toastService.ShowInfo(
+                        _loc.Format("Str_Mods_UpdateFound", scan.Updates.Count),
+                        _loc.GetString("Str_T_Updates"));
+                }
+                else if (scan.UnknownPaths.Count > 0)
+                {
+                    _toastService.ShowInfo(
+                        _loc.Format("Str_Mods_Partial", scan.ScannedCount - scan.UnknownPaths.Count, scan.UnknownPaths.Count),
+                        _loc.GetString("Str_T_Updates"));
+                }
+                else
+                {
+                    _toastService.ShowSuccess(
+                        _loc.Format("Str_Mods_AllCurrent", scan.ScannedCount),
+                        _loc.GetString("Str_T_Updates"));
+                }
+            }
+            catch (Exception ex)
+            {
+                CrashLogWriter.Write("ProfileManagerViewModel", "Update check failed", ex);
+                _toastService.ShowError(
+                    _loc.Format("Str_Mods_DownloadError", ex.Message),
+                    _loc.GetString("Str_T_Error"));
+            }
+            finally
+            {
+                IsCheckingUpdates = false;
+            }
+        }
+
+        private async Task ExecuteUpdateOneModAsync(LocalModItem? item)
+        {
+            if (item == null) return;
+
+            var candidate = _pendingUpdates.FirstOrDefault(c =>
+                string.Equals(
+                    Path.GetFullPath(c.OldPath),
+                    Path.GetFullPath(item.FullPath),
+                    StringComparison.OrdinalIgnoreCase));
+            if (candidate == null) return;
+
+            IsCheckingUpdates = true;
+            try
+            {
+                bool updated = await ApplyUpdateAsync(candidate).ConfigureAwait(true);
+                if (updated)
+                {
+                    LoadMods();
+                }
+            }
+            finally
+            {
+                IsCheckingUpdates = false;
+            }
+        }
+
+        private async Task ExecuteUpdateAllModsAsync()
+        {
+            if (_pendingUpdates.Count == 0)
+            {
+                _toastService.ShowInfo(_loc.GetString("Str_Mods_NothingToCheck"), _loc.GetString("Str_T_Updates"));
+                return;
+            }
+
+            IsCheckingUpdates = true;
+
+            int done = 0;
+            int failed = 0;
+            try
+            {
+                foreach (var candidate in _pendingUpdates.ToList())
+                {
+                    if (await ApplyUpdateAsync(candidate).ConfigureAwait(true))
                     {
-                        Interlocked.Increment(ref verified);
+                        done++;
                     }
                     else
                     {
-                        Interlocked.Increment(ref unknown);
+                        failed++;
                     }
                 }
-                catch
+
+                if (done > 0)
                 {
-                    Interlocked.Increment(ref unknown);
+                    LoadMods();
                 }
-                finally
-                {
-                    semaphore.Release();
-                }
-            }));
 
-            verifiedCount = verified;
-            unknownCount = unknown;
-
-            IsCheckingUpdates = false;
-
-            // Раньше сообщение всегда обещало "Все версии актуальны!", даже если
-            // проверка не удалась ни для одного мода. Теперь это отражено в тексте.
-            if (unknownCount > 0)
-            {
                 _toastService.ShowInfo(
-                    _loc.Format("Str_Mods_Partial", verifiedCount, unknownCount),
+                    _loc.Format("Str_Mods_UpdatedCount", done, failed),
                     _loc.GetString("Str_T_Updates"));
+                HasPendingUpdates = _pendingUpdates.Count > 0;
             }
-            else
+            finally
             {
-                _toastService.ShowSuccess(_loc.Format("Str_Mods_AllCurrent", verifiedCount), _loc.GetString("Str_T_Updates"));
+                IsCheckingUpdates = false;
             }
+        }
+
+        /// <summary>Установка одного кандидата и обновление его бейджа в списке.</summary>
+        private async Task<bool> ApplyUpdateAsync(ModUpdateCandidate candidate)
+        {
+            string? newPath = await ModUpdateService.ApplyAsync(candidate).ConfigureAwait(true);
+            if (newPath == null)
+            {
+                _toastService.ShowError(
+                    _loc.Format("Str_Mods_UpdateFailed", candidate.OldFileName),
+                    _loc.GetString("Str_T_Error"));
+                return false;
+            }
+
+            _toastService.ShowSuccess(
+                _loc.Format("Str_Mods_UpdatedOne", candidate.OldFileName, candidate.FreshName),
+                _loc.GetString("Str_T_Updates"));
+
+            _pendingUpdates.Remove(candidate);
+            return true;
         }
 
         private void ExecuteToggleMod(LocalModItem? mod)
