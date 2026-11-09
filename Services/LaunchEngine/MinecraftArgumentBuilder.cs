@@ -22,6 +22,14 @@ namespace MinecraftLauncher.Services.LaunchEngine
             args.Add($"-Xmx{options.RamMb}M");
             args.Add($"-Xms{Math.Max(512, options.RamMb / 2)}M");
 
+            // Агент подменяет authlib игры на authserver.ely.by: без него токен
+            // Ely.by принимается, но скины и плащи не загружаются ни в одной игре.
+            // Стоит в начале строки — до любых -cp.
+            if (!string.IsNullOrWhiteSpace(options.AuthlibInjectorJarPath))
+            {
+                args.Add($"-javaagent:{options.AuthlibInjectorJarPath}={LaunchOptions.ElyByInjectorTarget}");
+            }
+
             // Версию JVM узнаём до подбора флагов: от неё зависит, какой сборщик
             // мусора вообще можно использовать.
             int javaMajorVer = JavaService.DetectJavaMajorVersion(options.JavaPath);

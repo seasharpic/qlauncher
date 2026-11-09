@@ -43,13 +43,14 @@ namespace MinecraftLauncher.Services
         private string _gamePath = "";
 
         /// <summary>
-        /// Продлевает сессию Microsoft перед запуском игры.
+        /// Продлевает сессию аккаунта перед запуском игры.
         ///
-        /// Для офлайн-аккаунтов делать нечего: метки токена у них нет.
-        /// Если refresh не удался, запуск продолжается со старым токеном —
-        /// возможно, он ещё жив, а возможно, сервер сообщит об отказе.
-        /// Бросать исключение здесь означало бы запретить запуск из-за
-        /// сети, даже когда всё остальное готово.
+        /// Офлайн-аккаунты пропускаются: метки токена у них нет.
+        /// Ely.by продлевается своим Yggdrasil /auth/refresh, Microsoft —
+        /// через Xbox Live. Если refresh не удался, запуск продолжается
+        /// со старым токеном — возможно, он ещё жив, а возможно, сервер
+        /// сообщит об отказе. Бросать исключение здесь означало бы
+        /// запретить запуск из-за сети, даже когда всё остальное готово.
         /// </summary>
         private static async Task RefreshAccountSessionAsync(
             AccountProfile account,
@@ -58,6 +59,12 @@ namespace MinecraftLauncher.Services
             if (string.IsNullOrEmpty(account.AccessToken) ||
                 string.Equals(account.AccessToken, LaunchOptions.OfflineAccessToken, StringComparison.OrdinalIgnoreCase))
             {
+                return;
+            }
+
+            if (account.IsElyBy)
+            {
+                await RefreshElyBySessionAsync(account, statusCallback);
                 return;
             }
 
@@ -88,6 +95,53 @@ namespace MinecraftLauncher.Services
             catch (Exception ex)
             {
                 CrashLogWriter.Write("MinecraftLaunchService", "Microsoft session refresh skipped", ex);
+            }
+        }
+
+        /// <summary>
+        /// Продление сессии Ely.by. Refresh возвращает НОВЫЙ access-токен
+        /// вместо старого (старый становится недействительным), поэтому после
+        /// успеха настройки обязательно перезаписываются. Если сервер ответил
+        /// отказом — сессия истекла: сообщаем пользователю, что нужен повторный
+        /// вход, но запуск не прерываем.
+        /// </summary>
+        private static async Task RefreshElyBySessionAsync(
+            AccountProfile account,
+            Action<string>? statusCallback)
+        {
+            try
+            {
+                var refresh = await ElyByAuthService.Instance.TryRefreshAsync(account);
+
+                if (refresh == null || !refresh.IsUsable)
+                {
+                    statusCallback?.Invoke(LocalizationService.Instance.GetString("Str_Ely_SessionExpired"));
+                    return;
+                }
+
+                account.AccessToken = refresh.AccessToken;
+
+                if (!string.IsNullOrEmpty(refresh.Uuid))
+                {
+                    account.Uuid = refresh.Uuid;
+                }
+
+                // OAuth-сервер может передать свежий refresh при обновлении:
+                // прежний после этого недействителен, поэтому храним новый.
+                if (!string.IsNullOrEmpty(refresh.RefreshToken))
+                {
+                    account.ElyOauthRefreshToken = refresh.RefreshToken;
+                }
+
+                try
+                {
+                    SettingsService.Instance.Save();
+                }
+                catch { }
+            }
+            catch (Exception ex)
+            {
+                CrashLogWriter.Write("MinecraftLaunchService", "Ely.by session refresh skipped", ex);
             }
         }
 
@@ -273,6 +327,26 @@ namespace MinecraftLauncher.Services
             // молча по refresh-токену.
             await RefreshAccountSessionAsync(account, statusCallback);
 
+            // Для аккаунтов Ely.by подкладываем authlib-injector: без агента
+            // скины Ely.by в игре не работают, даже если токен корректный.
+            // Скачивание — один раз; провал не останавливает запуск, скины
+            // просто не подхватятся (или подхватятся голые).
+            string authlibInjectorPath = "";
+            if (account.IsElyBy)
+            {
+                statusCallback?.Invoke(LocalizationService.Instance.GetString("Str_Ely_Injector"));
+                authlibInjectorPath =
+                    await ElyByAuthService.Instance.EnsureInjectorJarAsync().ConfigureAwait(false) ?? "";
+
+                if (authlibInjectorPath.Length == 0)
+                {
+                    CrashLogWriter.Write(
+                        "MinecraftLaunchService",
+                        "authlib-injector.jar unavailable, launching without Ely.by skin support",
+                        null);
+                }
+            }
+
             string? serverIp = null;
             int? serverPort = null;
             if (!string.IsNullOrWhiteSpace(autoJoinServerIp))
@@ -301,6 +375,7 @@ namespace MinecraftLauncher.Services
                 PlayerName = account.Nickname,
                 Uuid = account.Uuid,
                 AccessToken = account.AccessToken,
+                AuthlibInjectorJarPath = authlibInjectorPath,
                 RamMb = settings.RamMb,
                 JvmPreset = settings.JvmPreset,
                 CustomJvmArgs = settings.CustomJvmArgs,

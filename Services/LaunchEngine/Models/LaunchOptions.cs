@@ -15,10 +15,25 @@ namespace MinecraftLauncher.Services.LaunchEngine.Models
         public string AccessToken { get; set; } = OfflineAccessToken;
 
         /// <summary>
+        /// Путь к authlib-injector.jar для аккаунтов Ely.by. Пустая строка
+        /// означает обычный запуск: агент подменяет authlib игры на
+        /// authserver.ely.by, чтобы скины Ely.by работали в игре, поэтому
+        /// подставляться должен только для Ely-аккаунтов, а не для всех.
+        /// </summary>
+        public string AuthlibInjectorJarPath { get; set; } = "";
+
+        /// <summary>
         /// Метка офлайн-аккаунта. Офлайн-аккаунты создаются с таким значением
         /// вместо настоящего токена, потому что токена у них нет.
         /// </summary>
         public const string OfflineAccessToken = "offline";
+
+        /// <summary>
+        /// Значение агента authlib-injector для скинов Ely.by (docs.ely.by,
+        /// раздел Authlib-injector: -javaagent:...=ely.by). Имя разруливает
+        /// саму библиотеку — отдельный URL подавать не нужно.
+        /// </summary>
+        public const string ElyByInjectorTarget = "ely.by";
 
         /// <summary>
         /// Нужна ли игре авторизация Microsoft.
