@@ -104,21 +104,6 @@ namespace MinecraftLauncher.Services
                     LocalizationService.Instance.Format("Str_Java_NotConfigured", configuredVer, requiredVer));
             }
 
-            // Раньше путь из настроек возвращался без проверки версии: пользователь мог
-            // указать Java 8, и сборка 1.21 молча стартовала на ней.
-            if (!string.IsNullOrWhiteSpace(configuredJavaPath) && File.Exists(configuredJavaPath))
-            {
-                int configuredVer = DetectJavaMajorVersion(configuredJavaPath);
-
-                if (configuredVer == requiredVer)
-                {
-                    return configuredJavaPath;
-                }
-
-                statusCallback?.Invoke(
-                    LocalizationService.Instance.Format("Str_Java_NotConfigured", configuredVer, requiredVer));
-            }
-
             string runtimeFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtime", $"java-{requiredVer}");
             string localJavaw = Path.Combine(runtimeFolder, "bin", "javaw.exe");
 

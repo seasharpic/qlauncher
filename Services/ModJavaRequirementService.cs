@@ -185,14 +185,52 @@ namespace MinecraftLauncher.Services
 
         /// <summary>
         /// Максимальное из требований, объявленных внутри одного мода.
+        ///
+        /// Обязательно смотрим и вложенные jar'ы (META-INF/jars/*.jar, Fabric
+        /// JiJ): fabric-block-getter-api-v2 и половина служебных модулей
+        /// Fabric API упакованы внутрь fabric-api.jar, и с их mixin-конфигов
+        /// читается требование JAVA_25.
         /// </summary>
         private static int ReadJarRequirement(string jarPath)
         {
             using var archive = ZipFile.OpenRead(jarPath);
 
-            int max = 0;
+            int max = ReadEntryRequirements(archive.Entries);
 
             foreach (var entry in archive.Entries)
+            {
+                if (!entry.FullName.StartsWith("META-INF/jars/", StringComparison.OrdinalIgnoreCase) ||
+                    !entry.FullName.EndsWith(".jar", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    using var nestedStream = entry.Open();
+                    using var nested = new ZipArchive(nestedStream, ZipArchiveMode.Read);
+                    max = Math.Max(max, ReadEntryRequirements(nested.Entries));
+                }
+                catch (Exception ex)
+                {
+                    // Битый вложенный jar не роняет разбор: требование от него
+                    // просто не будет учтено, остальное содержимое читается.
+                    CrashLogWriter.Write(
+                        "ModJavaRequirement",
+                        $"Failed to inspect nested jar in '{Path.GetFileName(jarPath)}': {entry.Name}",
+                        ex);
+                }
+            }
+
+            return max;
+        }
+
+        /// <summary>Требования по списку записей zip-архива (поверхность или вложенный jar).</summary>
+        private static int ReadEntryRequirements(IEnumerable<ZipArchiveEntry> entries)
+        {
+            int max = 0;
+
+            foreach (var entry in entries)
             {
                 if (entry.FullName.Equals("fabric.mod.json", StringComparison.OrdinalIgnoreCase))
                 {
@@ -209,20 +247,37 @@ namespace MinecraftLauncher.Services
 
         /// <summary>
         /// fabric.mod.json → environment.java, например ">=25".
+        ///
+        /// Environment бывает и строкой ("*", "client"), и объектом с ключом
+        /// java. Раньше TryGetProperty по строковому элементу бросал
+        /// исключение, и вместе с jar'ом терялись его mixin-конфиги — у
+        /// ferritecore/iris/lithium/sodium разбор обрывался ровно так.
         /// </summary>
         private static int ReadFabricModJson(ZipArchiveEntry entry)
         {
-            using var stream = entry.Open();
-            using var doc = JsonDocument.Parse(stream);
-
-            if (!doc.RootElement.TryGetProperty("environment", out var env) ||
-                !env.TryGetProperty("java", out var javaElement))
+            try
             {
+                using var stream = entry.Open();
+                using var doc = JsonDocument.Parse(stream);
+
+                if (!doc.RootElement.TryGetProperty("environment", out var env) ||
+                    env.ValueKind != JsonValueKind.Object ||
+                    !env.TryGetProperty("java", out var javaElement))
+                {
+                    return 0;
+                }
+
+                string? constraint = javaElement.GetString();
+                return string.IsNullOrWhiteSpace(constraint) ? 0 : ParseConstraint(constraint);
+            }
+            catch (Exception ex)
+            {
+                CrashLogWriter.Write(
+                    "ModJavaRequirement",
+                    $"Unreadable fabric.mod.json in '{entry.FullName}'",
+                    ex);
                 return 0;
             }
-
-            string? constraint = javaElement.GetString();
-            return string.IsNullOrWhiteSpace(constraint) ? 0 : ParseConstraint(constraint);
         }
 
         /// <summary>
@@ -230,19 +285,30 @@ namespace MinecraftLauncher.Services
         /// </summary>
         private static int ReadMixinsJson(ZipArchiveEntry entry)
         {
-            using var stream = entry.Open();
-            using var doc = JsonDocument.Parse(stream);
-
-            if (!doc.RootElement.TryGetProperty("compatibilityLevel", out var level))
+            try
             {
+                using var stream = entry.Open();
+                using var doc = JsonDocument.Parse(stream);
+
+                if (!doc.RootElement.TryGetProperty("compatibilityLevel", out var level))
+                {
+                    return 0;
+                }
+
+                string? value = level.GetString();
+                if (string.IsNullOrWhiteSpace(value)) return 0;
+
+                var m = CompatibilityLevel.Match(value);
+                return m.Success && int.TryParse(m.Groups[1].Value, out int major) ? major : 0;
+            }
+            catch (Exception ex)
+            {
+                CrashLogWriter.Write(
+                    "ModJavaRequirement",
+                    $"Unreadable mixin config '{entry.FullName}'",
+                    ex);
                 return 0;
             }
-
-            string? value = level.GetString();
-            if (string.IsNullOrWhiteSpace(value)) return 0;
-
-            var m = CompatibilityLevel.Match(value);
-            return m.Success && int.TryParse(m.Groups[1].Value, out int major) ? major : 0;
         }
 
         /// <summary>
