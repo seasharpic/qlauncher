@@ -468,6 +468,10 @@ public string ProgressText
             // на них не действует.
             LocalizationService.Instance.LanguageChanged += OnLanguageChanged;
 
+            // Тематические пресеты (Nether/End/Sift) несут собственные обои —
+            // фоном учит слушатель AccentChanged.
+            themeService.AccentChanged += () => ApplyCustomWallpaper();
+
             ExitCommand = new RelayCommand(() => RequestClose?.Invoke());
 
             PlayCommand = new AsyncRelayCommand(ExecutePlayAsync);
@@ -619,9 +623,20 @@ _serverTimer.Start();
                 catch { }
             }
 
+            // Тематические пресеты несут встроенные обои; у остальных — общая bg.png.
+            // Пользовательская картинка (CustomWallpaperPath) всегда сильнее тематики.
+            string? presetPack = _themeService.CurrentAccentPreset?.ToLowerInvariant() switch
+            {
+                "nether" => "pack://application:,,,/Assets/bg_nether.png",
+                "end" => "pack://application:,,,/Assets/bg_end.png",
+                "sift" => "pack://application:,,,/Assets/bg_sift.jpg",
+                _ => null
+            };
+
             try
             {
-                CustomBackgroundBrush = new ImageBrush(new BitmapImage(new Uri("pack://application:,,,/bg.png", UriKind.Absolute)))
+                var source = presetPack ?? "pack://application:,,,/bg.png";
+                CustomBackgroundBrush = new ImageBrush(new BitmapImage(new Uri(source, UriKind.Absolute)))
                 {
                     Stretch = Stretch.UniformToFill
                 };

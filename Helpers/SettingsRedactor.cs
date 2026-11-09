@@ -55,12 +55,15 @@ namespace MinecraftLauncher.Helpers
 
                 // Ник остаётся — он нужен для диагностики, но токен убираем.
                 // Пустой AccessToken при импорте обратно не даст войти без повторного логина.
+                // Флаг Ely.by сохраняется: после импорта аккаунт знает, что его
+                // надо продлевать по Yggdrasil, а не через Microsoft.
                 Accounts = source.Accounts
                     .Select(a => new AccountProfile
                     {
                         Nickname = a.Nickname,
                         Uuid = a.Uuid,
-                        AccessToken = Services.LaunchEngine.Models.LaunchOptions.OfflineAccessToken
+                        AccessToken = Services.LaunchEngine.Models.LaunchOptions.OfflineAccessToken,
+                        IsElyBy = a.IsElyBy
                     })
                     .ToList(),
 

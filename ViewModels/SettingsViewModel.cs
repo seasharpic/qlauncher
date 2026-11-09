@@ -41,6 +41,9 @@ namespace MinecraftLauncher.ViewModels
         private string _customWallpaperPath = "";
         private string _cacheInfoText = "";
         private string _offlineNicknameInput = "";
+        private string _elyLoginInput = "";
+        private string _elyPasswordInput = "";
+        private bool _elyNeedsTotp;
         private string _gpuPreference = "HighPerformance";
         private GpuOptionItem? _selectedGpuOption;
         private string _activeGpuSummary = "";
@@ -113,9 +116,45 @@ namespace MinecraftLauncher.ViewModels
                     // Пресет "Auto" выбирает сборщик по объёму памяти, поэтому
                     // изменение RAM меняет и набор флагов.
                     _ = RefreshJvmPreviewAsync();
+                    // Пилюля над слайдером и позиция бегунка зависят от значения.
+                    OnPropertyChanged(nameof(RamPill));
+                    OnPropertyChanged(nameof(RamIndex));
                 }
             }
         }
+
+        /// <summary>
+        /// Шаг RAM-слайдера как в современных браузерах модов: равные позиции,
+        /// неравные объёмы (1, 2, 4, 6, 8 ... 16 GB). Прежний ползунок щёлкал
+        /// каждый гигабайт, и вся полоса уходила под согласование с подписями.
+        /// </summary>
+        public static readonly int[] RamOptions = { 1024, 2048, 4096, 6144, 8192, 10240, 12288, 14336, 16384 };
+
+        public int RamIndex
+        {
+            get
+            {
+                int best = 0;
+                for (int i = 1; i < RamOptions.Length; i++)
+                {
+                    // Начальное значение после загрузки настроек может не совпадать
+                    // ни с одним шагом (RAM задавали вручную) — привязка к ближайшему.
+                    if (Math.Abs(RamOptions[i] - RamMb) < Math.Abs(RamOptions[best] - RamMb))
+                    {
+                        best = i;
+                    }
+                }
+                return best;
+            }
+            set
+            {
+                value = Math.Clamp(value, 0, RamOptions.Length - 1);
+                RamMb = RamOptions[value];
+            }
+        }
+
+        /// <summary>Подпись над бегунком слайдера, например "8192 MB".</summary>
+        public string RamPill => $"{RamMb} MB";
 
         public string JavaPath
         {
@@ -246,6 +285,44 @@ namespace MinecraftLauncher.ViewModels
             get => _offlineNicknameInput;
             set => SetProperty(ref _offlineNicknameInput, value);
         }
+
+        /// <summary>Логин (E-mail или ник) для входа через Ely.by.</summary>
+        public string ElyLoginInput
+        {
+            get => _elyLoginInput;
+            set => SetProperty(ref _elyLoginInput, value);
+        }
+
+        /// <summary>
+        /// Пароль Ely.by. Сеттер вызывается из code-behind страницы настроек:
+        /// PasswordBox не умеет обычного биндинга, свойства Password является
+        /// зависимым от защищённого ввода. Пароль живёт только в памяти.
+        /// </summary>
+        public string ElyPasswordInput
+        {
+            get => _elyPasswordInput;
+            set => SetProperty(ref _elyPasswordInput, value);
+        }
+
+        /// <summary>
+        /// Сервер Ely.by запросил код 2FA. Разблокирует поле ввода кода
+        /// и меняет кнопку входа на «повторить с кодом».
+        /// </summary>
+        public bool ElyNeedsTotp
+        {
+            get => _elyNeedsTotp;
+            set
+            {
+                if (SetProperty(ref _elyNeedsTotp, value))
+                {
+                    OnPropertyChanged(nameof(ElyTotpVisibility));
+                }
+            }
+        }
+
+        public string ElyTotpCodeInput { get; set; } = "";
+
+        public Visibility ElyTotpVisibility => ElyNeedsTotp ? Visibility.Visible : Visibility.Collapsed;
 
         public GpuOptionItem? SelectedGpuOption
         {
@@ -467,6 +544,9 @@ namespace MinecraftLauncher.ViewModels
         public RelayCommand CleanCacheCommand { get; }
         public RelayCommand AddOfflineAccountCommand { get; }
         public AsyncRelayCommand LoginMicrosoftCommand { get; }
+        public AsyncRelayCommand LoginElyByCommand { get; }
+        public AsyncRelayCommand LoginElyByBrowserCommand { get; }
+        public AsyncRelayCommand RetryElyTwoFactorCommand { get; }
         public RelayCommand<AccountProfile> DeleteAccountCommand { get; }
         public RelayCommand<string> SelectAccentPresetCommand { get; }
         public RelayCommand<string> SelectThemeCommand { get; }
@@ -498,6 +578,9 @@ namespace MinecraftLauncher.ViewModels
             CleanCacheCommand = new RelayCommand(ExecuteCleanCache);
             AddOfflineAccountCommand = new RelayCommand(ExecuteAddOfflineAccount);
             LoginMicrosoftCommand = new AsyncRelayCommand(ExecuteLoginMicrosoftAsync);
+            LoginElyByCommand = new AsyncRelayCommand(ExecuteLoginElyByAsync);
+            LoginElyByBrowserCommand = new AsyncRelayCommand(ExecuteLoginElyByBrowserAsync);
+            RetryElyTwoFactorCommand = new AsyncRelayCommand(ExecuteLoginElyByAsync);
             DeleteAccountCommand = new RelayCommand<AccountProfile>(ExecuteDeleteAccount);
             SelectAccentPresetCommand = new RelayCommand<string>(ExecuteSelectAccentPreset);
             SelectThemeCommand = new RelayCommand<string>(mode =>
@@ -972,6 +1055,163 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
+        /// <summary>
+        /// Вход через Ely.by по Yggdrasil-протоколу. При первом ответе сервера
+        /// «аккаунт защищён двухфакторной аутентификацией» поле с кодом 2FA
+        /// раскрывается, и пользователь отправляет форму ещё раз — запрос
+        /// повторяется уже с паролем вида «пароль:код».
+        /// </summary>
+        private async Task ExecuteLoginElyByAsync()
+        {
+            string login = ElyLoginInput.Trim();
+            string password = ElyPasswordInput;
+
+            if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
+            {
+                _toastService.ShowWarning(_loc.GetString("Str_Ely_LoginRequired"), _loc.GetString("Str_T_Account"));
+                return;
+            }
+
+            string? totp = ElyNeedsTotp ? ElyTotpCodeInput.Trim() : null;
+            if (ElyNeedsTotp && string.IsNullOrWhiteSpace(totp))
+            {
+                _toastService.ShowWarning(_loc.GetString("Str_Ely_LoginRequired"), _loc.GetString("Str_T_Account"));
+                return;
+            }
+
+            try
+            {
+                var session = await ElyByAuthService.Instance.LoginAsync(login, password, totp);
+
+                if (session.NeedsTwoFactor)
+                {
+                    ElyNeedsTotp = true;
+                    ElyTotpCodeInput = "";
+                    OnPropertyChanged(nameof(ElyTotpCodeInput));
+                    _toastService.ShowWarning(_loc.GetString("Str_Ely_TotpNeeded"), _loc.GetString("Str_T_Account"));
+                    return;
+                }
+
+                if (!session.IsUsable)
+                {
+                    _toastService.ShowError(
+                        _loc.Format("Str_Ely_LoginError", string.IsNullOrWhiteSpace(session.ErrorMessage)
+                            ? _loc.GetString("Str_Ely_AuthFailedGeneric")
+                            : session.ErrorMessage),
+                        _loc.GetString("Str_T_Error"));
+                    return;
+                }
+
+                // Форма сбрасывается целиком, включая скрытие поля 2FA.
+                ElyNeedsTotp = false;
+                ElyLoginInput = "";
+                ElyPasswordInput = "";
+                ElyTotpCodeInput = "";
+                OnPropertyChanged(nameof(ElyTotpCodeInput));
+
+                await FinalizeElyLoginAsync(session);
+
+                _toastService.ShowSuccess(_loc.Format("Str_Ely_LoginSuccess", session.Username), _loc.GetString("Str_T_Account"));
+            }
+            catch (Exception ex)
+            {
+                _toastService.ShowError(_loc.Format("Str_Ely_LoginError", ex.Message), _loc.GetString("Str_T_Error"));
+            }
+        }
+
+        /// <summary>
+        /// Вход через браузер по Device Code Flow — стиль PineconeMC:
+        /// лаунчер показывает короткий код, пользователь вводит его на
+        /// странице account.ely.by, и пароль нигде не участвует. Опрос
+        /// токенов по RFC 8628 идёт до подтверждения или до истечения срока.
+        /// </summary>
+        private async Task ExecuteLoginElyByBrowserAsync()
+        {
+            try
+            {
+                var start = await ElyByAuthService.Instance.StartDeviceAuthAsync();
+
+                if (start == null)
+                {
+                    _toastService.ShowError(_loc.GetString("Str_Ely_DeviceStartFailed"), _loc.GetString("Str_T_Error"));
+                    return;
+                }
+
+                // Страница авторизации Ely.by открывается в системном браузере,
+                // а не внутри лаунчера: пользователь авторизуется на доверенном
+                // сайте и лаунчер паролю не доверяет и не хранит.
+                Process.Start(new ProcessStartInfo(start.VerificationUriComplete) { UseShellExecute = true });
+
+                _toastService.ShowInfo(_loc.Format("Str_Ely_DeviceHint", start.UserCode), _loc.GetString("Str_T_Account"));
+
+                var session = await ElyByAuthService.Instance.WaitForDeviceTokenAsync(start);
+
+                if (session == null || !session.IsUsable)
+                {
+                    _toastService.ShowError(
+                        _loc.Format("Str_Ely_LoginError",
+                            string.IsNullOrWhiteSpace(session?.ErrorMessage)
+                                ? _loc.GetString("Str_Ely_DeviceExpired")
+                                : session.ErrorMessage),
+                        _loc.GetString("Str_T_Error"));
+                    return;
+                }
+
+                await FinalizeElyLoginAsync(session);
+
+                _toastService.ShowSuccess(_loc.Format("Str_Ely_LoginSuccess", session.Username), _loc.GetString("Str_T_Account"));
+            }
+            catch (Exception ex)
+            {
+                _toastService.ShowError(_loc.Format("Str_Ely_LoginError", ex.Message), _loc.GetString("Str_T_Error"));
+            }
+        }
+
+        /// <summary>
+        /// Общая часть обоих стилей входа Ely.by (пароль и браузер):
+        /// обновляет существующий аккаунт или добавляет новый, ставит его
+        /// активным и перечитывает список в UI.
+        /// </summary>
+        private async Task FinalizeElyLoginAsync(ElyBySession session)
+        {
+            var s = _settingsService.Settings;
+            var existing = s.Accounts.FirstOrDefault(a =>
+                string.Equals(a.Nickname, session.Username, StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null)
+            {
+                existing.AccessToken = session.AccessToken;
+                existing.Uuid = session.Uuid;
+                existing.IsElyBy = true;
+
+                // OAuth-токены приходят с refresh-токеном, без него — остались
+                // на Yggdrasil-входе. Не затираем пустым, чтобы не убить
+                // сохранённую возможность продлевать.
+                if (!string.IsNullOrEmpty(session.RefreshToken))
+                {
+                    existing.ElyOauthRefreshToken = session.RefreshToken;
+                }
+            }
+            else
+            {
+                s.Accounts.Add(new AccountProfile
+                {
+                    Nickname = session.Username,
+                    AccessToken = session.AccessToken,
+                    Uuid = session.Uuid,
+                    IsElyBy = true,
+                    ElyOauthRefreshToken = session.RefreshToken
+                });
+            }
+
+            s.ActiveAccount = session.Username;
+            _settingsService.Save(s);
+
+            // Оба входа (пароль и браузер) командами AsyncRelayCommand, а те
+            // выполняются на UI-потоке, поэтому перечитать список можно сразу.
+            LoadFromSettings();
+        }
+
         private void ExecuteDeleteAccount(AccountProfile? account)
         {
             if (account == null) return;
@@ -989,7 +1229,16 @@ namespace MinecraftLauncher.ViewModels
                 if (!string.IsNullOrEmpty(account.AccessToken) &&
                     !string.Equals(account.AccessToken, Services.LaunchEngine.Models.LaunchOptions.OfflineAccessToken, StringComparison.OrdinalIgnoreCase))
                 {
-                    MicrosoftAuthService.Instance.SignOutAll();
+                    if (account.IsElyBy)
+                    {
+                        // Отзываем токен на стороне Ely.by (best-effort, без
+                        // ожидания: удаление аккаунта не должно висеть на сети).
+                        _ = ElyByAuthService.Instance.InvalidateAsync(account);
+                    }
+                    else
+                    {
+                        MicrosoftAuthService.Instance.SignOutAll();
+                    }
                 }
 
                 if (s.ActiveAccount == account.Nickname)

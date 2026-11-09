@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json.Serialization;
 using MinecraftLauncher.Helpers;
 
 namespace MinecraftLauncher.Models
@@ -68,6 +69,23 @@ namespace MinecraftLauncher.Models
 
         /// <summary>Отображаемое имя для <see cref="AutoInjectServerIp"/>.</summary>
         public string AutoInjectServerName { get; set; } = "SCRAFT Server";
+
+        /// <summary>
+        /// Персональный токен CurseForge (формат "$2a$10$..."). В памяти — обычная
+        /// строка, на диск сериализуется зашифрованной через DPAPI
+        /// (см. <see cref="ProtectedStringConverter"/>). Пустое значение убирает
+        /// CurseForge из мод-браузера: Modrinth продолжает работать без ключа.
+        /// </summary>
+        [JsonConverter(typeof(ProtectedStringConverter))]
+        public string CurseForgeApiKey { get; set; } = "";
+
+        /// <summary>
+        /// clientToken для авторизации Ely.by (Yggdrasil). Это НЕ секрет —
+        /// идентификатор конкретной установки лаунчера, сервер Ely.by
+        /// привязывает access-токены к паре с ним. Генерируется при первом
+        /// входе в Ely.by и живёт в settings.json обычной строкой.
+        /// </summary>
+        public string ElyByClientToken { get; set; } = "";
 
         public List<AccountProfile> Accounts { get; set; } = new List<AccountProfile>();
         public List<ModpackProfile> Modpacks { get; set; } = new List<ModpackProfile>();

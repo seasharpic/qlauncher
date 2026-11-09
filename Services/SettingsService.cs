@@ -271,6 +271,7 @@ namespace MinecraftLauncher.Services
             target.SkippedVersion = source.SkippedVersion;
             target.AutoInjectServerIp = source.AutoInjectServerIp;
             target.AutoInjectServerName = source.AutoInjectServerName;
+            target.CurseForgeApiKey = source.CurseForgeApiKey;
             target.Accounts = source.Accounts ?? new List<AccountProfile>();
             target.Modpacks = source.Modpacks ?? new List<ModpackProfile>();
         }

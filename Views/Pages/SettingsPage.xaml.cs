@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Microsoft.Win32;
 using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Models;
@@ -28,10 +29,59 @@ namespace MinecraftLauncher.Views.Pages
         }
 
         /// <summary>
-        /// Прокручивает страницу к списку аккаунтов.
+        /// Прокручивает страницу к списку аккаунтов и ставит блок у верхнего
+        /// края вьюпорта (BringIntoView ограничивается «минимальным сдвигом»,
+        /// и блок оказывался в самом низу, требуя доскроллить вручную).
         /// Вызывается кнопкой «Менеджер аккаунтов» в селекторе на главной.
         /// </summary>
-        public void ScrollToAccounts() => AccountsSection?.BringIntoView();
+        public void ScrollToAccounts()
+        {
+            var target = AccountsSection;
+            if (target is null) return;
+
+            var scroll = FindVisualAncestor<ScrollViewer>(target);
+            if (scroll is null || scroll.Content is not UIElement content)
+            {
+                target.BringIntoView();
+                return;
+            }
+
+            try
+            {
+                var y = target.TransformToVisual(content).Transform(new Point(0, 0)).Y;
+                scroll.ScrollToVerticalOffset(Math.Max(0, y - 10));
+            }
+            catch (InvalidOperationException)
+            {
+                // Элемент ещё не в дереве/макете — откатываемся на родной механизм.
+                target.BringIntoView();
+            }
+        }
+
+        private static TAncestor? FindVisualAncestor<TAncestor>(DependencyObject? start)
+            where TAncestor : DependencyObject
+        {
+            while (start is not null)
+            {
+                if (start is TAncestor found) return found;
+                start = VisualTreeHelper.GetParent(start);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// PasswordBox не биндится обычной привязкой, поэтому пароль Ely.by
+        /// подтягивается в ViewModel вручную на каждое нажатие клавиши.
+        /// Пароль хранится только в памяти ViewModel и не уходит на диск.
+        /// </summary>
+        private void ElyPasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel is not null && sender is PasswordBox box)
+            {
+                ViewModel.ElyPasswordInput = box.Password;
+            }
+        }
 
         private void BackButton_Click(object sender, RoutedEventArgs e)
         {
