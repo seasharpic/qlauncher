@@ -8,10 +8,14 @@ namespace MinecraftLauncher.Services
     {
         bool IsDarkTheme { get; set; }
         event Action? ThemeChanged;
+        /// <summary>Сменился акцентный пресет (нужно перерисовать зависимые вещи, например обои).</summary>
+        event Action? AccentChanged;
         void ToggleTheme();
         void SetTheme(bool isDark);
         void ApplyAccentColor(string mainHex, string hoverHex);
         void ApplyAccentPreset(string presetName);
+        /// <summary>Каноническое имя применённого пресета — для обоев и отметки в UI.</summary>
+        string CurrentAccentPreset { get; }
     }
 
     public class ThemeService : IThemeService
@@ -20,6 +24,7 @@ namespace MinecraftLauncher.Services
 
         public bool IsDarkTheme { get; set; } = true;
         public event Action? ThemeChanged;
+        public event Action? AccentChanged;
 
         private string? _currentAccentMain;
         private string _currentAccentPreset = "sapphire";
@@ -118,6 +123,17 @@ namespace MinecraftLauncher.Services
                 case "gold":
                     ApplyAccentColor("#F59E0B", "#FBBF24");
                     break;
+                // Тематические пресеты (ниже каждый несёт свои встроенные обои,
+                // см. MainViewModel.ApplyCustomWallpaper).
+                case "nether":
+                    ApplyAccentColor("#D64541", "#FF7A45");
+                    break;
+                case "end":
+                    ApplyAccentColor("#5A2EC9", "#9E7CFF");
+                    break;
+                case "sift":
+                    ApplyAccentColor("#12A5A5", "#5CE1E6");
+                    break;
                 case "sapphire":
                 case "blue":
                 default:
@@ -126,6 +142,7 @@ namespace MinecraftLauncher.Services
             }
 
             RememberAccentPreset(presetName);
+            AccentChanged?.Invoke();
         }
 
         /// <summary>
@@ -143,7 +160,8 @@ namespace MinecraftLauncher.Services
                 "pink" => "rose",
                 "gold" => "amber",
                 "blue" => "sapphire",
-                "emerald" or "purple" or "rose" or "amber" or "sapphire" => presetName.ToLowerInvariant(),
+                "emerald" or "purple" or "rose" or "amber" or "sapphire"
+                    or "nether" or "end" or "sift" => presetName.ToLowerInvariant(),
                 _ => "sapphire",
             };
 
@@ -167,10 +185,17 @@ namespace MinecraftLauncher.Services
         /// </summary>
         public void RestoreAccentFromSettings()
         {
+            string savedPreset = SettingsService.Instance.Settings.AccentPreset ?? "sapphire";
+
+            // Имя пресета тоже восстанавливаем, иначе обои тем Nether/End/Sift
+            // после перезапуска возвращались к общей картине: поле пресета
+            // оставалось дефолтным «sapphire», хотя цвета применялись верные.
+            RememberAccentPreset(savedPreset);
+
             try
             {
-                ApplyAccentColor(ResolvePresetMain(SettingsService.Instance.Settings.AccentPreset),
-                                 ResolvePresetHover(SettingsService.Instance.Settings.AccentPreset));
+                ApplyAccentColor(ResolvePresetMain(savedPreset),
+                                 ResolvePresetHover(savedPreset));
             }
             catch { }
         }
@@ -185,6 +210,9 @@ namespace MinecraftLauncher.Services
                 "purple" => "#8B5CF6",
                 "rose" => "#F43F5E",
                 "amber" => "#F59E0B",
+                "nether" => "#D64541",
+                "end" => "#5A2EC9",
+                "sift" => "#12A5A5",
                 _ => "#3B85E6",
             };
 
@@ -195,6 +223,9 @@ namespace MinecraftLauncher.Services
                 "purple" => "#A78BFA",
                 "rose" => "#FB7185",
                 "amber" => "#FBBF24",
+                "nether" => "#FF7A45",
+                "end" => "#9E7CFF",
+                "sift" => "#5CE1E6",
                 _ => "#6AC4F7",
             };
     }
