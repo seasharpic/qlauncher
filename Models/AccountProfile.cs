@@ -9,7 +9,21 @@ namespace MinecraftLauncher.Models
         private string _nickname = "";
         private string _accessToken = "";
         private string _uuid = "";
+        private bool _isElyBy;
+        private string _elyOauthRefreshToken = "";
         private BitmapImage? _avatarImage;
+
+        /// <summary>
+        /// Аккаунт Ely.by. Отличается от Microsoft тем, как продлевается
+        /// сессия (Yggdrasil /auth/refresh вместо Xbox Live) и тем, что при
+        /// запуске той игре подставляется authlib-injector — иначе скины
+        /// Ely.by не загрузятся даже с правильным токеном.
+        /// </summary>
+        public bool IsElyBy
+        {
+            get => _isElyBy;
+            set => SetProperty(ref _isElyBy, value);
+        }
 
         public string Nickname
         {
@@ -26,6 +40,19 @@ namespace MinecraftLauncher.Models
         {
             get => _accessToken;
             set => SetProperty(ref _accessToken, value);
+        }
+
+        /// <summary>
+        /// Refresh-токен OAuth2 для аккаунтов Ely.by, вошедших через браузер
+        /// (device code flow): позволяет продлевать сессию по OAuth2-гранту
+        /// вместо Yggdrasil /auth/refresh. В памяти — обычная строка, на диск
+        /// сериализуется зашифрованной через DPAPI (ProtectedStringConverter).
+        /// </summary>
+        [JsonConverter(typeof(ProtectedStringConverter))]
+        public string ElyOauthRefreshToken
+        {
+            get => _elyOauthRefreshToken;
+            set => SetProperty(ref _elyOauthRefreshToken, value);
         }
 
         public string Uuid
