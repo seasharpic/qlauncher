@@ -44,6 +44,9 @@
     <Resource Include="logo.png" />
     <Resource Include="Assets\theme_light.png" />
     <Resource Include="Assets\theme_dark.png" />
+    <Resource Include="Assets\bg_nether.png" />
+    <Resource Include="Assets\bg_end.png" />
+    <Resource Include="Assets\bg_sift.jpg" />
     <Resource Include="Assets\Loaders\vanilla.png" />
     <Resource Include="Assets\Loaders\fabric.png" />
     <Resource Include="Assets\Loaders\forge.png" />

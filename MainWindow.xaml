@@ -409,12 +409,26 @@
                                                 <Rectangle Grid.Row="1" Fill="#00A4EF" Margin="0,1,1,0"/>
                                                 <Rectangle Grid.Row="1" Grid.Column="1" Fill="#FFB900" Margin="1,1,0,0"/>
                                             </Grid>
+
+                                            <!-- Значок аккаунта Ely.by: вместо логотипа Microsoft у Ely-аккаунтов -->
+                                            <Border x:Name="ElyLogo" Width="14" Height="14" CornerRadius="7" Background="#7A6FF0"
+                                                    Margin="0,0,8,0" VerticalAlignment="Center" Visibility="Collapsed"
+                                                    ToolTip="{DynamicResource Str_Settings_ElyAccount}">
+                                                <TextBlock Text="E" FontSize="9" FontWeight="Bold" Foreground="White"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+
                                             <TextBlock Text="{Binding Nickname}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource PrimaryTextBrush}"/>
                                         </StackPanel>
 
                                         <DataTemplate.Triggers>
                                             <DataTrigger Binding="{Binding AccessToken}" Value="offline">
                                                 <Setter TargetName="MsLogo" Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                            <!-- Ely.by-аккаунт: Microsoft-логотип скрываем, показываем Ely -->
+                                            <DataTrigger Binding="{Binding IsElyBy}" Value="True">
+                                                <Setter TargetName="MsLogo" Property="Visibility" Value="Collapsed"/>
+                                                <Setter TargetName="ElyLogo" Property="Visibility" Value="Visible"/>
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
