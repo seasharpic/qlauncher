@@ -3,9 +3,13 @@ namespace MinecraftLauncher.Models
     /// <summary>
     /// Карточка мода в результатах поиска каталога (Modrinth / CurseForge).
     /// Заполняется из <see cref="Services.ModBrowserService"/> через ModsViewModel.
+    /// Наследует ObservableObject: флажок избранного меняется кнопкой на
+    /// уже показанной карточке, биндинг должен услышать это.
     /// </summary>
-    public class ModItem
+    public class ModItem : Common.ObservableObject
     {
+        private bool _isFavorite;
+
         public string Slug { get; set; } = "";
         public string Title { get; set; } = "";
         public string Description { get; set; } = "";
@@ -29,5 +33,21 @@ namespace MinecraftLauncher.Models
         /// определяет папку установки и наличие кнопки «Установить».
         /// </summary>
         public bool CanInstall { get; set; }
+
+        /// <summary>Проект в «Избранном» лаунчера (настройки, без сети).</summary>
+        public bool IsFavorite
+        {
+            get => _isFavorite;
+            set
+            {
+                if (SetProperty(ref _isFavorite, value))
+                {
+                    OnPropertyChanged(nameof(FavoriteGlyph));
+                }
+            }
+        }
+
+        /// <summary>Глиф ★/☆ для кнопки на карточке (Segoe MDL2: E734 outline, E735 filled).</summary>
+        public string FavoriteGlyph => IsFavorite ? "\uE735" : "\uE734";
     }
 }

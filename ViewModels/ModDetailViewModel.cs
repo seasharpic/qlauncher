@@ -102,6 +102,25 @@ namespace MinecraftLauncher.ViewModels
 
         public AsyncRelayCommand InstallCommand { get; }
 
+        private bool _isFavorite;
+
+        /// <summary>Проект в «Избранном» лаунчера; кнопка ★ в шапке страницы.</summary>
+        public bool IsFavorite
+        {
+            get => _isFavorite;
+            private set
+            {
+                if (SetProperty(ref _isFavorite, value))
+                {
+                    OnPropertyChanged(nameof(FavoriteGlyph));
+                }
+            }
+        }
+
+        public string FavoriteGlyph => _isFavorite ? "\uE735" : "\uE734";
+
+        public RelayCommand ToggleFavoriteCommand { get; }
+
         private string? _pageUrl;
 
         public ModDetailViewModel(ModItem item, ModCategoryKind kind)
@@ -126,8 +145,51 @@ namespace MinecraftLauncher.ViewModels
             DownloadFileCommand = new AsyncRelayCommand<ModFileRow>(ExecuteDownloadFileAsync);
             CanInstall = ModCategoryKinds.IsInstallable(kind);
             InstallCommand = new AsyncRelayCommand(ExecuteInstallAsync);
+            ToggleFavoriteCommand = new RelayCommand(ExecuteToggleFavorite);
+            IsFavorite = SettingsService.Instance.Settings.FavoriteMods.Any(f =>
+                string.Equals(f.Source, item.Source, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(f.Id, item.Id, StringComparison.OrdinalIgnoreCase));
 
             _ = LoadAsync(browser);
+        }
+
+        private void ExecuteToggleFavorite()
+        {
+            var settings = SettingsService.Instance.Settings;
+            var existing = settings.FavoriteMods.FirstOrDefault(f =>
+                string.Equals(f.Source, _item.Source, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(f.Id, _item.Id, StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null)
+            {
+                settings.FavoriteMods.Remove(existing);
+                IsFavorite = false;
+                // Карточка в списке браузера осталась с прежним флагом — обновим.
+                _item.IsFavorite = false;
+                ToastService.Instance.ShowInfo(
+                    _loc.Format("Str_Fav_Removed", _item.Title),
+                    _loc.GetString("Str_Mods_Favorites"));
+            }
+            else
+            {
+                settings.FavoriteMods.Add(new FavoriteMod
+                {
+                    Id = _item.Id,
+                    Source = _item.Source,
+                    Slug = _item.Slug,
+                    Title = _item.Title,
+                    Author = _item.Author,
+                    IconUrl = _item.IconUrl,
+                    ProjectType = _item.ProjectType
+                });
+                IsFavorite = true;
+                _item.IsFavorite = true;
+                ToastService.Instance.ShowSuccess(
+                    _loc.Format("Str_Fav_Added", _item.Title),
+                    _loc.GetString("Str_Mods_Favorites"));
+            }
+
+            SettingsService.Instance.Save();
         }
 
         private async Task LoadAsync(IModBrowserService browser)

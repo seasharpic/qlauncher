@@ -517,6 +517,11 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Mods_RowUnknown">Не найден в каталогах</sys:String>
     <sys:String x:Key="Str_Mods_UpdateFound">Доступно обновлений: {0}. Нажмите «Обновить всё».</sys:String>
     <sys:String x:Key="Str_Profile_UpdateAll">Обновить всё</sys:String>
+    <sys:String x:Key="Str_Mods_Favorites">Избранное</sys:String>
+    <sys:String x:Key="Str_Mods_NoFavorites">В избранном пока пусто — нажмите ★ на карточке мода в каталоге.</sys:String>
+    <sys:String x:Key="Str_Fav_Added">В избранном: {0}</sys:String>
+    <sys:String x:Key="Str_Fav_Removed">Убрано из избранного: {0}</sys:String>
+
     <sys:String x:Key="Str_Mods_UpdatedCount">Обновлено: {0}, не удалось: {1}</sys:String>
     <sys:String x:Key="Str_Mods_UpdateFailed">Не удалось обновить {0} — файл не скачался или не совпал SHA-1.</sys:String>
     <sys:String x:Key="Str_Mods_UpdatedOne">Обновлено: {0} → {1}</sys:String>

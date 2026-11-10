@@ -89,5 +89,11 @@ namespace MinecraftLauncher.Models
 
         public List<AccountProfile> Accounts { get; set; } = new List<AccountProfile>();
         public List<ModpackProfile> Modpacks { get; set; } = new List<ModpackProfile>();
+
+        /// <summary>
+        /// Избранные проекты каталога модов. Живут в settings.json без сети:
+        /// вкладка «Избранное» браузера показывает их мгновенно.
+        /// </summary>
+        public List<FavoriteMod> FavoriteMods { get; set; } = new List<FavoriteMod>();
     }
 }

@@ -59,6 +59,24 @@ namespace MinecraftLauncher.ViewModels
         public ObservableCollection<ModCategory> Categories { get; } = new();
         public ObservableCollection<string> GameVersions { get; } = new();
 
+        private bool _isFavoritesMode;
+
+        /// <summary>Вкладка «Избранное»: список собирается из настроек, без сети.</summary>
+        public bool IsFavoritesMode
+        {
+            get => _isFavoritesMode;
+            private set
+            {
+                if (SetProperty(ref _isFavoritesMode, value))
+                {
+                    // Заполненная/пустая звезда на кнопке-переключателе.
+                    OnPropertyChanged(nameof(ToggleFavoritesGlyph));
+                }
+            }
+        }
+
+        public string ToggleFavoritesGlyph => _isFavoritesMode ? "\uE735" : "\uE734";
+
         public static string[] LoaderOptions { get; } = { "", "fabric", "forge", "neoforge", "quilt" };
         public static string[] SortOptions { get; } = { "relevance", "downloads", "updated" };
 
@@ -174,6 +192,8 @@ namespace MinecraftLauncher.ViewModels
         public AsyncRelayCommand<ModItem> InstallModCommand { get; }
         public RelayCommand ToggleApiKeyPanelCommand { get; }
         public RelayCommand SaveApiKeyCommand { get; }
+        public RelayCommand ToggleFavoritesModeCommand { get; }
+        public RelayCommand<ModItem> ToggleFavoriteCommand { get; }
 
         public ModsViewModel()
             : this(SettingsService.Instance, ToastService.Instance, MinecraftLaunchService.Instance, ModBrowserService.Instance)
@@ -196,11 +216,119 @@ namespace MinecraftLauncher.ViewModels
             InstallModCommand = new AsyncRelayCommand<ModItem>(ExecuteInstallModAsync);
             ToggleApiKeyPanelCommand = new RelayCommand(_ => IsApiKeyPanelVisible = !IsApiKeyPanelVisible);
             SaveApiKeyCommand = new RelayCommand(_ => ExecuteSaveApiKey());
+            ToggleFavoritesModeCommand = new RelayCommand(_ => ToggleFavoritesMode());
+            ToggleFavoriteCommand = new RelayCommand<ModItem>(ExecuteToggleFavorite);
 
             // Версии Minecraft подтягиваются один раз; при ошибке фильтр просто не появится,
             // поиск продолжает работать без него.
             _ = LoadGameVersionsSafeAsync();
             _ = LoadCategoriesSafeAsync();
+        }
+
+        /// <summary>
+        /// Переключение вкладок «каталог» ↔ «избранное». Избранное собирается
+        /// offline из настроек; назад — честный поиск с тем же запросом.
+        /// </summary>
+        private void ToggleFavoritesMode()
+        {
+            if (_isFavoritesMode)
+            {
+                IsFavoritesMode = false;
+                _ = ExecuteSearchAsync();
+                return;
+            }
+
+            IsFavoritesMode = true;
+            ShowFavorites();
+        }
+
+        private void ShowFavorites()
+        {
+            _searchCts?.Cancel();
+            _searchCts?.Dispose();
+            _searchCts = null;
+            _hasMore = false;
+
+            var loc = LocalizationService.Instance;
+            var favorites = _settingsService.Settings.FavoriteMods;
+
+            Mods.Clear();
+            foreach (var favorite in favorites)
+            {
+                var kind = ModCategoryKinds.FromKey(favorite.ProjectType);
+                Mods.Add(new ModItem
+                {
+                    Id = favorite.Id,
+                    Slug = favorite.Slug,
+                    Title = string.IsNullOrWhiteSpace(favorite.Title)
+                        ? loc.GetString("Str_Mods_UnknownTitle")
+                        : favorite.Title,
+                    Description = "",
+                    Author = favorite.Author,
+                    IconUrl = favorite.IconUrl,
+                    Downloads = "",
+                    UpdatedText = "",
+                    ProjectType = favorite.ProjectType,
+                    CanInstall = ModCategoryKinds.IsInstallable(kind),
+                    Source = favorite.Source,
+                    IsFavorite = true
+                });
+            }
+
+            IsLoading = false;
+            LoadingText = Mods.Count == 0
+                ? loc.GetString("Str_Mods_NoFavorites")
+                : "";
+        }
+
+        /// <summary>
+        /// Кнопка ★ на карточке: добавляет/убирает проект из избранного
+        /// (settings.json). На вкладке избранного карточка сразу исчезает.
+        /// </summary>
+        private void ExecuteToggleFavorite(ModItem? item)
+        {
+            if (item == null || string.IsNullOrWhiteSpace(item.Id)) return;
+
+            var settings = _settingsService.Settings;
+            var existing = settings.FavoriteMods.FirstOrDefault(f =>
+                string.Equals(f.Source, item.Source, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(f.Id, item.Id, StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null)
+            {
+                settings.FavoriteMods.Remove(existing);
+                item.IsFavorite = false;
+                _toastService.ShowInfo(
+                    _loc.Format("Str_Fav_Removed", item.Title),
+                    _loc.GetString("Str_Mods_Favorites"));
+            }
+            else
+            {
+                settings.FavoriteMods.Add(new FavoriteMod
+                {
+                    Id = item.Id,
+                    Source = item.Source,
+                    Slug = item.Slug,
+                    Title = item.Title,
+                    Author = item.Author,
+                    IconUrl = item.IconUrl,
+                    ProjectType = item.ProjectType
+                });
+                item.IsFavorite = true;
+                _toastService.ShowSuccess(
+                    _loc.Format("Str_Fav_Added", item.Title),
+                    _loc.GetString("Str_Mods_Favorites"));
+            }
+
+            _settingsService.Save();
+            if (_isFavoritesMode && !item.IsFavorite)
+            {
+                Mods.Remove(item);
+                if (Mods.Count == 0)
+                {
+                    LoadingText = _loc.GetString("Str_Mods_NoFavorites");
+                }
+            }
         }
 
         private ModSource CurrentSource =>
@@ -307,6 +435,13 @@ namespace MinecraftLauncher.ViewModels
 
         private async Task ExecuteSearchAsync()
         {
+            // Обычный поиск всегда работает в режиме каталога: пользователь
+            // мог нажать «Поиск», находясь на вкладке избранного.
+            if (_isFavoritesMode)
+            {
+                IsFavoritesMode = false;
+            }
+
             if (CurrentSource == ModSource.CurseForge && !_browser.HasCurseForgeKey())
             {
                 IsApiKeyPanelVisible = true;
@@ -425,6 +560,13 @@ namespace MinecraftLauncher.ViewModels
             var kind = CurrentKind;
             var loc = LocalizationService.Instance;
             bool installable = ModCategoryKinds.IsInstallable(kind);
+            var settings = _settingsService.Settings;
+
+            var favorites = settings.FavoriteMods;
+
+            bool isFavorite = favorites.Any(f =>
+                string.Equals(f.Source, entry.Source == ModSource.CurseForge ? "curseforge" : "modrinth", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(f.Id, entry.Id, StringComparison.OrdinalIgnoreCase));
 
             return new ModItem
             {
@@ -440,7 +582,8 @@ namespace MinecraftLauncher.ViewModels
                     entry.UpdatedAt.LocalDateTime.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture)),
                 ProjectType = _selectedCategory,
                 CanInstall = installable,
-                Source = entry.Source == ModSource.CurseForge ? "curseforge" : "modrinth"
+                Source = entry.Source == ModSource.CurseForge ? "curseforge" : "modrinth",
+                IsFavorite = isFavorite
             };
         }
 

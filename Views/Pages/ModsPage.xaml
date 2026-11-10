@@ -81,6 +81,23 @@
                     </ComboBox.Style>
                 </ComboBox>
 
+                <!-- Вкладка «Избранное»: список из настроек, offline. Активная — жёлтая звезда. -->
+                <Button Command="{Binding ToggleFavoritesModeCommand}" Width="36" Height="36"
+                        ToolTip="{DynamicResource Str_Mods_Favorites}" Margin="0,0,0,6">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource DarkButtonStyle}">
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsFavoritesMode}" Value="True">
+                                    <Setter Property="Foreground" Value="#FFC94A"/>
+                                    <Setter Property="Background" Value="{DynamicResource HoverOverlayBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <TextBlock Text="{Binding ToggleFavoritesGlyph}" FontFamily="Segoe MDL2 Assets" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+
                 <!-- Ключ CurseForge: открывает/закрывает панель ввода.
                      Векторная иконка вместо шрифтового глифа — рендерится чётко. -->
                 <Button Width="36" Height="36" Style="{StaticResource DarkButtonStyle}" Command="{Binding ToggleApiKeyPanelCommand}"
@@ -169,6 +186,23 @@
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <!-- ★ Избранное на карточке: не открывает страницу, только флаг -->
+                                                <Button Content="{Binding FavoriteGlyph}" FontFamily="Segoe MDL2 Assets" FontSize="18"
+                                                        Width="34" Height="30" HorizontalAlignment="Right" Margin="0,0,0,4"
+                                                        Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip="{DynamicResource Str_Mods_Favorites}">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource DarkButtonStyle}">
+                                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                                    <Setter Property="Foreground" Value="#FFC94A"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
                                                 <TextBlock Text="{Binding Downloads}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Right" Margin="0,0,0,3"/>
                                                 <TextBlock Text="{Binding UpdatedText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" HorizontalAlignment="Right" Margin="0,0,0,5"/>
                                                 <!-- Установка: только для типов с папкой (мод, ресурспак...).
