@@ -526,6 +526,17 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Backup_Created">Mods backup created: {0}</sys:String>
     <sys:String x:Key="Str_Backup_Auto">Backup created before replacing mods: {0}</sys:String>
     <sys:String x:Key="Str_Backup_Failed">Failed to create a mods backup ({0}). Continue without a backup?</sys:String>
+
+    <!-- 3D skin preview -->
+    <sys:String x:Key="Str_Skin3D_Title">3D skin</sys:String>
+    <sys:String x:Key="Str_Skin3D_Hint">Drag to rotate, mouse wheel to zoom</sys:String>
+    <sys:String x:Key="Str_Skin3D_Slim">Slim (3px arms)</sys:String>
+    <sys:String x:Key="Str_Skin3D_AutoRotate">Auto-rotate</sys:String>
+    <sys:String x:Key="Str_Skin3D_Save">Save skin</sys:String>
+    <sys:String x:Key="Str_Skin3D_Open">Skin file</sys:String>
+    <sys:String x:Key="Str_Skin3D_Loading">Loading skin…</sys:String>
+    <sys:String x:Key="Str_Skin3D_NotLoaded">Failed to load the skin</sys:String>
+    <sys:String x:Key="Str_Skin3D_Saved">Skin saved: {0}</sys:String>
     <sys:String x:Key="Str_Mods_UpdatedCount">Updated: {0}, failed: {1}</sys:String>
     <sys:String x:Key="Str_Mods_UpdateFailed">Failed to update {0} — the file did not download or the SHA-1 mismatched.</sys:String>
     <sys:String x:Key="Str_Mods_UpdatedOne">Updated: {0} → {1}</sys:String>

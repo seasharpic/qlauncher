@@ -526,6 +526,17 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Backup_Created">Бэкап модов создан: {0}</sys:String>
     <sys:String x:Key="Str_Backup_Auto">Создан бэкап перед заменой модов: {0}</sys:String>
     <sys:String x:Key="Str_Backup_Failed">Не удалось создать бэкап модов ({0}). Продолжить без бэкапа?</sys:String>
+
+    <!-- 3D-превью скина -->
+    <sys:String x:Key="Str_Skin3D_Title">3D-скин</sys:String>
+    <sys:String x:Key="Str_Skin3D_Hint">Вращение — ЛКМ, зум — колесо мыши</sys:String>
+    <sys:String x:Key="Str_Skin3D_Slim">Slim (3px руки)</sys:String>
+    <sys:String x:Key="Str_Skin3D_AutoRotate">Автоповорот</sys:String>
+    <sys:String x:Key="Str_Skin3D_Save">Сохранить скин</sys:String>
+    <sys:String x:Key="Str_Skin3D_Open">Файл скина</sys:String>
+    <sys:String x:Key="Str_Skin3D_Loading">Загрузка скина…</sys:String>
+    <sys:String x:Key="Str_Skin3D_NotLoaded">Не удалось загрузить скин</sys:String>
+    <sys:String x:Key="Str_Skin3D_Saved">Скин сохранён: {0}</sys:String>
     <sys:String x:Key="Str_Mods_UpdatedCount">Обновлено: {0}, не удалось: {1}</sys:String>
     <sys:String x:Key="Str_Mods_UpdateFailed">Не удалось обновить {0} — файл не скачался или не совпал SHA-1.</sys:String>
     <sys:String x:Key="Str_Mods_UpdatedOne">Обновлено: {0} → {1}</sys:String>

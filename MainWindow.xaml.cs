@@ -433,6 +433,24 @@ namespace MinecraftLauncher
             Dispatcher.BeginInvoke(new Action(() => page.ScrollToAccounts()), DispatcherPriority.Loaded);
         }
 
+        /// <summary>
+        /// 3D-превью скина выбранного аккаунта: окно само скачает скин
+        /// (Ely.by / mc-heads / minotar) и соберёт модель игрока.
+        /// </summary>
+        private void Skin3DButton_Click(object sender, RoutedEventArgs e)
+        {
+            AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
+
+            var account = ViewModel.SelectedAccount;
+            if (account == null) return;
+
+            var window = new Views.Windows.SkinPreviewWindow(account.IsElyBy, account.Nickname, account.Uuid)
+            {
+                Owner = this
+            };
+            window.Show();
+        }
+
         private void NavHome_Click(object sender, RoutedEventArgs e)
         {
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
