@@ -161,6 +161,10 @@ namespace MinecraftLauncher.Views.Windows
 
         private void SlimCheckBox_Changed(object sender, RoutedEventArgs e)
         {
+            // Checked/Unchecked срабатывают и во время InitializeComponent
+            // (положение галочки из XAML) — до присвоения полей конструктором.
+            if (_autoRotateTimer == null) return;
+
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
             _slim = SlimCheckBox.IsChecked == true;
             BuildModel();
@@ -168,6 +172,8 @@ namespace MinecraftLauncher.Views.Windows
 
         private void AutoRotateCheckBox_Changed(object sender, RoutedEventArgs e)
         {
+            if (_autoRotateTimer == null) return;
+
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
             bool on = AutoRotateCheckBox.IsChecked == true;
             if (on && _skin != null && !_dragging)
