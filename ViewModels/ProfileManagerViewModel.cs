@@ -422,16 +422,16 @@ namespace MinecraftLauncher.ViewModels
                 }
 
                 _toastService.ShowSuccess(
-                    _loc.Format(announceAuto ? "Str_Backup_Auto" : "Str_Backup_Created", path),
+                    _loc.Format(announceAuto ? "Str_Backup_Mods_Auto" : "Str_Backup_Mods_Created", path),
                     _loc.GetString("Str_T_Mods"));
                 return true;
             }
             catch (Exception ex)
             {
-                string message = _loc.Format("Str_Backup_Failed", ex.Message);
+                string message = _loc.Format("Str_Backup_Mods_Failed", ex.Message);
                 bool proceed = QMessageBoxWindow.Show(
                     message,
-                    _loc.GetString("Str_Backup_Title"),
+                    _loc.GetString("Str_Backup_Mods_Title"),
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning) == MessageBoxResult.Yes;
 

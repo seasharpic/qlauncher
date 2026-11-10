@@ -522,10 +522,10 @@ Cancel to get a clean build without your accounts.</sys:String>
     <sys:String x:Key="Str_Mods_NoFavorites">В избранном пока пусто — нажмите ★ на карточке мода в каталоге.</sys:String>
     <sys:String x:Key="Str_Fav_Added">В избранном: {0}</sys:String>
     <sys:String x:Key="Str_Fav_Removed">Убрано из избранного: {0}</sys:String>
-    <sys:String x:Key="Str_Backup_Title">Бэкап модов</sys:String>
-    <sys:String x:Key="Str_Backup_Created">Бэкап модов создан: {0}</sys:String>
-    <sys:String x:Key="Str_Backup_Auto">Создан бэкап перед заменой модов: {0}</sys:String>
-    <sys:String x:Key="Str_Backup_Failed">Не удалось создать бэкап модов ({0}). Продолжить без бэкапа?</sys:String>
+    <sys:String x:Key="Str_Backup_Mods_Title">Бэкап модов</sys:String>
+    <sys:String x:Key="Str_Backup_Mods_Created">Бэкап модов создан: {0}</sys:String>
+    <sys:String x:Key="Str_Backup_Mods_Auto">Создан бэкап перед заменой модов: {0}</sys:String>
+    <sys:String x:Key="Str_Backup_Mods_Failed">Не удалось создать бэкап модов ({0}). Продолжить без бэкапа?</sys:String>
 
     <!-- 3D-превью скина -->
     <sys:String x:Key="Str_Skin3D_Title">3D-скин</sys:String>
