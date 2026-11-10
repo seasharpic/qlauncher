@@ -133,6 +133,12 @@
                                 <TextBlock Text="{DynamicResource Str_Profile_CheckUpdates}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
+                        <Button Command="{Binding CreateModsBackupCommand}" Height="36" Padding="14,0" Margin="0,0,8,0" Style="{DynamicResource DarkButtonStyle}" FontSize="13" ToolTip="{DynamicResource Str_Profile_CreateBackup}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE81D;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource Str_Profile_CreateBackup}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <Button Command="{Binding OpenModsFolderCommand}" Height="36" Padding="14,0" Style="{DynamicResource DarkButtonStyle}" FontSize="13">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>

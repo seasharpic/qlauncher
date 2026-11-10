@@ -85,6 +85,7 @@ namespace MinecraftLauncher.ViewModels
         public AsyncRelayCommand CheckModUpdatesCommand { get; }
         public AsyncRelayCommand UpdateAllModsCommand { get; }
         public AsyncRelayCommand<LocalModItem> UpdateOneModCommand { get; }
+        public AsyncRelayCommand CreateModsBackupCommand { get; }
 
         /// <summary>Обновления, найденные последней проверкой: OldPath → кандидат.</summary>
         private List<ModUpdateCandidate> _pendingUpdates = new();
@@ -180,6 +181,7 @@ namespace MinecraftLauncher.ViewModels
             CheckModUpdatesCommand = new AsyncRelayCommand(ExecuteCheckModUpdatesAsync);
             UpdateAllModsCommand = new AsyncRelayCommand(ExecuteUpdateAllModsAsync);
             UpdateOneModCommand = new AsyncRelayCommand<LocalModItem>(ExecuteUpdateOneModAsync);
+            CreateModsBackupCommand = new AsyncRelayCommand(ExecuteCreateModsBackupAsync);
 
             LoadMods();
             LoadWorlds();
@@ -337,6 +339,11 @@ namespace MinecraftLauncher.ViewModels
             IsCheckingUpdates = true;
             try
             {
+                // Замена jar — необратимая операция: сначала бэкап.
+                if (!await TryBackupBeforeReplaceAsync(announceAuto: true).ConfigureAwait(true))
+                {
+                    return;
+                }
                 bool updated = await ApplyUpdateAsync(candidate).ConfigureAwait(true);
                 if (updated)
                 {
@@ -358,11 +365,15 @@ namespace MinecraftLauncher.ViewModels
             }
 
             IsCheckingUpdates = true;
-
             int done = 0;
             int failed = 0;
             try
             {
+                // Прежде чем трогать хотя бы один jar — архив модов.
+                if (!await TryBackupBeforeReplaceAsync(announceAuto: true).ConfigureAwait(true))
+                {
+                    return;
+                }
                 foreach (var candidate in _pendingUpdates.ToList())
                 {
                     if (await ApplyUpdateAsync(candidate).ConfigureAwait(true))
@@ -388,6 +399,55 @@ namespace MinecraftLauncher.ViewModels
             finally
             {
                 IsCheckingUpdates = false;
+            }
+        }
+
+        /// <summary>
+        /// Запускает процесс «модам будет больно»: сначала архив модов
+        /// экземпляра. Возвращает false, если бэкап не удался, а юзер
+        /// отказался продолжать.
+        /// </summary>
+        private async Task<bool> TryBackupBeforeReplaceAsync(bool announceAuto)
+        {
+            try
+            {
+                string? path = await InstanceBackupService.CreateModsBackupAsync(
+                    _profile.FolderPath, _profile.Name, _profile.GameVersion, _profile.Loader)
+                    .ConfigureAwait(true);
+
+                if (path == null)
+                {
+                    // Модов нет — заменять нечего, бэкап не требуется.
+                    return true;
+                }
+
+                _toastService.ShowSuccess(
+                    _loc.Format(announceAuto ? "Str_Backup_Auto" : "Str_Backup_Created", path),
+                    _loc.GetString("Str_T_Mods"));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                string message = _loc.Format("Str_Backup_Failed", ex.Message);
+                bool proceed = QMessageBoxWindow.Show(
+                    message,
+                    _loc.GetString("Str_Backup_Title"),
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning) == MessageBoxResult.Yes;
+
+                if (!proceed)
+                {
+                    _toastService.ShowError(message, _loc.GetString("Str_T_Error"));
+                }
+                return proceed;
+            }
+        }
+
+        private async Task ExecuteCreateModsBackupAsync()
+        {
+            if (!await TryBackupBeforeReplaceAsync(announceAuto: false).ConfigureAwait(true))
+            {
+                return;
             }
         }
 
