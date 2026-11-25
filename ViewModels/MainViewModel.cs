@@ -886,8 +886,19 @@ _serverTimer.Start();
             }
         }
 
+        public static Func<bool>? AndroidLaunchHandler { get; set; }
+
         private async Task StartGameAsync(string version, string? serverIp)
         {
+            if (OperatingSystem.IsAndroid())
+            {
+                if (AndroidLaunchHandler == null || !AndroidLaunchHandler())
+                {
+                    _toastService.ShowWarning(_loc.GetString("Str_Android_AmethystMissing"), "Str_T_Warning");
+                }
+                return;
+            }
+
             var settings = _settingsService.Settings;
             var account = SelectedAccount ?? Accounts.FirstOrDefault();
 

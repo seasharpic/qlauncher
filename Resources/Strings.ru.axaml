@@ -8,6 +8,7 @@
     <sys:String x:Key="Str_Nav_Mods">Моды</sys:String>
     <sys:String x:Key="Str_Nav_Screenshots">Скриншоты</sys:String>
     <sys:String x:Key="Str_Nav_Console">Консоль</sys:String>
+    <sys:String x:Key="Str_Nav_Settings">Настройки</sys:String>
     <sys:String x:Key="Str_Nav_QuickFolder">Быстрый доступ к папкам</sys:String>
 
     <!-- Actions -->

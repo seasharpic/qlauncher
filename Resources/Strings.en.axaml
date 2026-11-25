@@ -8,6 +8,7 @@
     <sys:String x:Key="Str_Nav_Mods">Mods</sys:String>
     <sys:String x:Key="Str_Nav_Screenshots">Screenshots</sys:String>
     <sys:String x:Key="Str_Nav_Console">Console</sys:String>
+    <sys:String x:Key="Str_Nav_Settings">Settings</sys:String>
     <sys:String x:Key="Str_Nav_QuickFolder">Quick Folders</sys:String>
 
     <!-- Actions -->

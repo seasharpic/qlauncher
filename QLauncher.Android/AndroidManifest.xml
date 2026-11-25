@@ -4,5 +4,21 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <queries>
+        <package android:name="org.angelauramc.amethyst" />
+        <package android:name="org.angelauramc.amethyst.debug" />
+        <package android:name="net.kdt.pojavlaunch" />
+        <package android:name="net.kdt.pojavlaunch.debug" />
+        <package android:name="com.movtery.zalithlauncher" />
+        <package android:name="com.movtery.zalithlauncher.debug" />
+        <package android:name="git.artdeell.mojo" />
+        <package android:name="git.artdeell.mojo.debug" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application android:label="QLauncher" android:allowBackup="true" />
 </manifest>

@@ -9,8 +9,8 @@
     <AssemblyName>QLauncher</AssemblyName>
     <RootNamespace>MinecraftLauncher</RootNamespace>
     <ApplicationId>com.qlauncher.android</ApplicationId>
-    <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>2.0.0</ApplicationDisplayVersion>
+    <ApplicationVersion>2102</ApplicationVersion>
+    <ApplicationDisplayVersion>2.1.0.2</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <PublishTrimmed>false</PublishTrimmed>
     <AndroidLinkMode>None</AndroidLinkMode>

@@ -4,52 +4,59 @@
              x:Class="MinecraftLauncher.Views.AndroidMainView"
              Background="{DynamicResource ModpackOverlayBgBrush}">
 
-    <Grid RowDefinitions="Auto,*,Auto">
-        <!-- Top Mobile Bar -->
-        <Border Grid.Row="0" Background="{DynamicResource TitleBarBrush}" Padding="14,10">
+    <Grid x:Name="RootGrid" RowDefinitions="Auto,*,Auto">
+        <!-- Clean Mobile Top Header -->
+        <Border Grid.Row="0" Background="{DynamicResource TitleBarBrush}" Padding="16,12" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="0,0,0,1">
             <Grid ColumnDefinitions="Auto,*,Auto">
-                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <Image Source="avares://QLauncher/logo.png" Width="24" Height="24"/>
-                    <TextBlock Text="QLauncher" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <Button x:Name="BackBtn" Classes="DarkButton" Padding="10,6" Click="Back_Click" Content="←" IsVisible="False"/>
+                    <Image Source="avares://QLauncher/logo.png" Width="26" Height="26"/>
+                    <TextBlock Text="QLauncher" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="17" FontWeight="Bold" VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
-                    <Button Classes="DarkButton" Padding="10,6" Click="NavHome_Click" Content="{DynamicResource Str_Nav_Home}"/>
-                    <Button Classes="DarkButton" Padding="10,6" Click="NavModpacks_Click" Content="{DynamicResource Str_Nav_Modpacks}"/>
-                    <Button Classes="DarkButton" Padding="10,6" Click="NavMods_Click" Content="{DynamicResource Str_Nav_Mods}"/>
-                    <Button Classes="DarkButton" Padding="10,6" Click="NavSettings_Click" Content="⚙"/>
-                </StackPanel>
+                <Border Grid.Column="2" Background="{DynamicResource HoverOverlayBrush}" CornerRadius="8" Padding="10,4" VerticalAlignment="Center">
+                    <TextBlock Text="v2.1.0.2" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" FontWeight="SemiBold"/>
+                </Border>
             </Grid>
         </Border>
 
         <!-- Main Home Content -->
         <ScrollViewer Grid.Row="1" x:Name="HomeView" IsVisible="True" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="14" Spacing="12">
-                <Border Background="{DynamicResource PanelBrush}" CornerRadius="14" Padding="14">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="{DynamicResource Str_Action_Play}" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold"/>
-                        <ComboBox ItemsSource="{Binding Accounts}" SelectedItem="{Binding SelectedAccount, Mode=TwoWay}" Classes="CustomComboBox" Height="42">
+            <StackPanel Margin="16" Spacing="14">
+                <Border Background="{DynamicResource PanelBrush}" CornerRadius="16" Padding="16" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="{DynamicResource Str_Action_Play}" Foreground="{DynamicResource AccentBrush}" FontSize="15" FontWeight="Bold"/>
+
+                        <ComboBox ItemsSource="{Binding Accounts}" SelectedItem="{Binding SelectedAccount, Mode=TwoWay}"
+                                  Classes="CustomComboBox" Height="44" HorizontalAlignment="Stretch">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding Nickname}" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <ComboBox ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion, Mode=TwoWay}" Classes="CustomComboBox" Height="42"/>
-                        <TextBlock Text="{Binding ProgressText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
-                        <Button Content="{DynamicResource Str_Action_Play}" Command="{Binding PlayCommand}" Classes="PlayButton" Height="46" FontSize="16"/>
-                        <Button Content="{DynamicResource Str_Android_OpenAmethyst}" Click="OpenAmethyst_Click" Classes="DarkButton" Height="42" FontSize="14"/>
+
+                        <ComboBox ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion, Mode=TwoWay}"
+                                  Classes="CustomComboBox" Height="44" HorizontalAlignment="Stretch"/>
+
+                        <TextBlock Text="{Binding ProgressText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" TextWrapping="Wrap"/>
+
+                        <Button Content="{DynamicResource Str_Action_Play}" Command="{Binding PlayCommand}"
+                                Classes="PlayButton" Height="48" FontSize="16" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+
+                        <Button Content="{DynamicResource Str_Android_OpenAmethyst}" Click="OpenAmethyst_Click"
+                                Classes="DarkButton" Height="42" FontSize="14" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
-                <Border Background="{DynamicResource PanelBrush}" CornerRadius="14" Padding="14">
-                    <StackPanel Spacing="8">
+                <Border Background="{DynamicResource PanelBrush}" CornerRadius="16" Padding="16" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1">
+                    <StackPanel Spacing="10">
                         <TextBlock Text="{DynamicResource Str_News_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="16" FontWeight="Bold"/>
-                        <TextBlock Text="{DynamicResource Str_News_Empty}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" IsVisible="{Binding !HasNews}"/>
+                        <TextBlock Text="{DynamicResource Str_News_Empty}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" IsVisible="{Binding !HasNews}"/>
                         <ItemsControl ItemsSource="{Binding NewsPosts}" IsVisible="{Binding HasNews}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="10" Padding="12" Margin="0,0,0,8">
+                                    <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="12" Padding="12" Margin="0,0,0,8">
                                         <StackPanel Spacing="4">
                                             <TextBlock Text="{Binding Date}" Foreground="{DynamicResource AccentBrush}" FontSize="11" FontWeight="Bold"/>
                                             <TextBlock Text="{Binding Text}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" TextWrapping="Wrap"/>
@@ -67,12 +74,26 @@
         <ContentControl x:Name="MainFrame" Grid.Row="1" IsVisible="False"/>
 
         <!-- Toast Container -->
-        <StackPanel x:Name="ToastContainer" Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="12" IsHitTestVisible="False"/>
+        <StackPanel x:Name="ToastContainer" Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="14,10" Spacing="6" IsHitTestVisible="False"/>
+
+        <!-- Mobile Bottom Navigation Bar -->
+        <Border Grid.Row="2" Background="{DynamicResource TitleBarBrush}" Padding="8,8" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
+                <Button Grid.Column="0" Classes="DarkButton" Padding="6,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Click="NavHome_Click" Content="{DynamicResource Str_Nav_Home}" FontSize="12"/>
+                <Button Grid.Column="1" Classes="DarkButton" Padding="6,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Click="NavModpacks_Click" Content="{DynamicResource Str_Nav_Modpacks}" FontSize="12"/>
+                <Button Grid.Column="2" Classes="DarkButton" Padding="6,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Click="NavMods_Click" Content="{DynamicResource Str_Nav_Mods}" FontSize="12"/>
+                <Button Grid.Column="3" Classes="DarkButton" Padding="6,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Click="NavSettings_Click" Content="{DynamicResource Str_Nav_Settings}" FontSize="12"/>
+            </Grid>
+        </Border>
 
         <!-- In-App Dialog Overlay for Android -->
         <Grid x:Name="DialogOverlay" Grid.RowSpan="3" Background="#AA000000" IsVisible="False">
-            <Border Width="340" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Background="#1A1C28" CornerRadius="14" Padding="18" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1">
+            <Border MaxWidth="340" Margin="20" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="#1A1C28" CornerRadius="16" Padding="18" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1">
                 <StackPanel Spacing="12">
                     <TextBlock x:Name="DialogTitle" Foreground="White" FontSize="16" FontWeight="Bold"/>
                     <TextBlock x:Name="DialogMessage" Foreground="#D1D5DB" FontSize="13" TextWrapping="Wrap"/>

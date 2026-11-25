@@ -26,9 +26,17 @@ namespace MinecraftLauncher.Views
 
             ViewModel = new MainViewModel();
             DataContext = ViewModel;
+            MainViewModel.AndroidLaunchHandler = () => AndroidLauncherBridge.OpenInAmethystHandler?.Invoke() == true;
 
             Loaded += async (_, _) =>
             {
+                var topLevel = TopLevel.GetTopLevel(this);
+                if (topLevel?.InsetsManager is { } insets)
+                {
+                    RootGrid.Margin = insets.SafeAreaPadding;
+                    insets.SafeAreaChanged += (_, args) => RootGrid.Margin = args.SafeAreaPadding;
+                }
+
                 ToastService.Instance.RegisterContainer(ToastContainer);
                 try
                 {
@@ -76,14 +84,20 @@ namespace MinecraftLauncher.Views
             HomeView.IsVisible = false;
             MainFrame.Content = page;
             MainFrame.IsVisible = true;
+            BackBtn.IsVisible = true;
         }
 
         public void AnimateGoBack()
         {
             if (_navHistory.Count > 0)
+            {
                 MainFrame.Content = _navHistory.Pop();
+                BackBtn.IsVisible = true;
+            }
             else
+            {
                 CloseSettings();
+            }
         }
 
         public void CloseSettings()
@@ -92,9 +106,12 @@ namespace MinecraftLauncher.Views
             MainFrame.IsVisible = false;
             MainFrame.Content = null;
             HomeView.IsVisible = true;
+            BackBtn.IsVisible = false;
             _ = ViewModel.LoadAccountsAsync();
             _ = ViewModel.LoadVersionsAsync();
         }
+
+        private void Back_Click(object? sender, RoutedEventArgs e) => AnimateGoBack();
 
         public void OpenModpackOverlay() { }
         public void OpenShortcutOverlay() { }
