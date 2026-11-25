@@ -3,14 +3,15 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 
 namespace MinecraftLauncher.Helpers
 {
     public static class AvatarHelper
     {
         private static readonly HttpClient HttpClient = new HttpClient();
-        private static readonly ConcurrentDictionary<string, BitmapImage> Cache = new ConcurrentDictionary<string, BitmapImage>();
+        private static readonly ConcurrentDictionary<string, Bitmap> Cache = new ConcurrentDictionary<string, Bitmap>();
         private static readonly string CacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Cache", "Avatars");
 
         static AvatarHelper()
@@ -23,7 +24,7 @@ namespace MinecraftLauncher.Helpers
             catch { }
         }
 
-        public static async Task<BitmapImage?> GetAvatarAsync(string nickname, string uuid = "")
+        public static async Task<Bitmap?> GetAvatarAsync(string nickname, string uuid = "")
         {
             if (string.IsNullOrWhiteSpace(nickname)) return GetDefaultAvatar();
 
@@ -80,7 +81,7 @@ namespace MinecraftLauncher.Helpers
             return GetDefaultAvatar();
         }
 
-        public static async Task<BitmapImage?> GetBodyPreviewAsync(string nickname, string uuid = "")
+        public static async Task<Bitmap?> GetBodyPreviewAsync(string nickname, string uuid = "")
         {
             if (string.IsNullOrWhiteSpace(nickname)) return GetDefaultAvatar();
 
@@ -122,17 +123,11 @@ namespace MinecraftLauncher.Helpers
             return GetDefaultAvatar();
         }
 
-        private static BitmapImage? LoadBitmapFromFile(string path)
+        private static Bitmap? LoadBitmapFromFile(string path)
         {
             try
             {
-                var bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                bitmap.UriSource = new Uri(path, UriKind.Absolute);
-                bitmap.EndInit();
-                bitmap.Freeze();
-                return bitmap;
+                return new Bitmap(path);
             }
             catch
             {
@@ -140,20 +135,21 @@ namespace MinecraftLauncher.Helpers
             }
         }
 
-        public static BitmapImage GetDefaultAvatar()
+        public static Bitmap? GetDefaultAvatar()
         {
             string key = "__default_steve__";
             if (Cache.TryGetValue(key, out var cached)) return cached;
 
             try
             {
-                var bitmap = new BitmapImage(new Uri("pack://application:,,,/logo.png", UriKind.Absolute));
+                using var stream = AssetLoader.Open(new Uri("avares://QLauncher/logo.png"));
+                var bitmap = new Bitmap(stream);
                 Cache[key] = bitmap;
                 return bitmap;
             }
             catch
             {
-                return new BitmapImage();
+                return null;
             }
         }
     }

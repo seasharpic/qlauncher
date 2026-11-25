@@ -1,9 +1,7 @@
-using System;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Media;
 
 namespace MinecraftLauncher.Views.Controls
 {
@@ -30,48 +28,40 @@ namespace MinecraftLauncher.Views.Controls
             switch (type)
             {
                 case ToastType.Success:
-                    IconText.Text = "\uE73E";
+                    IconText.Text = "✓";
                     IconText.Foreground = new SolidColorBrush(Color.FromRgb(80, 220, 100));
                     ToastBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(80, 220, 100));
                     break;
                 case ToastType.Error:
-                    IconText.Text = "\uEA39";
+                    IconText.Text = "✕";
                     IconText.Foreground = new SolidColorBrush(Color.FromRgb(255, 90, 90));
                     ToastBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(255, 90, 90));
                     break;
                 case ToastType.Warning:
-                    IconText.Text = "\uE7BA";
+                    IconText.Text = "⚠";
                     IconText.Foreground = new SolidColorBrush(Color.FromRgb(255, 195, 60));
                     ToastBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(255, 195, 60));
                     break;
                 case ToastType.Info:
                 default:
-                    IconText.Text = "\uE946";
-                    IconText.Foreground = (Brush)Application.Current.FindResource("AccentBrush");
-                    ToastBorder.BorderBrush = (Brush)Application.Current.FindResource("AccentBrush");
+                    IconText.Text = "ℹ";
+                    if (Application.Current?.TryGetResource("AccentBrush", Application.Current.ActualThemeVariant, out var res) == true && res is IBrush accent)
+                    {
+                        IconText.Foreground = accent;
+                        ToastBorder.BorderBrush = accent;
+                    }
                     break;
             }
 
-            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(250));
-            var slideUp = new DoubleAnimation(20, 0, TimeSpan.FromMilliseconds(250));
-
-            var transform = new TranslateTransform();
-            ToastBorder.RenderTransform = transform;
-
-            ToastBorder.BeginAnimation(UIElement.OpacityProperty, fadeIn);
-            transform.BeginAnimation(TranslateTransform.YProperty, slideUp);
-
+            ToastBorder.Opacity = 1;
             await Task.Delay(durationMs);
+            ToastBorder.Opacity = 0;
+            await Task.Delay(260);
 
-            var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(250));
-            fadeOut.Completed += (_, _) =>
+            if (Parent is Panel parentPanel)
             {
-                if (Parent is Panel parentPanel)
-                {
-                    parentPanel.Children.Remove(this);
-                }
-            };
-            ToastBorder.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+                parentPanel.Children.Remove(this);
+            }
         }
     }
 }

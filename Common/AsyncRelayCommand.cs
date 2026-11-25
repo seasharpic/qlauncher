@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia.Threading;
 using MinecraftLauncher.Helpers;
 
 namespace MinecraftLauncher.Common
@@ -12,10 +13,6 @@ namespace MinecraftLauncher.Common
         private readonly string _name;
         private bool _isExecuting;
 
-        /// <summary>
-        /// Позволяет вызывающему коду показать пользователю ошибку конкретной команды,
-        /// вместо общего «ошибка в работе приложения».
-        /// </summary>
         public event Action<Exception>? CommandFailed;
 
         public AsyncRelayCommand(Func<Task> execute, Func<bool>? canExecute = null)
@@ -44,11 +41,7 @@ namespace MinecraftLauncher.Common
             }
         }
 
-        public event EventHandler? CanExecuteChanged
-        {
-            add => CommandManager.RequerySuggested += value;
-            remove => CommandManager.RequerySuggested -= value;
-        }
+        public event EventHandler? CanExecuteChanged;
 
         public bool CanExecute(object? parameter)
         {
@@ -66,15 +59,9 @@ namespace MinecraftLauncher.Common
             }
             catch (OperationCanceledException)
             {
-                // Отмена — не ошибка.
             }
             catch (Exception ex)
             {
-                // Раньше catch отсутствовал, и исключение из async void уходило в
-                // SynchronizationContext, где его глотал DispatcherUnhandledException
-                // с args.Handled = true: приложение продолжало работу в
-                // невалидном состоянии, а пользователь видел только «ошибка в работе
-                // приложения» без указания команды.
                 CrashLogWriter.Write("AsyncRelayCommand", $"Command '{_name}' failed", ex);
                 CommandFailed?.Invoke(ex);
             }
@@ -99,7 +86,13 @@ namespace MinecraftLauncher.Common
             }
         }
 
-        public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
+        public void RaiseCanExecuteChanged()
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+                CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            else
+                Dispatcher.UIThread.Post(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
+        }
     }
 
     public class AsyncRelayCommand<T> : ICommand
@@ -109,9 +102,6 @@ namespace MinecraftLauncher.Common
         private readonly string _name;
         private bool _isExecuting;
 
-        /// <summary>
-        /// Позволяет вызывающему коду показать пользователю ошибку конкретной команды.
-        /// </summary>
         public event Action<Exception>? CommandFailed;
 
         public AsyncRelayCommand(Func<T?, Task> execute, Predicate<T?>? canExecute = null, string? name = null)
@@ -134,11 +124,7 @@ namespace MinecraftLauncher.Common
             }
         }
 
-        public event EventHandler? CanExecuteChanged
-        {
-            add => CommandManager.RequerySuggested += value;
-            remove => CommandManager.RequerySuggested -= value;
-        }
+        public event EventHandler? CanExecuteChanged;
 
         public bool CanExecute(object? parameter)
         {
@@ -166,7 +152,6 @@ namespace MinecraftLauncher.Common
             }
             catch (OperationCanceledException)
             {
-                // Отмена — не ошибка.
             }
             catch (Exception ex)
             {
@@ -194,6 +179,12 @@ namespace MinecraftLauncher.Common
             }
         }
 
-        public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
+        public void RaiseCanExecuteChanged()
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+                CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            else
+                Dispatcher.UIThread.Post(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
+        }
     }
 }

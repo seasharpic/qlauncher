@@ -1,0 +1,75 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MinecraftLauncher.Views.Windows.SkinPreviewWindow"
+        Title="{DynamicResource Str_Skin3D_Title}"
+        Height="640" Width="470"
+        SystemDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False">
+
+    <Border x:Name="OuterBorder" CornerRadius="14" ClipToBounds="True"
+            Background="{DynamicResource ModpackOverlayBgBrush}"
+            BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="3">
+        <Grid RowDefinitions="40,*,54">
+            <!-- Title Bar -->
+            <Border Grid.Row="0" PointerPressed="TitleBar_PointerPressed"
+                    Background="{DynamicResource TitleBarBrush}" CornerRadius="10,10,0,0">
+                <Grid Margin="12,0,0,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Spacing="8">
+                        <TextBlock Text="👤" Foreground="{DynamicResource AccentBrush}" FontSize="14" VerticalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource Str_Skin3D_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="✕" Classes="CloseButton" Click="CloseButton_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 3D Scene -->
+            <Border Grid.Row="1" Margin="15,12,15,0" Background="{DynamicResource PanelBrush}" CornerRadius="10" ClipToBounds="True">
+                <Grid x:Name="ViewportHost"
+                      Background="Transparent"
+                      PointerPressed="Viewport_PointerPressed"
+                      PointerMoved="Viewport_PointerMoved"
+                      PointerReleased="Viewport_PointerReleased"
+                      PointerWheelChanged="Viewport_PointerWheelChanged">
+                    <Image x:Name="SkinImage" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+
+                    <TextBlock Text="{DynamicResource Str_Skin3D_Hint}" IsHitTestVisible="False"
+                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"
+                               HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,10"/>
+                </Grid>
+            </Border>
+
+            <TextBlock x:Name="StatusText" Grid.Row="1" IsHitTestVisible="False"
+                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="15,0,15,54"/>
+
+            <!-- Footer -->
+            <Border Grid.Row="2" Background="{DynamicResource TitleBarBrush}"
+                    BorderBrush="{DynamicResource HoverOverlayBrush}" BorderThickness="0,1,0,0"
+                    CornerRadius="0,0,10,10">
+                <Grid Margin="15,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
+                        <CheckBox x:Name="SlimCheckBox" Content="{DynamicResource Str_Skin3D_Slim}"
+                                  Classes="CustomCheckBox" VerticalAlignment="Center"
+                                  IsCheckedChanged="SlimCheckBox_Changed"/>
+                        <CheckBox x:Name="AutoRotateCheckBox" Content="{DynamicResource Str_Skin3D_AutoRotate}"
+                                  Classes="CustomCheckBox" VerticalAlignment="Center" IsChecked="True"
+                                  IsCheckedChanged="AutoRotateCheckBox_Changed"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
+                        <Button Content="{DynamicResource Str_Skin3D_Open}" Height="32" Width="100"
+                                Classes="DarkButton" FontSize="13" Click="OpenButton_Click"/>
+                        <Button Content="{DynamicResource Str_Skin3D_Save}" Height="32" Width="120"
+                                Classes="DarkButton" FontSize="13" Click="SaveButton_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

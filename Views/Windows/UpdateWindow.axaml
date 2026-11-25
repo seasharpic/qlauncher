@@ -1,0 +1,109 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MinecraftLauncher.Views.Windows.UpdateWindow"
+        Title="{DynamicResource Str_Update_WindowTitle}"
+        Height="380" Width="600"
+        SystemDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        WindowStartupLocation="CenterScreen"
+        KeyDown="Window_KeyDown">
+
+    <Border CornerRadius="16"
+            Background="{DynamicResource ModpackOverlayBgBrush}"
+            BorderBrush="{DynamicResource WindowBorderBrush}"
+            BorderThickness="1.5"
+            BoxShadow="0 10 25 0 #59000000">
+        <Grid RowDefinitions="42,*,Auto">
+            <!-- Header / Titlebar -->
+            <Border Grid.Row="0" PointerPressed="Header_PointerPressed"
+                    Background="{DynamicResource TitleBarBrush}" CornerRadius="15,15,0,0">
+                <Grid Margin="12,0,0,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Spacing="8">
+                        <Image Source="avares://QLauncher/logo.png" Width="20" Height="20"/>
+                        <TextBlock Text="{DynamicResource Str_Update_WindowTitle}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+
+                        <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                            <TextBlock x:Name="VersionBadgeText" Text="v2.0.0 -> v2.1.0" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="11" FontWeight="Medium"/>
+                        </Border>
+
+                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                            <TextBlock x:Name="ReleaseTypeBadgeText" Text="{DynamicResource Str_Update_NewVersion}" Foreground="White" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="OpenBrowserBtn" Content="🌐" Classes="CaptionButton" Click="OpenBrowserBtn_Click" ToolTip.Tip="{DynamicResource Str_Update_OpenRelease}"/>
+                        <Button x:Name="CloseBtn" Content="✕" Classes="CloseButton" Click="CloseBtn_Click" ToolTip.Tip="{DynamicResource Str_Update_Close}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Body -->
+            <Grid Grid.Row="1" Margin="16,10,16,6" RowDefinitions="Auto,*,Auto">
+                <Grid Grid.Row="0" Margin="2,0,2,6">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="ReleaseDateText" Text="" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                        <TextBlock Text=" • " Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                        <TextBlock x:Name="AuthorText" Text="" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                        <TextBlock Text=" • " Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                        <TextBlock x:Name="MirrorBadgeText" Text="" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="10">
+                        <TextBlock x:Name="SizeText" Text="" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" VerticalAlignment="Center"/>
+                        <Button Content="{DynamicResource Str_Update_CopyList}" Classes="CaptionButton" Width="NaN" Padding="6,2" FontSize="11" Click="CopyChangelog_Click" ToolTip.Tip="{DynamicResource Str_Update_CopyChangelogTip}"/>
+                    </StackPanel>
+                </Grid>
+
+                <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <TextBlock x:Name="ChangelogTextBlock" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" TextWrapping="Wrap"/>
+                    </ScrollViewer>
+                </Border>
+
+                <Grid Grid.Row="2" Margin="2,4,2,0">
+                    <TextBlock x:Name="Sha256Text" Text="{DynamicResource Str_Update_Sha256Pending}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                </Grid>
+            </Grid>
+
+            <!-- Footer -->
+            <Border Grid.Row="2" Background="{DynamicResource TitleBarBrush}"
+                    BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="0,1,0,0"
+                    CornerRadius="0,0,15,15" Padding="16,10">
+                <Grid>
+                    <Grid x:Name="InitialActionsPanel" IsVisible="True">
+                        <Button Content="{DynamicResource Str_Update_SkipVersion}" Classes="CaptionButton" Width="NaN" Padding="6,4" HorizontalAlignment="Left" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Click="SkipVersion_Click" ToolTip.Tip="{DynamicResource Str_Update_SkipVersionTip}"/>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                            <Button Content="{DynamicResource Str_Update_Later}" Classes="DarkButton" Width="90" Height="34" Click="Later_Click"/>
+                            <Button x:Name="StartUpdateBtn" Content="{DynamicResource Str_Update_Start}" Classes="PlayButton" Width="120" Height="34" Click="StartUpdate_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid x:Name="DownloadProgressPanel" IsVisible="False" ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                            <TextBlock x:Name="DownloadStatusText" Text="{DynamicResource Str_Update_PreparingDownload}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="11" FontWeight="Medium" Margin="0,0,0,6"/>
+
+                            <Border Height="6" Background="{DynamicResource WindowBorderBrush}" CornerRadius="3">
+                                <Border x:Name="DownloadProgressBarFill" Width="0" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" CornerRadius="3"/>
+                            </Border>
+
+                            <TextBlock x:Name="DownloadSpeedEtaText" Text="{DynamicResource Str_Update_WaitingConnection}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,4,0,0"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="1" Content="{DynamicResource Str_Action_Cancel}" Classes="DarkButton" Width="80" Height="34" VerticalAlignment="Center" Click="CancelDownload_Click"/>
+                    </Grid>
+
+                    <Grid x:Name="ReadyToRestartPanel" IsVisible="False">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <TextBlock Text="{DynamicResource Str_Update_Verifying}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="11" FontWeight="Medium"/>
+                        </StackPanel>
+
+                        <Button x:Name="RestartBtn" Content="{DynamicResource Str_Update_RestartBtn}" Classes="PlayButton" Width="190" Height="34" HorizontalAlignment="Right" Click="Restart_Click"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

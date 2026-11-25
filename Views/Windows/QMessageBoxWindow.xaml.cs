@@ -1,94 +1,100 @@
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Markup;
-using System.Windows.Media;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Layout;
+using Avalonia.Media;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Services;
 
 namespace MinecraftLauncher.Views.Windows
 {
+    public enum QMessageBoxButton { OK, OKCancel, YesNo, YesNoCancel }
+    public enum QMessageBoxImage { None, Information, Warning, Error, Question }
+    public enum QMessageBoxResult { None, OK, Cancel, Yes, No }
+
     public partial class QMessageBoxWindow : Window
     {
-        // Локализация для подписей кнопок и заголовка по умолчанию.
         private static readonly ILocalizationService L = LocalizationService.Instance;
 
-        public MessageBoxResult Result { get; private set; } = MessageBoxResult.None;
+        public QMessageBoxResult Result { get; private set; } = QMessageBoxResult.None;
 
-        public QMessageBoxWindow(string message, string? title, MessageBoxButton buttons, MessageBoxImage image)
+        public QMessageBoxWindow()
         {
             InitializeComponent();
+        }
 
+        public QMessageBoxWindow(string message, string? title, QMessageBoxButton buttons, QMessageBoxImage image) : this()
+        {
             MessageText.Text = message;
             TitleText.Text = string.IsNullOrEmpty(title)
                 ? L.GetString("Str_MessageBox_WindowTitle")
                 : title;
 
-            if (image == MessageBoxImage.Error)
-                TopAccent.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E81123"));
-            else if (image == MessageBoxImage.Warning)
-                TopAccent.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F5A623"));
+            if (image == QMessageBoxImage.Error)
+                TopAccent.Background = new SolidColorBrush(Color.Parse("#E81123"));
+            else if (image == QMessageBoxImage.Warning)
+                TopAccent.Background = new SolidColorBrush(Color.Parse("#F5A623"));
             else
-                TopAccent.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#3B85E6"));
+                TopAccent.Background = new SolidColorBrush(Color.Parse("#3B85E6"));
 
-            if (buttons == MessageBoxButton.YesNo)
+            if (buttons == QMessageBoxButton.YesNo)
             {
-                // Подписи кнопок берём из ресурсов: раньше они были русскими
-                // литералами, и в английском интерфейсе диалог подтверждения
-                // оставался смешанным.
-                AddButton(L.GetString("Str_Yes"), MessageBoxResult.Yes, "#3B85E6", true);
-                AddButton(L.GetString("Str_No"), MessageBoxResult.No, "#3A3D4D", false);
+                AddButton(L.GetString("Str_Yes"), QMessageBoxResult.Yes, "#3B85E6", true);
+                AddButton(L.GetString("Str_No"), QMessageBoxResult.No, "#3A3D4D", false);
+            }
+            else if (buttons == QMessageBoxButton.OKCancel)
+            {
+                AddButton(L.GetString("Str_Ok"), QMessageBoxResult.OK, "#3B85E6", true);
+                AddButton(L.GetString("Str_Cancel"), QMessageBoxResult.Cancel, "#3A3D4D", false);
             }
             else
             {
-                AddButton(L.GetString("Str_Ok"), MessageBoxResult.OK, "#3B85E6", true);
+                AddButton(L.GetString("Str_Ok"), QMessageBoxResult.OK, "#3B85E6", true);
             }
         }
 
-        private void AddButton(string text, MessageBoxResult result, string colorHex, bool isPrimary)
+        private void AddButton(string text, QMessageBoxResult result, string colorHex, bool isPrimary)
         {
             var btn = new Button
             {
                 Content = text,
-                Width = 90,
+                MinWidth = 90,
                 Height = 35,
-                Margin = new Thickness(10, 0, 0, 0),
                 Foreground = Brushes.White,
-                Cursor = System.Windows.Input.Cursors.Hand,
-                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorHex)),
+                Cursor = new Cursor(StandardCursorType.Hand),
+                Background = new SolidColorBrush(Color.Parse(colorHex)),
                 BorderThickness = new Thickness(0),
-                Template = CreateButtonTemplate(isPrimary ? 6 : 4)
+                CornerRadius = new CornerRadius(isPrimary ? 6 : 4),
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center
             };
 
             btn.Click += (_, _) =>
             {
                 Result = result;
-                Close();
+                Close(result);
             };
 
             ButtonsPanel.Children.Add(btn);
         }
 
-        private static ControlTemplate CreateButtonTemplate(int cornerRadius)
-        {
-            string xaml = $@"
-                <ControlTemplate TargetType='Button' xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'>
-                    <Border Background='{{TemplateBinding Background}}' CornerRadius='{cornerRadius}'>
-                        <ContentPresenter HorizontalAlignment='Center' VerticalAlignment='Center'/>
-                    </Border>
-                </ControlTemplate>";
-            return (ControlTemplate)XamlReader.Parse(xaml);
-        }
-
-        public static MessageBoxResult Show(string message, string title = null!, MessageBoxButton buttons = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information)
+        public static async Task<QMessageBoxResult> ShowAsync(
+            string message,
+            string? title = null,
+            QMessageBoxButton buttons = QMessageBoxButton.OK,
+            QMessageBoxImage image = QMessageBoxImage.Information)
         {
             var msgBox = new QMessageBoxWindow(message, title, buttons, image);
-
-            if (Application.Current?.MainWindow != null && Application.Current.MainWindow.IsVisible)
+            if (UiHelper.MainWindow is { IsVisible: true } owner)
             {
-                msgBox.Owner = Application.Current.MainWindow;
+                return await msgBox.ShowDialog<QMessageBoxResult>(owner);
             }
 
-            msgBox.ShowDialog();
-            return msgBox.Result;
+            var tcs = new TaskCompletionSource<QMessageBoxResult>();
+            msgBox.Closed += (_, _) => tcs.TrySetResult(msgBox.Result);
+            msgBox.Show();
+            return await tcs.Task;
         }
     }
 }

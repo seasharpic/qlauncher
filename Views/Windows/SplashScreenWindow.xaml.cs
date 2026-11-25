@@ -1,28 +1,32 @@
 using System;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Media.Animation;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using MinecraftLauncher.Services;
 
 namespace MinecraftLauncher.Views.Windows
 {
     public partial class SplashScreenWindow : Window
     {
-        // Локализация для строк, которые собираются в коде.
         private static readonly ILocalizationService L = LocalizationService.Instance;
 
         public SplashScreenWindow()
         {
             InitializeComponent();
+            Opened += Window_Opened;
         }
 
-        private async void Window_Loaded(object sender, RoutedEventArgs e)
+        private async void Window_Opened(object? sender, EventArgs e)
         {
             await SimulateLoadingAsync();
 
             var mainWindow = new MainWindow();
-            Application.Current.MainWindow = mainWindow;
-            mainWindow.Closed += (_, _) => Application.Current.Shutdown();
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            {
+                desktop.MainWindow = mainWindow;
+                mainWindow.Closed += (_, _) => desktop.Shutdown();
+            }
             mainWindow.Show();
 
             Close();
@@ -31,29 +35,20 @@ namespace MinecraftLauncher.Views.Windows
         private async Task SimulateLoadingAsync()
         {
             StatusText.Text = L.GetString("Str_Splash_Initializing");
-            AnimateProgressBar(80);
+            ProgressBarFill.Width = 80;
             await Task.Delay(400);
 
             StatusText.Text = L.GetString("Str_Splash_LoadingConfig");
-            AnimateProgressBar(180);
+            ProgressBarFill.Width = 180;
             await Task.Delay(450);
 
             StatusText.Text = L.GetString("Str_Splash_CheckingComponents");
-            AnimateProgressBar(260);
+            ProgressBarFill.Width = 260;
             await Task.Delay(400);
 
             StatusText.Text = L.GetString("Str_Splash_Ready");
-            AnimateProgressBar(300);
+            ProgressBarFill.Width = 300;
             await Task.Delay(250);
-        }
-
-        private void AnimateProgressBar(double toWidth)
-        {
-            var anim = new DoubleAnimation(toWidth, TimeSpan.FromMilliseconds(350))
-            {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-            };
-            ProgressBarFill.BeginAnimation(FrameworkElement.WidthProperty, anim);
         }
     }
 }

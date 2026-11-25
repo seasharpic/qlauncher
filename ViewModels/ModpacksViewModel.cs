@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
-using System.Windows;
+using Avalonia.Platform.Storage;
 using MinecraftLauncher.Common;
 using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Models;
@@ -79,7 +79,7 @@ namespace MinecraftLauncher.ViewModels
                     LoaderTag = string.IsNullOrWhiteSpace(pack.Loader) ? "Vanilla" : pack.Loader,
                     GameVersionTag = string.IsNullOrWhiteSpace(pack.GameVersion) ? "1.20.1" : pack.GameVersion,
                     PlaytimeText = _loc.Format("Str_Playtime_Summary", hours, mins, pack.LaunchCount),
-                    IsActiveVisibility = isActive ? Visibility.Visible : Visibility.Collapsed
+                    IsActive = isActive
                 });
             }
         }
@@ -118,25 +118,20 @@ namespace MinecraftLauncher.ViewModels
 
         public async void ImportZip()
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog
-            {
-                Filter = "Modpack files (*.mrpack;*.zip)|*.mrpack;*.zip|Modrinth Pack (*.mrpack)|*.mrpack|Zip Archive (*.zip)|*.zip",
-                Title = _loc.GetString("Str_Dialog_ImportPackMinecraft")
-            };
+            var filePath = await UiHelper.PickFileAsync(
+                _loc.GetString("Str_Dialog_ImportPackMinecraft"),
+                new FilePickerFileType("Modpack files") { Patterns = new[] { "*.mrpack", "*.zip" } });
 
-            if (dlg.ShowDialog() == true)
+            if (!string.IsNullOrEmpty(filePath))
             {
                 try
                 {
                     _toastService.ShowInfo(_loc.GetString("Str_Import_Progress"), _loc.GetString("Str_T_ImportTitle"));
 
-                    // Логика импорта вынесена в общий сервис: раньше она была
-                    // продублирована в трёх местах и уже разошлась между ними.
                     var profile = await ModpackImportService.Instance.ImportAsync(
-                        dlg.FileName,
+                        filePath,
                         _settingsService.Settings.GamePath);
 
-                    // Изменение общего списка и сохранение — на UI-потоке.
                     _settingsService.Settings.Modpacks.Add(profile);
                     _settingsService.Save();
 
@@ -147,7 +142,7 @@ namespace MinecraftLauncher.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    CrashLogWriter.Write("ModpackImport", $"Failed to import '{dlg.FileName}'", ex);
+                    CrashLogWriter.Write("ModpackImport", $"Failed to import '{filePath}'", ex);
                     _toastService.ShowError(_loc.Format("Str_Import_Error", ex.Message), _loc.GetString("Str_T_Error"));
                 }
             }
@@ -255,23 +250,33 @@ namespace MinecraftLauncher.ViewModels
             try
             {
                 string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                string shortcutFile = Path.Combine(desktop, $"Minecraft ({pack.Name}).lnk");
                 string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "";
 
                 if (!string.IsNullOrEmpty(exePath))
                 {
-                    Type? shellType = Type.GetTypeFromProgID("WScript.Shell");
-                    if (shellType != null)
+                    string packTag = $"⭐ {pack.Name} ({pack.Loader})";
+                    if (OperatingSystem.IsWindows())
                     {
-                        dynamic shell = Activator.CreateInstance(shellType)!;
-                        dynamic shortcut = shell.CreateShortcut(shortcutFile);
-                        shortcut.TargetPath = exePath;
-                        string packTag = $"⭐ {pack.Name} ({pack.Loader})";
-                        shortcut.Arguments = $"-quickplay \"{packTag}\"";
-                        shortcut.IconLocation = $"{exePath},0";
-                        shortcut.WorkingDirectory = Path.GetDirectoryName(exePath) ?? "";
-                        shortcut.Save();
-
+                        string shortcutFile = Path.Combine(desktop, $"Minecraft ({pack.Name}).lnk");
+                        Type? shellType = Type.GetTypeFromProgID("WScript.Shell");
+                        if (shellType != null)
+                        {
+                            dynamic shell = Activator.CreateInstance(shellType)!;
+                            dynamic shortcut = shell.CreateShortcut(shortcutFile);
+                            shortcut.TargetPath = exePath;
+                            shortcut.Arguments = $"-quickplay \"{packTag}\"";
+                            shortcut.IconLocation = $"{exePath},0";
+                            shortcut.WorkingDirectory = Path.GetDirectoryName(exePath) ?? "";
+                            shortcut.Save();
+                            _toastService.ShowSuccess(_loc.Format("Str_Pack_ShortcutCreated", pack.Name), _loc.GetString("Str_T_Shortcut"));
+                        }
+                    }
+                    else if (OperatingSystem.IsLinux())
+                    {
+                        string desktopFile = Path.Combine(desktop, $"QLauncher-{pack.Name}.desktop");
+                        string content = $"[Desktop Entry]\nType=Application\nName=Minecraft ({pack.Name})\nExec=\"{exePath}\" -quickplay \"{packTag}\"\nTerminal=false\nCategories=Game;\n";
+                        File.WriteAllText(desktopFile, content);
+                        try { File.SetUnixFileMode(desktopFile, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute); } catch { }
                         _toastService.ShowSuccess(_loc.Format("Str_Pack_ShortcutCreated", pack.Name), _loc.GetString("Str_T_Shortcut"));
                     }
                 }
@@ -282,13 +287,13 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
-        private void ExecuteDeletePack(string? packName)
+        private async void ExecuteDeletePack(string? packName)
         {
             if (string.IsNullOrWhiteSpace(packName)) return;
             var pack = _settingsService.Settings.Modpacks.Find(p => p.Name == packName);
             if (pack == null) return;
 
-            if (QMessageBoxWindow.Show(_loc.Format("Str_Pack_DeleteQuestion", pack.Name), _loc.GetString("Str_T_DeleteConfirm"), MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (await QMessageBoxWindow.ShowAsync(_loc.Format("Str_Pack_DeleteQuestion", pack.Name), _loc.GetString("Str_T_DeleteConfirm"), QMessageBoxButton.YesNo, QMessageBoxImage.Warning) == QMessageBoxResult.Yes)
             {
                 try
                 {

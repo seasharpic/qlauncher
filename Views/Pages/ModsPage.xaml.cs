@@ -1,11 +1,12 @@
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.ViewModels;
 
 namespace MinecraftLauncher.Views.Pages
 {
-    public partial class ModsPage : Page
+    public partial class ModsPage : UserControl
     {
         public ModsViewModel ViewModel { get; }
 
@@ -16,15 +17,15 @@ namespace MinecraftLauncher.Views.Pages
             DataContext = ViewModel;
         }
 
-        private void BackButton_Click(object sender, RoutedEventArgs e)
+        private void BackButton_Click(object? sender, RoutedEventArgs e)
         {
-            if (Window.GetWindow(this) is MainWindow mainWindow)
+            if (UiHelper.MainWindow is MainWindow mainWindow)
             {
                 mainWindow.CloseSettings();
             }
         }
 
-        private void SearchBox_KeyDown(object sender, KeyEventArgs e)
+        private void SearchBox_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter && ViewModel.SearchCommand.CanExecute(null))
             {
@@ -32,11 +33,11 @@ namespace MinecraftLauncher.Views.Pages
             }
         }
 
-        /// <summary>Клик по карточке: открываем страницу мода с типом этой карточки.</summary>
-        private void ModCard_Click(object sender, MouseButtonEventArgs e)
+        private void ModCard_PointerReleased(object? sender, PointerReleasedEventArgs e)
         {
-            if (sender is FrameworkElement element && element.DataContext is Models.ModItem item &&
-                Window.GetWindow(this) is MainWindow mainWindow)
+            if (e.InitialPressMouseButton == MouseButton.Left &&
+                sender is Control element && element.DataContext is Models.ModItem item &&
+                UiHelper.MainWindow is MainWindow mainWindow)
             {
                 var kind = Models.ModCategoryKinds.FromKey(item.ProjectType);
                 mainWindow.AnimateNavigate(new ModDetailPage(item, kind));

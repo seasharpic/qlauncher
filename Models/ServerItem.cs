@@ -1,4 +1,4 @@
-using System.Windows.Media;
+using Avalonia.Media;
 using MinecraftLauncher.Common;
 
 namespace MinecraftLauncher.Models
@@ -11,7 +11,7 @@ namespace MinecraftLauncher.Models
         private string _version = "...";
         private double _progressWidth = 0;
         private string _pingText = "";
-        private Brush _pingColor = new SolidColorBrush(Color.FromRgb(150, 150, 150));
+        private IBrush _pingColor = new SolidColorBrush(Color.FromRgb(150, 150, 150));
 
         public string Name
         {
@@ -49,7 +49,7 @@ namespace MinecraftLauncher.Models
             set => SetProperty(ref _pingText, value);
         }
 
-        public Brush PingColor
+        public IBrush PingColor
         {
             get => _pingColor;
             set => SetProperty(ref _pingColor, value);

@@ -6,7 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
+using Avalonia.Platform.Storage;
 using MinecraftLauncher.Common;
 using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Models;
@@ -429,11 +429,11 @@ namespace MinecraftLauncher.ViewModels
             catch (Exception ex)
             {
                 string message = _loc.Format("Str_Backup_Mods_Failed", ex.Message);
-                bool proceed = QMessageBoxWindow.Show(
+                bool proceed = await QMessageBoxWindow.ShowAsync(
                     message,
                     _loc.GetString("Str_Backup_Mods_Title"),
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning) == MessageBoxResult.Yes;
+                    QMessageBoxButton.YesNo,
+                    QMessageBoxImage.Warning) == QMessageBoxResult.Yes;
 
                 if (!proceed)
                 {
@@ -492,11 +492,11 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
-        private void ExecuteDeleteMod(LocalModItem? mod)
+        private async void ExecuteDeleteMod(LocalModItem? mod)
         {
             if (mod == null || !File.Exists(mod.FullPath)) return;
 
-            if (QMessageBoxWindow.Show(_loc.Format("Str_Mod_DeleteQuestion", mod.FileName), _loc.GetString("Str_T_DeleteModConfirm"), MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (await QMessageBoxWindow.ShowAsync(_loc.Format("Str_Mod_DeleteQuestion", mod.FileName), _loc.GetString("Str_T_DeleteModConfirm"), QMessageBoxButton.YesNo, QMessageBoxImage.Question) == QMessageBoxResult.Yes)
             {
                 try
                 {
@@ -511,26 +511,32 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
+        private static void OpenFolderCrossPlatform(string path)
+        {
+            try
+            {
+                if (OperatingSystem.IsWindows())
+                    Process.Start("explorer.exe", path);
+                else if (OperatingSystem.IsMacOS())
+                    Process.Start("open", path);
+                else
+                    Process.Start("xdg-open", path);
+            }
+            catch { }
+        }
+
         private void ExecuteOpenModsFolder()
         {
             string modsDir = Path.Combine(_profile.FolderPath, "mods");
             Directory.CreateDirectory(modsDir);
-            try
-            {
-                Process.Start("explorer.exe", modsDir);
-            }
-            catch { }
+            OpenFolderCrossPlatform(modsDir);
         }
 
         private void ExecuteOpenWorldsFolder()
         {
             string savesDir = Path.Combine(_profile.FolderPath, "saves");
             Directory.CreateDirectory(savesDir);
-            try
-            {
-                Process.Start("explorer.exe", savesDir);
-            }
-            catch { }
+            OpenFolderCrossPlatform(savesDir);
         }
 
         public void LoadBackups()
@@ -564,13 +570,13 @@ namespace MinecraftLauncher.ViewModels
         {
             if (backup == null || !File.Exists(backup.FullPath)) return;
 
-            var result = QMessageBoxWindow.Show(
+            var result = await QMessageBoxWindow.ShowAsync(
                 _loc.Format("Str_Dialog_RestoreWorld", backup.WorldName, backup.FileName),
                 _loc.GetString("Str_Dialog_RestoreWorldTitle"),
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+                QMessageBoxButton.YesNo,
+                QMessageBoxImage.Question);
 
-            if (result != MessageBoxResult.Yes) return;
+            if (result != QMessageBoxResult.Yes) return;
 
             try
             {
@@ -586,17 +592,17 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
-        private void ExecuteDeleteBackup(WorldBackupItem? backup)
+        private async void ExecuteDeleteBackup(WorldBackupItem? backup)
         {
             if (backup == null || !File.Exists(backup.FullPath)) return;
 
-            var result = QMessageBoxWindow.Show(
+            var result = await QMessageBoxWindow.ShowAsync(
                 _loc.Format("Str_Dialog_DeleteBackup", backup.FileName),
                 _loc.GetString("Str_Dialog_DeleteBackupTitle"),
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+                QMessageBoxButton.YesNo,
+                QMessageBoxImage.Warning);
 
-            if (result != MessageBoxResult.Yes) return;
+            if (result != QMessageBoxResult.Yes) return;
 
             try
             {
@@ -612,11 +618,11 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
-        private void ExecuteDeleteWorld(WorldItem? world)
+        private async void ExecuteDeleteWorld(WorldItem? world)
         {
             if (world == null || !Directory.Exists(world.FullPath)) return;
 
-            if (QMessageBoxWindow.Show(_loc.Format("Str_World_DeleteQuestion", world.WorldName), _loc.GetString("Str_T_DeleteConfirm"), MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (await QMessageBoxWindow.ShowAsync(_loc.Format("Str_World_DeleteQuestion", world.WorldName), _loc.GetString("Str_T_DeleteConfirm"), QMessageBoxButton.YesNo, QMessageBoxImage.Warning) == QMessageBoxResult.Yes)
             {
                 try
                 {
@@ -631,21 +637,20 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
-        private void ExecuteExportZip()
+        private async void ExecuteExportZip()
         {
-            var dlg = new Microsoft.Win32.SaveFileDialog
-            {
-                FileName = $"{_profile.Name}.zip",
-                Filter = "Zip Archive (*.zip)|*.zip",
-                Title = _loc.GetString("Str_Dialog_ExportPack")
-            };
+            var filePath = await UiHelper.SaveFileAsync(
+                _loc.GetString("Str_Dialog_ExportPack"),
+                $"{_profile.Name}.zip",
+                "zip",
+                new FilePickerFileType("Zip Archive") { Patterns = new[] { "*.zip" } });
 
-            if (dlg.ShowDialog() == true)
+            if (!string.IsNullOrEmpty(filePath))
             {
                 try
                 {
-                    if (File.Exists(dlg.FileName)) File.Delete(dlg.FileName);
-                    ZipFile.CreateFromDirectory(_profile.FolderPath, dlg.FileName);
+                    if (File.Exists(filePath)) File.Delete(filePath);
+                    ZipFile.CreateFromDirectory(_profile.FolderPath, filePath);
                     _toastService.ShowSuccess(_loc.GetString("Str_Export_Done"), _loc.GetString("Str_T_Export"));
                 }
                 catch (Exception ex)

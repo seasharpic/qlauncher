@@ -1,0 +1,261 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="MinecraftLauncher.Views.Pages.ProfileManagerPage"
+             x:Name="Root"
+             Background="Transparent">
+
+    <UserControl.Styles>
+        <Style Selector="RadioButton.TabRadio">
+            <Setter Property="Background" Value="{DynamicResource InputNicknameBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="18,10"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="RadioButton.TabRadio:checked /template/ Border">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+        <Style Selector="RadioButton.TabRadio:checked">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Margin="20">
+        <Border Background="{DynamicResource PanelBrush}" CornerRadius="16" Padding="24">
+            <Grid RowDefinitions="Auto,Auto,*">
+                <Grid Grid.Row="0" Margin="0,0,0,20" ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="15">
+                            <Button Content="←" FontSize="18" Classes="DarkButton" Width="36" Height="36" Click="BackButton_Click" ToolTip.Tip="{DynamicResource Str_Action_Back}"/>
+                            <TextBlock Text="{Binding TitleText}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding PlaytimeText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="51,4,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                        <Button Click="CreatePack_Click" Height="36" Padding="14,0" Classes="DarkButton" FontSize="13" ToolTip.Tip="{DynamicResource Str_Profile_NewPackTooltip}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                <TextBlock Text="+" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource Str_Profile_NewPack}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding ExportZipCommand}" Height="36" Padding="14,0" Classes="DarkButton" FontSize="13" ToolTip.Tip="{DynamicResource Str_Profile_ExportZipTooltip}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                <TextBlock Text="📦" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource Str_Profile_ExportZip}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Click="CreateShortcut_Click" Height="36" Padding="14,0" Classes="DarkButton" FontSize="13" ToolTip.Tip="{DynamicResource Str_Profile_ShortcutTooltip}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                <TextBlock Text="🔗" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource Str_Profile_Shortcut}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Click="DeletePack_Click" Height="36" Padding="14,0" Foreground="#FF6363" Classes="DarkButton" FontSize="13" ToolTip.Tip="{DynamicResource Str_Profile_DeleteTooltip}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                <TextBlock Text="🗑" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource Str_Profile_Delete}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Grid.Row="1" Margin="0,0,0,15" Orientation="Horizontal" Spacing="10">
+                    <RadioButton x:Name="TabModsRadio" Content="{DynamicResource Str_Profile_TabMods}" IsChecked="{Binding IsModsTabSelected, Mode=TwoWay}" Classes="TabRadio" IsCheckedChanged="Tab_Checked"/>
+                    <RadioButton x:Name="TabWorldsRadio" Content="{DynamicResource Str_Profile_TabWorlds}" Classes="TabRadio" IsCheckedChanged="Tab_Checked"/>
+                </StackPanel>
+
+                <!-- MODS VIEW -->
+                <Grid x:Name="ModsView" Grid.Row="2" IsVisible="True" RowDefinitions="Auto,*">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12" HorizontalAlignment="Right" Spacing="8">
+                        <Button Command="{Binding UpdateAllModsCommand}" Height="36" Padding="14,0" FontSize="13"
+                                Classes="PlayButton" IsVisible="{Binding HasPendingUpdates}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                <TextBlock Text="⬇" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource Str_Profile_UpdateAll}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding CheckModUpdatesCommand}" Height="36" Padding="14,0" Classes="DarkButton" FontSize="13" ToolTip.Tip="{DynamicResource Str_Profile_CheckUpdatesTooltip}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                <TextBlock Text="🔄" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource Str_Profile_CheckUpdates}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding CreateModsBackupCommand}" Height="36" Padding="14,0" Classes="DarkButton" FontSize="13" ToolTip.Tip="{DynamicResource Str_Profile_CreateBackup}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                <TextBlock Text="💾" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource Str_Profile_CreateBackup}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding OpenModsFolderCommand}" Height="36" Padding="14,0" Classes="DarkButton" FontSize="13">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                <TextBlock Text="📁" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource Str_Profile_OpenMods}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <Grid>
+                            <TextBlock Text="{DynamicResource Str_Profile_ModsHint}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="14" TextWrapping="Wrap"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20"
+                                       IsVisible="{Binding !LocalMods.Count}"/>
+
+                            <ItemsControl ItemsSource="{Binding LocalMods}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="10" Margin="0,0,0,8" Padding="14,12">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="{Binding ActionText}"
+                                                              Command="{Binding #Root.DataContext.ToggleModCommand}"
+                                                              CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="{DynamicResource Str_Profile_Menu_ShowInExplorer}"
+                                                              Command="{Binding #Root.DataContext.OpenModInExplorerCommand}"
+                                                              CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="{DynamicResource Str_Profile_Menu_OpenConfig}"
+                                                              Command="{Binding #Root.DataContext.OpenModConfigCommand}"
+                                                              CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="{DynamicResource Str_Profile_Menu_FindModrinth}"
+                                                              Command="{Binding #Root.DataContext.SearchModOnModrinthCommand}"
+                                                              CommandParameter="{Binding}"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="{DynamicResource Str_Profile_Menu_Delete}"
+                                                              Command="{Binding #Root.DataContext.DeleteModCommand}"
+                                                              CommandParameter="{Binding}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource PrimaryTextBrush}" FontWeight="Bold" FontSize="14"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Spacing="10">
+                                                        <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusColor}" FontSize="12" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding UpdateText}" Foreground="#FFD9A0" FontSize="12" VerticalAlignment="Center"
+                                                                   IsVisible="{Binding UpdateText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,0,8,0">
+                                                    <Button Content="⬇"
+                                                            Classes="DarkButton"
+                                                            IsVisible="{Binding HasUpdate}"
+                                                            Command="{Binding #Root.DataContext.UpdateOneModCommand}"
+                                                            CommandParameter="{Binding}" Height="32" Width="36"
+                                                            ToolTip.Tip="{DynamicResource Str_Profile_UpdateAll}"/>
+                                                    <Button Content="{Binding ActionText}"
+                                                            Command="{Binding #Root.DataContext.ToggleModCommand}"
+                                                            CommandParameter="{Binding}" Height="32" Padding="12,0" Classes="DarkButton" FontSize="13"/>
+                                                </StackPanel>
+
+                                                <Button Grid.Column="2" Content="🗑"
+                                                        Command="{Binding #Root.DataContext.DeleteModCommand}"
+                                                        CommandParameter="{Binding}" Height="32" Width="36" Foreground="#FF6363" Classes="DarkButton" ToolTip.Tip="{DynamicResource Str_Profile_Menu_Delete}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- WORLDS VIEW -->
+                <Grid x:Name="WorldsView" Grid.Row="2" IsVisible="False" RowDefinitions="Auto,*">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12" HorizontalAlignment="Right">
+                        <Button Command="{Binding OpenWorldsFolderCommand}" Height="36" Padding="14,0" Classes="DarkButton" FontSize="13">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                <TextBlock Text="📁" FontSize="13" VerticalAlignment="Center"/>
+                                <TextBlock Text="{DynamicResource Str_Profile_OpenSaves}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="0,0,10,0">
+                            <TextBlock Text="{DynamicResource Str_Worlds_ActiveWorlds}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" FontWeight="SemiBold" Margin="4,0,0,8"/>
+
+                            <TextBlock Text="{DynamicResource Str_Worlds_NoWorlds}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" TextWrapping="Wrap"
+                                       HorizontalAlignment="Center" Margin="20,10,20,20"
+                                       IsVisible="{Binding !Worlds.Count}"/>
+
+                            <ItemsControl ItemsSource="{Binding Worlds}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="10" Margin="0,0,0,10" Padding="14,12">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <Border Grid.Column="0" Width="48" Height="48" CornerRadius="6" Margin="0,0,12,0" ClipToBounds="True" Background="#111">
+                                                    <Image Source="{Binding Icon}" Stretch="UniformToFill"/>
+                                                </Border>
+
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding WorldName}" Foreground="{DynamicResource PrimaryTextBrush}" FontWeight="Bold" FontSize="14"/>
+                                                    <TextBlock Text="{Binding LastPlayedText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,2,0,0"/>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                                    <Button Content="{DynamicResource Str_Worlds_CreateBackup}"
+                                                            Command="{Binding #Root.DataContext.BackupWorldCommand}"
+                                                            CommandParameter="{Binding}" Height="32" Padding="12,0" Classes="DarkButton" FontSize="13"/>
+                                                    <Button Content="{DynamicResource Str_Action_Delete}"
+                                                            Command="{Binding #Root.DataContext.DeleteWorldCommand}"
+                                                            CommandParameter="{Binding}" Height="32" Padding="12,0" Foreground="#FF6363" Classes="DarkButton" FontSize="13"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="{DynamicResource Str_Worlds_Backups}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" FontWeight="SemiBold" Margin="4,16,0,8"/>
+
+                            <TextBlock Text="{DynamicResource Str_Worlds_NoBackups}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" TextWrapping="Wrap"
+                                       HorizontalAlignment="Center" Margin="20,10,20,20"
+                                       IsVisible="{Binding !Backups.Count}"/>
+
+                            <ItemsControl ItemsSource="{Binding Backups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="10" Margin="0,0,0,10" Padding="14,12">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8" Margin="0,0,12,0" Background="#1B2230">
+                                                    <TextBlock Text="🗄" FontSize="20" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding WorldName}" Foreground="{DynamicResource PrimaryTextBrush}" FontWeight="Bold" FontSize="14"/>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Spacing="4">
+                                                        <TextBlock Text="{Binding DisplayDate}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                                        <TextBlock Text="•" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                                        <TextBlock Text="{Binding DisplaySize}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                                        <TextBlock Text="•" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                                        <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                                    <Button Content="{DynamicResource Str_Action_Restore}"
+                                                            Command="{Binding #Root.DataContext.RestoreBackupCommand}"
+                                                            CommandParameter="{Binding}" Height="32" Padding="12,0" Classes="DarkButton" FontSize="13"/>
+                                                    <Button Content="{DynamicResource Str_Action_Delete}"
+                                                            Command="{Binding #Root.DataContext.DeleteBackupCommand}"
+                                                            CommandParameter="{Binding}" Height="32" Padding="12,0" Foreground="#FF6363" Classes="DarkButton" FontSize="13"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

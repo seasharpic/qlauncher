@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using Microsoft.Win32;
 using MinecraftLauncher.Models;
 
@@ -24,6 +25,56 @@ namespace MinecraftLauncher.Services
         private const string UserGpuPreferencesKey = @"Software\Microsoft\DirectX\UserGpuPreferences";
 
         public List<GpuInfo> GetAvailableGpus()
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                return GetWindowsGpus();
+            }
+
+            if (OperatingSystem.IsLinux())
+            {
+                return GetLinuxGpus();
+            }
+
+            return new List<GpuInfo>();
+        }
+
+        private static List<GpuInfo> GetLinuxGpus()
+        {
+            var result = new List<GpuInfo>();
+            try
+            {
+                using var proc = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "lspci",
+                    Arguments = "-nn",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+                if (proc != null)
+                {
+                    string output = proc.StandardOutput.ReadToEnd();
+                    proc.WaitForExit(1500);
+                    foreach (var line in output.Split('\n'))
+                    {
+                        if (line.Contains("VGA compatible controller", StringComparison.OrdinalIgnoreCase) ||
+                            line.Contains("3D controller", StringComparison.OrdinalIgnoreCase))
+                        {
+                            int idx = line.IndexOf(": ", StringComparison.Ordinal);
+                            string name = idx >= 0 ? line[(idx + 2)..].Trim() : line.Trim();
+                            bool isDiscrete = DetermineIfDiscrete(name, "", name, 0);
+                            result.Add(new GpuInfo { Name = name, IsDiscrete = isDiscrete });
+                        }
+                    }
+                }
+            }
+            catch { }
+            return result;
+        }
+
+        [SupportedOSPlatform("windows")]
+        private static List<GpuInfo> GetWindowsGpus()
         {
             var result = new List<GpuInfo>();
 
@@ -92,8 +143,7 @@ namespace MinecraftLauncher.Services
             {
                 try
                 {
-                    var nativeGpus = EnumerateViaDisplayDevices();
-                    result.AddRange(nativeGpus);
+                    result.AddRange(EnumerateViaDisplayDevices());
                 }
                 catch { }
             }
@@ -107,12 +157,12 @@ namespace MinecraftLauncher.Services
             string lowerId = deviceId.ToLowerInvariant();
 
             if (lowerName.Contains("nvidia") || lowerName.Contains("geforce") || lowerName.Contains("quadro") ||
-                lowerName.Contains("rtx") || lowerName.Contains("gtx") || lowerId.Contains("ven_10de"))
+                lowerName.Contains("rtx") || lowerName.Contains("gtx") || lowerId.Contains("ven_10de") || lowerId.Contains("10de:"))
             {
                 return true;
             }
 
-            if (lowerName.Contains("radeon") || lowerId.Contains("ven_1002") || lowerId.Contains("ven_1022"))
+            if (lowerName.Contains("radeon") || lowerId.Contains("ven_1002") || lowerId.Contains("ven_1022") || lowerId.Contains("1002:"))
             {
                 if (lowerName.Contains("rx ") || lowerName.Contains("pro ") || vram >= 1024L * 1024L * 1024L)
                 {
@@ -130,8 +180,13 @@ namespace MinecraftLauncher.Services
 
         public void ApplyGpuPreference(string javaPath, string preference)
         {
-            if (string.IsNullOrWhiteSpace(javaPath)) return;
+            if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(javaPath)) return;
+            ApplyWindowsGpuPreference(javaPath, preference);
+        }
 
+        [SupportedOSPlatform("windows")]
+        private static void ApplyWindowsGpuPreference(string javaPath, string preference)
+        {
             try
             {
                 var pathsToRegister = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -163,10 +218,6 @@ namespace MinecraftLauncher.Services
                 }
                 else if (string.Equals(preference, "Default", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Раньше здесь писалось "GpuPreference=0;", и это не то же самое,
-                    // что отсутствие записи: JDK-файлы навсегда оставались
-                    // прописаны в пользовательской таблице выбора GPU.
-                    // Для "Default" значение нужно удалить.
                     regValue = null;
                 }
                 else
@@ -201,7 +252,6 @@ namespace MinecraftLauncher.Services
             }
             else if (string.Equals(preference, "Default", StringComparison.OrdinalIgnoreCase))
             {
-                // Rely on standard Windows system resolution
             }
             else
             {

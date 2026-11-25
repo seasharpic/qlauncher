@@ -1,12 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Threading;
-using MinecraftLauncher.Common;
+using System.IO.Compression;
+using System.Linq;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Platform;
+using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Services;
 using MinecraftLauncher.ViewModels;
@@ -17,15 +21,14 @@ namespace MinecraftLauncher
 {
     public partial class MainWindow : Window
     {
-        // Локализация для строк, которые собираются в коде.
         private static readonly ILocalizationService _loc = LocalizationService.Instance;
 
         public MainViewModel ViewModel { get; }
 
-        private double _normalLeft, _normalTop, _normalWidth, _normalHeight;
-        private bool _isCustomMaximized;
         private GameConsoleWindow? _consoleWindow;
         private Action? _themeChangedHandler;
+        private readonly Stack<UserControl> _navHistory = new();
+        private TrayIcon? _trayIcon;
 
         public MainWindow()
         {
@@ -33,41 +36,72 @@ namespace MinecraftLauncher
             ViewModel = new MainViewModel();
             DataContext = ViewModel;
 
+            InitTrayIcon();
+
             ViewModel.GameLaunched += OnGameLaunched;
             ViewModel.RequestClose += () => Close();
             ViewModel.RequestHide += () =>
             {
-                LauncherTrayIcon.Visibility = Visibility.Visible;
+                if (_trayIcon != null) _trayIcon.IsVisible = true;
                 Hide();
             };
             ViewModel.RequestShow += RestoreLauncher;
 
-            MainFrame.Navigated += MainFrame_Navigated;
-
-            // Раньше обработчик не отписывался, а ThemeService — синглтон на всё время
-        // жизни процесса: MainWindow удерживался в памяти до конца работы лаунчера.
-        // Отписываемся при закрытии окна.
-        _themeChangedHandler = () => Dispatcher.Invoke(UpdateThemeUi);
-        ThemeService.Instance.ThemeChanged += _themeChangedHandler;
+            _themeChangedHandler = () => Dispatcher.UIThread.Post(UpdateThemeUi);
+            ThemeService.Instance.ThemeChanged += _themeChangedHandler;
 
             UpdateThemeUi();
 
-            Loaded += MainWindow_Loaded;
+            AddHandler(DragDrop.DragEnterEvent, Window_DragEnter);
+            AddHandler(DragDrop.DragLeaveEvent, Window_DragLeave);
+            AddHandler(DragDrop.DragOverEvent, Window_DragOver);
+            AddHandler(DragDrop.DropEvent, Window_Drop);
+
+            Opened += MainWindow_Opened;
             Closing += MainWindow_Closing;
         }
 
-        /// <summary>
-        /// Очистка при закрытии окна: отписка от синглтонов, остановка таймеров
-        /// и закрытие Discord RPC. Раньше обработчик темы не отписывался, таймеры
-        /// не останавливались, а выход через трей вообще не трогал StopRpc —
-        /// сокет оставался открытым до конца процесса.
-        /// </summary>
-        private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        private void InitTrayIcon()
+        {
+            try
+            {
+                using var iconStream = AssetLoader.Open(new Uri("avares://QLauncher/logo.png"));
+                var restoreItem = new NativeMenuItem(_loc.GetString("Str_Tray_Restore"));
+                restoreItem.Click += (_, _) => RestoreLauncher();
+
+                var exitItem = new NativeMenuItem(_loc.GetString("Str_Tray_Exit"));
+                exitItem.Click += (_, _) => UiHelper.Shutdown();
+
+                var menu = new NativeMenu();
+                menu.Items.Add(restoreItem);
+                menu.Items.Add(new NativeMenuItemSeparator());
+                menu.Items.Add(exitItem);
+
+                _trayIcon = new TrayIcon
+                {
+                    Icon = new WindowIcon(iconStream),
+                    ToolTipText = "QLauncher",
+                    Menu = menu,
+                    IsVisible = false
+                };
+                _trayIcon.Clicked += (_, _) => RestoreLauncher();
+            }
+            catch { }
+        }
+
+        private void MainWindow_Closing(object? sender, WindowClosingEventArgs e)
         {
             if (_themeChangedHandler != null)
             {
                 ThemeService.Instance.ThemeChanged -= _themeChangedHandler;
                 _themeChangedHandler = null;
+            }
+
+            if (_trayIcon != null)
+            {
+                _trayIcon.IsVisible = false;
+                _trayIcon.Dispose();
+                _trayIcon = null;
             }
 
             ViewModel?.Dispose();
@@ -79,7 +113,7 @@ namespace MinecraftLauncher
             DiscordService.Instance.StopRpc();
         }
 
-        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_Opened(object? sender, EventArgs e)
         {
             ToastService.Instance.RegisterContainer(ToastContainer);
 
@@ -91,11 +125,8 @@ namespace MinecraftLauncher
 
             if (!LauncherPathHelper.IsPortableMode && PortableBadge != null)
             {
-                PortableBadge.Visibility = Visibility.Collapsed;
+                PortableBadge.IsVisible = false;
             }
-
-            var loadFade = new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(350));
-            ContentGrid.BeginAnimation(UIElement.OpacityProperty, loadFade);
 
             await ViewModel.InitializeAsync();
 
@@ -103,52 +134,47 @@ namespace MinecraftLauncher
             {
                 if (args.PropertyName == nameof(MainViewModel.ProgressFillRatio))
                 {
-                    if (ProgressHostGrid.ActualWidth > 0)
+                    double hostW = ProgressHostGrid.Bounds.Width;
+                    if (hostW > 0)
                     {
-                        double targetWidth = Math.Max(0, Math.Min(ProgressHostGrid.ActualWidth, ViewModel.ProgressFillRatio * ProgressHostGrid.ActualWidth));
+                        double targetWidth = Math.Max(0, Math.Min(hostW, ViewModel.ProgressFillRatio * hostW));
                         ProgressFillBorder.Width = targetWidth;
-                        ProgressFillBorder.Visibility = targetWidth > 0 ? Visibility.Visible : Visibility.Collapsed;
+                        ProgressFillBorder.IsVisible = targetWidth > 0;
                     }
                 }
                 else if (args.PropertyName == nameof(MainViewModel.IsModpackOverlayVisible))
                 {
                     if (ViewModel.IsModpackOverlayVisible)
-                    {
-                        AnimateOpenModpackOverlay();
-                    }
+                        ViewModel.DiscordService.SetPageState(_loc.GetString("Str_Discord_PageModpacksDetails"), _loc.GetString("Str_Discord_PageModpacksState"));
                     else
-                    {
-                        AnimateCloseModpackOverlay();
-                    }
+                        UpdateDiscordForCurrentState();
                 }
                 else if (args.PropertyName == nameof(MainViewModel.IsShortcutOverlayVisible))
                 {
                     if (ViewModel.IsShortcutOverlayVisible)
-                    {
                         ViewModel.DiscordService.SetPageState(_loc.GetString("Str_Discord_ShortcutDetails"), _loc.GetString("Str_Discord_ShortcutState"));
-                    }
                     else
-                    {
-                        if (MainFrame.Visibility == Visibility.Visible && MainFrame.Content != null)
-                        {
-                            UpdateDiscordForPage(MainFrame.Content);
-                        }
-                        else
-                        {
-                            ViewModel.DiscordService.SetMenuState(ViewModel.SelectedVersion);
-                        }
-                    }
+                        UpdateDiscordForCurrentState();
                 }
             };
         }
 
+        private void UpdateDiscordForCurrentState()
+        {
+            if (MainFrame.IsVisible && MainFrame.Content != null)
+                UpdateDiscordForPage(MainFrame.Content);
+            else
+                ViewModel.DiscordService.SetMenuState(ViewModel.SelectedVersion);
+        }
+
         private void OnGameLaunched(System.Diagnostics.Process process)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.UIThread.Post(() =>
             {
-                if (_consoleWindow == null || !_consoleWindow.IsLoaded)
+                if (_consoleWindow == null)
                 {
                     _consoleWindow = new GameConsoleWindow();
+                    _consoleWindow.Closed += (_, _) => _consoleWindow = null;
                     _consoleWindow.BindOutput(ViewModel);
                 }
 
@@ -158,82 +184,31 @@ namespace MinecraftLauncher
             });
         }
 
-        public void AnimateNavigate(Page page)
+        public void AnimateNavigate(UserControl page)
         {
-            HomeView.Visibility = Visibility.Collapsed;
-            MainFrame.Visibility = Visibility.Visible;
-            MainFrame.Navigate(page);
-
-            var slideAnim = new DoubleAnimation
+            if (MainFrame.IsVisible && MainFrame.Content is UserControl current)
             {
-                From = 90,
-                To = 0,
-                Duration = TimeSpan.FromMilliseconds(250),
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-            };
+                _navHistory.Push(current);
+            }
 
-            var fadeAnim = new DoubleAnimation
-            {
-                From = 0,
-                To = 1,
-                Duration = TimeSpan.FromMilliseconds(250)
-            };
-
-            MainFrameTransform.BeginAnimation(TranslateTransform.XProperty, slideAnim);
-            MainFrame.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
+            HomeView.IsVisible = false;
+            MainFrame.Content = page;
+            MainFrame.IsVisible = true;
+            UpdateDiscordForPage(page);
         }
 
-        public async void AnimateGoBack()
+        public void AnimateGoBack()
         {
-            if (MainFrame.CanGoBack)
+            if (_navHistory.Count > 0)
             {
-                var slideOut = new DoubleAnimation
-                {
-                    From = 0,
-                    To = 70,
-                    Duration = TimeSpan.FromMilliseconds(160),
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-                };
-                var fadeOut = new DoubleAnimation
-                {
-                    From = 1,
-                    To = 0,
-                    Duration = TimeSpan.FromMilliseconds(160)
-                };
-
-                MainFrameTransform.BeginAnimation(TranslateTransform.XProperty, slideOut);
-                MainFrame.BeginAnimation(UIElement.OpacityProperty, fadeOut);
-
-                await System.Threading.Tasks.Task.Delay(160);
-
-                MainFrame.GoBack();
-
-                var slideIn = new DoubleAnimation
-                {
-                    From = -70,
-                    To = 0,
-                    Duration = TimeSpan.FromMilliseconds(200),
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-                };
-                var fadeIn = new DoubleAnimation
-                {
-                    From = 0,
-                    To = 1,
-                    Duration = TimeSpan.FromMilliseconds(200)
-                };
-
-                MainFrameTransform.BeginAnimation(TranslateTransform.XProperty, slideIn);
-                MainFrame.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+                var prev = _navHistory.Pop();
+                MainFrame.Content = prev;
+                UpdateDiscordForPage(prev);
             }
             else
             {
                 CloseSettings();
             }
-        }
-
-        private void MainFrame_Navigated(object sender, System.Windows.Navigation.NavigationEventArgs e)
-        {
-            UpdateDiscordForPage(e.Content);
         }
 
         public void UpdateDiscordForPage(object? content)
@@ -270,7 +245,8 @@ namespace MinecraftLauncher
 
         public void CloseSettings()
         {
-            MainFrame.Visibility = Visibility.Collapsed;
+            _navHistory.Clear();
+            MainFrame.IsVisible = false;
             MainFrame.Content = null;
 
             ViewModel.ApplyCustomWallpaper();
@@ -279,11 +255,7 @@ namespace MinecraftLauncher
 
             ViewModel.DiscordService.SetMenuState(ViewModel.SelectedVersion);
 
-            HomeView.Opacity = 0;
-            HomeView.Visibility = Visibility.Visible;
-
-            var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200));
-            HomeView.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+            HomeView.IsVisible = true;
         }
 
         public void ReloadLauncher()
@@ -299,92 +271,7 @@ namespace MinecraftLauncher
             {
                 ViewModel.NewModpackVersion = ViewModel.VanillaVersions[0];
             }
-
             ViewModel.IsModpackOverlayVisible = true;
-        }
-
-        private void AnimateOpenModpackOverlay()
-        {
-            ViewModel.DiscordService.SetPageState(_loc.GetString("Str_Discord_PageModpacksDetails"), _loc.GetString("Str_Discord_PageModpacksState"));
-
-            ModpackOverlay.Visibility = Visibility.Visible;
-            ModpackOverlay.IsHitTestVisible = true;
-
-            var fadeOverlay = new DoubleAnimation
-            {
-                From = 0.0,
-                To = 1.0,
-                Duration = TimeSpan.FromMilliseconds(220),
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-            };
-            ModpackOverlay.BeginAnimation(UIElement.OpacityProperty, fadeOverlay);
-
-            var scaleAnim = new DoubleAnimation
-            {
-                From = 0.90,
-                To = 1.0,
-                Duration = TimeSpan.FromMilliseconds(260),
-                EasingFunction = new BackEase { Amplitude = 0.25, EasingMode = EasingMode.EaseOut }
-            };
-            ModpackScaleTransform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
-            ModpackScaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
-
-            var slideAnim = new DoubleAnimation
-            {
-                From = 25,
-                To = 0,
-                Duration = TimeSpan.FromMilliseconds(260),
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-            };
-            ModpackTranslateTransform.BeginAnimation(TranslateTransform.YProperty, slideAnim);
-        }
-
-        private void AnimateCloseModpackOverlay()
-        {
-            ModpackOverlay.IsHitTestVisible = false;
-
-            var fadeOverlay = new DoubleAnimation
-            {
-                From = ModpackOverlay.Opacity,
-                To = 0.0,
-                Duration = TimeSpan.FromMilliseconds(160),
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-            };
-            fadeOverlay.Completed += (s, e) =>
-            {
-                if (!ViewModel.IsModpackOverlayVisible)
-                {
-                    ModpackOverlay.Visibility = Visibility.Collapsed;
-                    if (MainFrame.Visibility == Visibility.Visible && MainFrame.Content != null)
-                    {
-                        UpdateDiscordForPage(MainFrame.Content);
-                    }
-                    else
-                    {
-                        ViewModel.DiscordService.SetMenuState(ViewModel.SelectedVersion);
-                    }
-                }
-            };
-            ModpackOverlay.BeginAnimation(UIElement.OpacityProperty, fadeOverlay);
-
-            var scaleAnim = new DoubleAnimation
-            {
-                From = ModpackScaleTransform.ScaleX,
-                To = 0.94,
-                Duration = TimeSpan.FromMilliseconds(160),
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-            };
-            ModpackScaleTransform.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
-            ModpackScaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
-
-            var slideAnim = new DoubleAnimation
-            {
-                From = ModpackTranslateTransform.Y,
-                To = 15,
-                Duration = TimeSpan.FromMilliseconds(160),
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-            };
-            ModpackTranslateTransform.BeginAnimation(TranslateTransform.YProperty, slideAnim);
         }
 
         public void OpenShortcutOverlay()
@@ -405,89 +292,75 @@ namespace MinecraftLauncher
         {
             if (ThemeToggleBtn != null)
             {
-                ThemeToggleBtn.Content = ThemeService.Instance.IsDarkTheme ? "\uE706" : "\uE708";
-                ThemeToggleBtn.ToolTip = ThemeService.Instance.IsDarkTheme ? _loc.GetString("Str_Theme_ToggleToLight") : _loc.GetString("Str_Theme_ToggleToDark");
+                ThemeToggleBtn.Content = ThemeService.Instance.IsDarkTheme ? "☀" : "🌙";
+                ToolTip.SetTip(ThemeToggleBtn, ThemeService.Instance.IsDarkTheme
+                    ? _loc.GetString("Str_Theme_ToggleToLight")
+                    : _loc.GetString("Str_Theme_ToggleToDark"));
             }
         }
 
-        private void ThemeToggleBtn_Click(object sender, RoutedEventArgs e)
-        {
+        private void ThemeToggleBtn_Click(object? sender, RoutedEventArgs e) =>
             ViewModel.ToggleThemeCommand.Execute(null);
-        }
 
-        private void SettingsButton_Click(object sender, RoutedEventArgs e) =>
+        private void SettingsButton_Click(object? sender, RoutedEventArgs e) =>
             AnimateNavigate(new SettingsPage());
 
-        /// <summary>
-        /// Открывает настройки сразу на разделе аккаунтов.
-        /// </summary>
-        private void AccountManagerButton_Click(object sender, RoutedEventArgs e)
+        private void AccountManagerButton_Click(object? sender, RoutedEventArgs e)
         {
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
-
             var page = new SettingsPage();
             AnimateNavigate(page);
-
-            // Прокрутка после навигации: до попадания страницы в дерево окна
-            // размеры ещё не вычислены, и BringIntoView ничего не делает.
-            Dispatcher.BeginInvoke(new Action(() => page.ScrollToAccounts()), DispatcherPriority.Loaded);
+            Dispatcher.UIThread.Post(() => page.ScrollToAccounts(), DispatcherPriority.Loaded);
         }
 
-        /// <summary>
-        /// 3D-превью скина выбранного аккаунта: окно само скачает скин
-        /// (Ely.by / mc-heads / minotar) и соберёт модель игрока.
-        /// </summary>
-        private void Skin3DButton_Click(object sender, RoutedEventArgs e)
+        private void Skin3DButton_Click(object? sender, RoutedEventArgs e)
         {
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
-
             var account = ViewModel.SelectedAccount;
             if (account == null) return;
 
-            var window = new Views.Windows.SkinPreviewWindow(account.IsElyBy, account.Nickname, account.Uuid)
-            {
-                Owner = this
-            };
-            window.Show();
+            var window = new SkinPreviewWindow(account.IsElyBy, account.Nickname, account.Uuid);
+            window.Show(this);
         }
 
-        private void NavHome_Click(object sender, RoutedEventArgs e)
+        private void NavHome_Click(object? sender, RoutedEventArgs e)
         {
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
             CloseSettings();
         }
 
-        private void NavModpacks_Click(object sender, RoutedEventArgs e)
+        private void NavModpacks_Click(object? sender, RoutedEventArgs e)
         {
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
             AnimateNavigate(new ModpacksPage());
         }
 
-        private void NavMods_Click(object sender, RoutedEventArgs e)
+        private void NavMods_Click(object? sender, RoutedEventArgs e)
         {
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
             AnimateNavigate(new ModsPage());
         }
 
-        private void NavScreenshots_Click(object sender, RoutedEventArgs e)
+        private void NavScreenshots_Click(object? sender, RoutedEventArgs e)
         {
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
             AnimateNavigate(new ScreenshotsPage(SettingsService.Instance.Settings.GamePath));
         }
 
-        private void NavConsole_Click(object sender, RoutedEventArgs e)
+        private void NavConsole_Click(object? sender, RoutedEventArgs e)
         {
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
-            if (_consoleWindow == null || !_consoleWindow.IsLoaded)
+            if (_consoleWindow == null)
             {
                 _consoleWindow = new GameConsoleWindow();
+                _consoleWindow.Closed += (_, _) => _consoleWindow = null;
                 _consoleWindow.BindOutput(ViewModel);
             }
             _consoleWindow.Show();
             _consoleWindow.Activate();
         }
 
-        private void VersionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void VersionComboBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
             if (VersionComboBox.SelectedItem is string selectedStr && MainViewModel.IsCreateModpackEntry(selectedStr))
             {
@@ -508,67 +381,58 @@ namespace MinecraftLauncher
             }
         }
 
-        private void CloseModpackOverlay_Click(object sender, MouseButtonEventArgs e) =>
+        private void CloseModpackOverlay_PointerPressed(object? sender, PointerPressedEventArgs e) =>
             ViewModel.IsModpackOverlayVisible = false;
 
-        private void CloseShortcutOverlay_Click(object sender, MouseButtonEventArgs e) =>
+        private void CloseShortcutOverlay_PointerPressed(object? sender, PointerPressedEventArgs e) =>
             ViewModel.IsShortcutOverlayVisible = false;
 
-        private void QuickFolderButton_Click(object sender, RoutedEventArgs e)
+        private void CloseAddServerOverlay_PointerPressed(object? sender, PointerPressedEventArgs e) =>
+            ViewModel.CloseAddServerOverlayCommand.Execute(null);
+
+        private void QuickFolderButton_Click(object? sender, RoutedEventArgs e)
         {
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
-            FoldersPopup.PlacementTarget = QuickFolderBtn;
             FoldersPopup.IsOpen = !FoldersPopup.IsOpen;
         }
 
-        private void OpenFolder_Mods(object sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("mods"); }
-        private void OpenFolder_ResourcePacks(object sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("resourcepacks"); }
-        private void OpenFolder_ShaderPacks(object sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("shaderpacks"); }
-        private void OpenFolder_Saves(object sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("saves"); }
-        private void OpenFolder_Screenshots(object sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("screenshots"); }
-        private void OpenFolder_Logs(object sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("logs"); }
-        private void OpenFolder_Root(object sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute(""); }
+        private void OpenFolder_Mods(object? sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("mods"); }
+        private void OpenFolder_ResourcePacks(object? sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("resourcepacks"); }
+        private void OpenFolder_ShaderPacks(object? sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("shaderpacks"); }
+        private void OpenFolder_Saves(object? sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("saves"); }
+        private void OpenFolder_Screenshots(object? sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("screenshots"); }
+        private void OpenFolder_Logs(object? sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute("logs"); }
+        private void OpenFolder_Root(object? sender, RoutedEventArgs e) { FoldersPopup.IsOpen = false; ViewModel.OpenQuickFolderCommand.Execute(""); }
 
-        private void Window_DragEnter(object sender, DragEventArgs e)
+        private void Window_DragEnter(object? sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            if (e.Data.Contains(DataFormats.Files))
             {
-                if (DragDropOverlay != null) DragDropOverlay.Visibility = Visibility.Visible;
-                e.Effects = DragDropEffects.Copy;
+                if (DragDropOverlay != null) DragDropOverlay.IsVisible = true;
+                e.DragEffects = DragDropEffects.Copy;
                 e.Handled = true;
             }
         }
 
-        private void Window_DragLeave(object sender, DragEventArgs e)
+        private void Window_DragLeave(object? sender, DragEventArgs e)
         {
-            if (DragDropOverlay != null) DragDropOverlay.Visibility = Visibility.Collapsed;
+            if (DragDropOverlay != null) DragDropOverlay.IsVisible = false;
         }
 
-        private void Window_DragOver(object sender, DragEventArgs e)
+        private void Window_DragOver(object? sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            if (e.Data.Contains(DataFormats.Files))
             {
-                e.Effects = DragDropEffects.Copy;
+                e.DragEffects = DragDropEffects.Copy;
                 e.Handled = true;
             }
         }
 
-        /// <summary>
-        /// Импорт перетащенного .mrpack.
-        ///
-        /// Раньше список settings.Modpacks пополнялся из фонового потока, пока UI
-        /// его перебирал, и Save писал снятую до этого ссылку. Теперь мутация
-        /// и сохранение идут на UI-потоке, а сама распаковка и скачивание —
-        /// в Task.Run.
-        /// </summary>
         private async Task ImportMrPackAsync(string file)
         {
             try
             {
                 ToastService.Instance.ShowInfo(_loc.GetString("Str_DragDrop_Importing"), _loc.GetString("Str_T_ImportTitle"));
-
-                // Тот же общий сервис, что и у кнопок импорта: третья копия
-                // логики заменена вызовом единственной реализации.
                 var profile = await ModpackImportService.Instance.ImportAsync(
                     file,
                     SettingsService.Instance.Settings.GamePath);
@@ -588,13 +452,19 @@ namespace MinecraftLauncher
             }
         }
 
-        private void Window_Drop(object sender, DragEventArgs e)
+        private void Window_Drop(object? sender, DragEventArgs e)
         {
-            if (DragDropOverlay != null) DragDropOverlay.Visibility = Visibility.Collapsed;
-            if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+            if (DragDropOverlay != null) DragDropOverlay.IsVisible = false;
+            var storageItems = e.Data.GetFiles();
+            if (storageItems == null) return;
 
-            string[]? files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (files == null || files.Length == 0) return;
+            var files = storageItems
+                .Select(i => i.TryGetLocalPath())
+                .Where(p => !string.IsNullOrEmpty(p))
+                .Cast<string>()
+                .ToArray();
+
+            if (files.Length == 0) return;
 
             var settings = SettingsService.Instance.Settings;
             string effectiveGameDir = settings.GamePath;
@@ -628,14 +498,11 @@ namespace MinecraftLauncher
                 if (ext == ".mrpack")
                 {
                     _ = ImportMrPackAsync(file);
-                    // Раньше здесь стоял return, и всё, что шло после .mrpack
-                    // в списке перетаскивания, молча терялось без уведомления.
                     continue;
                 }
                 else if (ext == ".jar")
                 {
-                    string destFile = Path.Combine(targetModsDir, Path.GetFileName(file));
-                    File.Copy(file, destFile, true);
+                    File.Copy(file, Path.Combine(targetModsDir, Path.GetFileName(file)), true);
                     modsCount++;
                 }
                 else if (ext == ".zip")
@@ -644,7 +511,7 @@ namespace MinecraftLauncher
                     bool isResource = false;
                     try
                     {
-                        using var archive = System.IO.Compression.ZipFile.OpenRead(file);
+                        using var archive = ZipFile.OpenRead(file);
                         foreach (var entry in archive.Entries)
                         {
                             if (entry.FullName.StartsWith("shaders/", StringComparison.OrdinalIgnoreCase))
@@ -663,21 +530,18 @@ namespace MinecraftLauncher
                     if (isShader)
                     {
                         Directory.CreateDirectory(targetShaderpacksDir);
-                        string destFile = Path.Combine(targetShaderpacksDir, Path.GetFileName(file));
-                        File.Copy(file, destFile, true);
+                        File.Copy(file, Path.Combine(targetShaderpacksDir, Path.GetFileName(file)), true);
                         shadersCount++;
                     }
                     else if (isResource)
                     {
                         Directory.CreateDirectory(targetResourcepacksDir);
-                        string destFile = Path.Combine(targetResourcepacksDir, Path.GetFileName(file));
-                        File.Copy(file, destFile, true);
+                        File.Copy(file, Path.Combine(targetResourcepacksDir, Path.GetFileName(file)), true);
                         resourcesCount++;
                     }
                     else
                     {
-                        string destFile = Path.Combine(targetModsDir, Path.GetFileName(file));
-                        File.Copy(file, destFile, true);
+                        File.Copy(file, Path.Combine(targetModsDir, Path.GetFileName(file)), true);
                         modsCount++;
                     }
                 }
@@ -687,7 +551,7 @@ namespace MinecraftLauncher
             if (total > 0)
             {
                 AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
-                var parts = new System.Collections.Generic.List<string>();
+                var parts = new List<string>();
                 if (modsCount > 0) parts.Add(_loc.Format("Str_Mods_Count", modsCount));
                 if (shadersCount > 0) parts.Add(_loc.Format("Str_Shaders_Count", shadersCount));
                 if (resourcesCount > 0) parts.Add(_loc.Format("Str_ResourcePacks_Count", resourcesCount));
@@ -695,14 +559,9 @@ namespace MinecraftLauncher
             }
         }
 
-        private void CloseAddServerOverlay_Click(object sender, MouseButtonEventArgs e)
+        private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
-            ViewModel.CloseAddServerOverlayCommand.Execute(null);
-        }
-
-        private void Window_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ChangedButton == MouseButton.Left)
+            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             {
                 if (e.ClickCount == 2)
                 {
@@ -710,96 +569,22 @@ namespace MinecraftLauncher
                 }
                 else
                 {
-                    if (_isCustomMaximized)
-                    {
-                        ClearAnimations();
-                        Point clickPos = e.GetPosition(this);
-                        double ratio = clickPos.X / ActualWidth;
-                        Width = _normalWidth;
-                        Height = _normalHeight;
-                        Left = Left + clickPos.X - (_normalWidth * ratio);
-                        Top = Top + clickPos.Y - clickPos.Y;
-                        if (OuterBorder != null) OuterBorder.CornerRadius = new CornerRadius(14);
-                        if (TitleBorder != null) TitleBorder.CornerRadius = new CornerRadius(10, 10, 0, 0);
-                        if (CloseBtn != null) CloseBtn.Tag = new CornerRadius(0, 10, 0, 0);
-                        _isCustomMaximized = false;
-                    }
-                    DragMove();
+                    BeginMoveDrag(e);
                 }
             }
         }
 
-        private void MinimizeButton_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
-
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
-        {
-            // Раньше Shutdown вызывался и здесь, и в Closed обработчиках App,
-            // и в SplashScreenWindow. Теперь очистка сосредоточена в MainWindow_Closing,
-            // здесь только завершаем приложение.
-            Application.Current.Shutdown();
-        }
-
-        private void ClearAnimations()
-        {
-            BeginAnimation(LeftProperty, null);
-            BeginAnimation(TopProperty, null);
-            BeginAnimation(WidthProperty, null);
-            BeginAnimation(HeightProperty, null);
-            OuterBorder?.BeginAnimation(Border.CornerRadiusProperty, null);
-            TitleBorder?.BeginAnimation(Border.CornerRadiusProperty, null);
-        }
-
-        private void MaximizeButton_Click(object sender, RoutedEventArgs e)
-        {
-            var duration = TimeSpan.FromMilliseconds(220);
-            var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
-
-            if (!_isCustomMaximized)
-            {
-                _normalLeft = Left; _normalTop = Top; _normalWidth = Width; _normalHeight = Height;
-                BeginAnimation(LeftProperty, new DoubleAnimation(SystemParameters.WorkArea.Left, duration) { EasingFunction = ease });
-                BeginAnimation(TopProperty, new DoubleAnimation(SystemParameters.WorkArea.Top, duration) { EasingFunction = ease });
-                BeginAnimation(WidthProperty, new DoubleAnimation(SystemParameters.WorkArea.Width, duration) { EasingFunction = ease });
-                BeginAnimation(HeightProperty, new DoubleAnimation(SystemParameters.WorkArea.Height, duration) { EasingFunction = ease });
-                if (OuterBorder != null) AnimateCorners(OuterBorder, new CornerRadius(0), duration, ease);
-                if (TitleBorder != null) AnimateCorners(TitleBorder, new CornerRadius(0), duration, ease);
-                if (CloseBtn != null) CloseBtn.Tag = new CornerRadius(0);
-                _isCustomMaximized = true;
-            }
-            else
-            {
-                BeginAnimation(LeftProperty, new DoubleAnimation(_normalLeft, duration) { EasingFunction = ease });
-                BeginAnimation(TopProperty, new DoubleAnimation(_normalTop, duration) { EasingFunction = ease });
-                BeginAnimation(WidthProperty, new DoubleAnimation(_normalWidth, duration) { EasingFunction = ease });
-                BeginAnimation(HeightProperty, new DoubleAnimation(_normalHeight, duration) { EasingFunction = ease });
-                if (OuterBorder != null) AnimateCorners(OuterBorder, new CornerRadius(14), duration, ease);
-                if (TitleBorder != null) AnimateCorners(TitleBorder, new CornerRadius(10, 10, 0, 0), duration, ease);
-                if (CloseBtn != null) CloseBtn.Tag = new CornerRadius(0, 10, 0, 0);
-                _isCustomMaximized = false;
-            }
-        }
-
-        private void AnimateCorners(Border border, CornerRadius to, TimeSpan duration, IEasingFunction ease)
-        {
-            var anim = new CornerRadiusAnimation { From = border.CornerRadius, To = to, Duration = duration, EasingFunction = ease };
-            border.BeginAnimation(Border.CornerRadiusProperty, anim);
-        }
-
-        private void LauncherTrayIcon_TrayMouseDoubleClick(object sender, RoutedEventArgs e) => RestoreLauncher();
-        private void TrayRestore_Click(object sender, RoutedEventArgs e) => RestoreLauncher();
-        private void TrayExit_Click(object sender, RoutedEventArgs e)
-        {
-            // Выход через трей раньше вообще не вызывал DiscordService.StopRpc(),
-            // поэтому RPC-сокет оставался открытым до конца процесса.
-            Application.Current.Shutdown();
-        }
+        private void MinimizeButton_Click(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+        private void MaximizeButton_Click(object? sender, RoutedEventArgs e) =>
+            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        private void CloseButton_Click(object? sender, RoutedEventArgs e) => UiHelper.Shutdown();
 
         private void RestoreLauncher()
         {
             Show();
             WindowState = WindowState.Normal;
             Activate();
-            LauncherTrayIcon.Visibility = Visibility.Collapsed;
+            if (_trayIcon != null) _trayIcon.IsVisible = false;
         }
     }
 }

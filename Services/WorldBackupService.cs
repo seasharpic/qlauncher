@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
+using Avalonia.Media.Imaging;
 using MinecraftLauncher.Models;
 
 namespace MinecraftLauncher.Services
@@ -35,19 +35,13 @@ namespace MinecraftLauncher.Services
                     {
                         string folderName = Path.GetFileName(dir);
                         string iconPath = Path.Combine(dir, "icon.png");
-                        BitmapImage? icon = null;
+                        Bitmap? icon = null;
 
                         if (File.Exists(iconPath))
                         {
                             try
                             {
-                                var bmp = new BitmapImage();
-                                bmp.BeginInit();
-                                bmp.UriSource = new Uri(iconPath, UriKind.Absolute);
-                                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                                bmp.EndInit();
-                                bmp.Freeze();
-                                icon = bmp;
+                                icon = new Bitmap(iconPath);
                             }
                             catch { }
                         }
@@ -107,11 +101,6 @@ namespace MinecraftLauncher.Services
                         {
                             var fi = new FileInfo(file);
                             string baseName = Path.GetFileNameWithoutExtension(file);
-
-                            // Раньше имя мира вырезалось по последнему '_', но сам
-                            // таймстамп содержит '_' ("yyyyMMdd_HHmmss"), поэтому
-                            // из "My_World_20260106_143000" получалось "My_World_20260106".
-                            // Теперь отрезаем ровно метку времени в конце.
                             string worldName = TryStripTimestamp(baseName) ?? baseName;
 
                             list.Add(new WorldBackupItem
@@ -132,17 +121,8 @@ namespace MinecraftLauncher.Services
             return list;
         }
 
-        /// <summary>
-        /// Убирает метку времени в конце имени бекапа, возвращая имя мира.
-        ///
-        /// Формат имени: "{ИмяМира}_yyyyMMdd_HHmmss". Отрезать нужно ровно
-        /// последние 15 символов (метка плюс разделитель), а не по последнему '_',
-        /// иначе мир "My_World" восстанавливался как "My_World_20260106".
-        /// Если хвост не похож на метку времени, возвращаем null.
-        /// </summary>
         private static string? TryStripTimestamp(string fileNameWithoutExtension)
         {
-            // Метка: "_" + 8 цифр даты + "_" + 6 цифр времени = 16 символов.
             const int timestampWithSeparatorLength = 1 + 8 + 1 + 6;
 
             if (fileNameWithoutExtension.Length <= timestampWithSeparatorLength)
@@ -196,9 +176,6 @@ namespace MinecraftLauncher.Services
                 string targetWorldDir = Path.Combine(savesDir, worldName);
                 if (Directory.Exists(targetWorldDir))
                 {
-                    // Отодвигаем текущий мир в backups, а не в saves: раньше папка
-                    // "Мир_pre_restore_..." появлялась среди миров и выглядела
-                    // в игре как фантомный мир.
                     string backupsRoot = Path.Combine(gamePath, "backups");
                     Directory.CreateDirectory(backupsRoot);
 

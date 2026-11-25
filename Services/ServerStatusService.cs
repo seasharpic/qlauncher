@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Media;
+using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using fNbt;
 using MinecraftLauncher.Models;
 
@@ -24,8 +26,6 @@ namespace MinecraftLauncher.Services
     {
         public static ServerStatusService Instance { get; } = new ServerStatusService();
 
-        // Клиент переиспользуется: раньше на каждый сервер создавался свой HttpClient,
-        // то есть при 20 серверах каждые 2 минуты рвались сокеты и повторялся DNS.
         private static readonly HttpClient SharedClient = new HttpClient
         {
             Timeout = TimeSpan.FromSeconds(5)
@@ -98,9 +98,6 @@ namespace MinecraftLauncher.Services
                 return uiServers;
             }
 
-            // Пингуем параллельно с ограничением. Раньше было последовательно: при 20 серверах
-            // и таймауте 5 секунд полный цикл растягивался до 100 секунд и успевал
-            // пересечься со следующим тиком таймера.
             using var semaphore = new SemaphoreSlim(8);
             var tasks = new List<Task>(uiServers.Count);
 
@@ -158,16 +155,8 @@ namespace MinecraftLauncher.Services
             }
         }
 
-        /// <summary>
-        /// Кисти создаются один раз и замораживаются: раньше на каждый сервер
-        /// и на каждое обновление выделялась новая SolidColorBrush.
-        /// </summary>
-        private static SolidColorBrush CreateBrush(byte r, byte g, byte b)
-        {
-            var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
-            brush.Freeze();
-            return brush;
-        }
+        private static IBrush CreateBrush(byte r, byte g, byte b)
+            => new ImmutableSolidColorBrush(Color.FromRgb(r, g, b));
 
         public void InjectServersIfEnabled(string gamePath, bool autoAddServers)
         {
@@ -195,7 +184,6 @@ namespace MinecraftLauncher.Services
                 string targetIp = SettingsService.Instance.Settings.AutoInjectServerIp;
                 string targetName = SettingsService.Instance.Settings.AutoInjectServerName;
 
-                // Пустой адрес — значит автодобавление выключено настройками.
                 if (string.IsNullOrWhiteSpace(targetIp)) return;
 
                 bool exists = false;

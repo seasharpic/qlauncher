@@ -1,0 +1,140 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:MinecraftLauncher.Helpers"
+             x:Class="MinecraftLauncher.Views.Pages.ModsPage"
+             x:Name="Root">
+
+    <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,*">
+        <!-- Строка поиска -->
+        <Grid Grid.Row="0" Margin="0,0,0,15" ColumnDefinitions="Auto,*,Auto">
+            <Button Grid.Column="0" Content="←" FontSize="18" Width="40" Height="40" Classes="DarkButton" Click="BackButton_Click" ToolTip.Tip="{DynamicResource Str_Action_Back}" Margin="0,0,15,0"/>
+            <TextBox Grid.Column="1" Text="{Binding SearchQuery, Mode=TwoWay}" Classes="CustomTextBox" Height="40" Margin="0,0,10,0" KeyDown="SearchBox_KeyDown" Watermark="{DynamicResource Str_Mods_SearchPlaceholder}"/>
+            <Button Grid.Column="2" Content="{DynamicResource Str_Mods_SearchBtn}" Width="110" Height="40" Classes="PlayButton" Command="{Binding SearchCommand}"/>
+        </Grid>
+
+        <!-- Фильтры каталога -->
+        <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="12,8" Margin="0,0,0,10">
+            <WrapPanel>
+                <ComboBox Width="160" Height="36" Classes="CustomComboBox" SelectedValueBinding="{Binding Tag}" SelectedValue="{Binding SelectedSource, Mode=TwoWay}" Margin="0,0,10,6" ToolTip.Tip="{DynamicResource Str_Mods_Source}">
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Source_Modrinth}" Tag="modrinth"/>
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Source_CurseForge}" Tag="curseforge"/>
+                </ComboBox>
+
+                <ComboBox Width="180" Height="36" Classes="CustomComboBox" SelectedValueBinding="{Binding Tag}" SelectedValue="{Binding SelectedCategory, Mode=TwoWay}" Margin="0,0,10,6" ToolTip.Tip="{DynamicResource Str_Mods_Title}">
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Category_Mod}" Tag="mod"/>
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Type_ResourcePack}" Tag="resourcepack"/>
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Type_Shader}" Tag="shader"/>
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Type_DataPack}" Tag="datapack"/>
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Type_Plugin}" Tag="plugin"/>
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Type_Modpack}" Tag="modpack"/>
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Type_World}" Tag="world"/>
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Type_Customization}" Tag="customization"/>
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Type_Addons}" Tag="addons"/>
+                </ComboBox>
+
+                <ComboBox Width="210" Height="36" Classes="CustomComboBox" ItemsSource="{Binding Categories}" DisplayMemberBinding="{Binding Name}" SelectedValueBinding="{Binding Id}" SelectedValue="{Binding SelectedCategoryId, Mode=TwoWay}" Margin="0,0,10,6" ToolTip.Tip="{DynamicResource Str_Mods_Category}"/>
+
+                <ComboBox Width="140" Height="36" Classes="CustomComboBox" SelectedValueBinding="{Binding Tag}" SelectedValue="{Binding SelectedLoader, Mode=TwoWay}" Margin="0,0,10,6" ToolTip.Tip="{DynamicResource Str_Mods_Loader}">
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Loader_Auto}" Tag=""/>
+                    <ComboBoxItem Content="Fabric" Tag="fabric"/>
+                    <ComboBoxItem Content="Forge" Tag="forge"/>
+                    <ComboBoxItem Content="NeoForge" Tag="neoforge"/>
+                    <ComboBoxItem Content="Quilt" Tag="quilt"/>
+                </ComboBox>
+
+                <ComboBox Width="170" Height="36" Classes="CustomComboBox" SelectedValueBinding="{Binding Tag}" SelectedValue="{Binding SelectedSort, Mode=TwoWay}" Margin="0,0,10,6" ToolTip.Tip="{DynamicResource Str_Mods_Sort}">
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Sort_Relevance}" Tag="relevance"/>
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Sort_Downloads}" Tag="downloads"/>
+                    <ComboBoxItem Content="{DynamicResource Str_Mods_Sort_Updated}" Tag="updated"/>
+                </ComboBox>
+
+                <ComboBox Width="130" Height="36" Classes="CustomComboBox"
+                          IsVisible="{Binding AreVersionsLoaded}"
+                          ItemsSource="{Binding GameVersions}" SelectedItem="{Binding SelectedGameVersion, Mode=TwoWay}"
+                          Margin="0,0,10,6" ToolTip.Tip="{DynamicResource Str_Mods_Version}"/>
+
+                <Button Command="{Binding ToggleFavoritesModeCommand}" Width="36" Height="36" Classes="DarkButton"
+                        ToolTip.Tip="{DynamicResource Str_Mods_Favorites}" Margin="0,0,10,6">
+                    <TextBlock Text="★" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+
+                <Button Width="36" Height="36" Classes="DarkButton" Command="{Binding ToggleApiKeyPanelCommand}"
+                        ToolTip.Tip="{DynamicResource Str_Mods_CfKeyTooltip}" Margin="0,0,0,6">
+                    <TextBlock Text="🔑" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+            </WrapPanel>
+        </Border>
+
+        <!-- Панель ввода API-ключа CurseForge -->
+        <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="12,10" Margin="0,0,0,10"
+                IsVisible="{Binding IsApiKeyPanelVisible}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{DynamicResource Str_Mods_CfKeyLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" VerticalAlignment="Center"/>
+                <TextBox Width="380" Height="34" Classes="CustomTextBox" Text="{Binding CurseForgeKeyInput, Mode=TwoWay}" VerticalContentAlignment="Center"/>
+                <Button Content="{DynamicResource Str_Mods_CfKeySave}" Width="90" Height="34" Classes="PlayButton" Command="{Binding SaveApiKeyCommand}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="3" Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="12,8" Margin="0,0,0,12">
+            <TextBlock Text="{Binding CategoryHint}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13"/>
+        </Border>
+
+        <Border Grid.Row="4" Background="{DynamicResource PanelBrush}" CornerRadius="15" Padding="15">
+            <Grid>
+                <TextBlock Text="{Binding LoadingText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="16"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           IsVisible="{Binding IsLoading}"/>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <ItemsControl ItemsSource="{Binding Mods}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="10" Margin="4,4,4,10" Padding="15"
+                                            helpers:Card3DTiltHelper.Enable3DTilt="True"
+                                            Cursor="Hand" PointerReleased="ModCard_PointerReleased">
+                                        <Grid ColumnDefinitions="64,*,150">
+                                            <Border Grid.Column="0" Width="64" Height="64" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource InputBgBrush}">
+                                                <Image helpers:ImageLoader.Source="{Binding IconUrl}" Width="64" Height="64" Stretch="Uniform"/>
+                                            </Border>
+
+                                            <StackPanel Grid.Column="1" Margin="15,0,10,0" VerticalAlignment="Center">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <TextBlock Grid.Column="0" Text="{Binding Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="16" FontWeight="Bold"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Source}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" VerticalAlignment="Top" Margin="8,3,0,0"/>
+                                                </Grid>
+                                                <TextBlock Text="{Binding Author}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,2,0,5"/>
+                                                <TextBlock Text="{Binding Description}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" TextWrapping="Wrap" MaxHeight="32" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <Button Content="★" FontSize="16"
+                                                        Width="34" Height="30" HorizontalAlignment="Right" Margin="0,0,0,4"
+                                                        Classes="DarkButton"
+                                                        Command="{Binding #Root.DataContext.ToggleFavoriteCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip.Tip="{DynamicResource Str_Mods_Favorites}"/>
+                                                <TextBlock Text="{Binding Downloads}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Right" Margin="0,0,0,3"/>
+                                                <TextBlock Text="{Binding UpdatedText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" HorizontalAlignment="Right" Margin="0,0,0,5"/>
+                                                <Button Content="{DynamicResource Str_Mods_InstallBtn}" Height="35"
+                                                        Classes="PlayButton"
+                                                        IsVisible="{Binding CanInstall}"
+                                                        Command="{Binding #Root.DataContext.InstallModCommand}"
+                                                        CommandParameter="{Binding}" HorizontalAlignment="Right"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Width="140" Height="38" Content="{DynamicResource Str_Mods_LoadMore}"
+                                Classes="DarkButton"
+                                IsVisible="{Binding HasMore}"
+                                Command="{Binding LoadMoreCommand}" Margin="0,6,0,2"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

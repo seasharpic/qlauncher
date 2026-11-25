@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Input;
+using Avalonia.Threading;
 
 namespace MinecraftLauncher.Common
 {
@@ -20,17 +21,19 @@ namespace MinecraftLauncher.Common
             _canExecute = canExecute;
         }
 
-        public event EventHandler? CanExecuteChanged
-        {
-            add => CommandManager.RequerySuggested += value;
-            remove => CommandManager.RequerySuggested -= value;
-        }
+        public event EventHandler? CanExecuteChanged;
 
         public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
 
         public void Execute(object? parameter) => _execute(parameter);
 
-        public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
+        public void RaiseCanExecuteChanged()
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+                CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            else
+                Dispatcher.UIThread.Post(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
+        }
     }
 
     public class RelayCommand<T> : ICommand
@@ -44,11 +47,7 @@ namespace MinecraftLauncher.Common
             _canExecute = canExecute;
         }
 
-        public event EventHandler? CanExecuteChanged
-        {
-            add => CommandManager.RequerySuggested += value;
-            remove => CommandManager.RequerySuggested -= value;
-        }
+        public event EventHandler? CanExecuteChanged;
 
         public bool CanExecute(object? parameter)
         {
@@ -69,6 +68,12 @@ namespace MinecraftLauncher.Common
             _execute((T?)parameter);
         }
 
-        public void RaiseCanExecuteChanged() => CommandManager.InvalidateRequerySuggested();
+        public void RaiseCanExecuteChanged()
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+                CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            else
+                Dispatcher.UIThread.Post(() => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
+        }
     }
 }

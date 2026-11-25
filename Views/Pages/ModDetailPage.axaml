@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:MinecraftLauncher.Helpers"
+             x:Class="MinecraftLauncher.Views.Pages.ModDetailPage"
+             x:Name="Root">
+
+    <Grid Margin="20" RowDefinitions="Auto,*">
+        <!-- Шапка: назад + иконка/название + кнопки -->
+        <Border Grid.Row="0" Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="15" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                <Button Grid.Column="0" Content="←" FontSize="18" Width="40" Height="40"
+                        Classes="DarkButton" Click="BackButton_Click"
+                        ToolTip.Tip="{DynamicResource Str_Action_Back}" VerticalAlignment="Top"/>
+
+                <Border Grid.Column="1" Width="84" Height="84" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource InputBgBrush}" Margin="15,0,0,0">
+                    <Image helpers:ImageLoader.Source="{Binding IconUrl}" Width="84" Height="84" Stretch="Uniform"/>
+                </Border>
+
+                <StackPanel Grid.Column="2" Margin="15,0,10,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold" TextWrapping="Wrap"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0" Spacing="10">
+                        <TextBlock Text="{Binding Author}" Foreground="{DynamicResource AccentBrush}" FontSize="13"/>
+                        <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="6" Padding="7,2">
+                            <TextBlock Text="{Binding SourceName}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="{Binding DownloadsText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding UpdatedText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="8">
+                    <Button Content="★" FontSize="18"
+                            Classes="DarkButton"
+                            Command="{Binding ToggleFavoriteCommand}" Width="170" Height="40"
+                            ToolTip.Tip="{DynamicResource Str_Mods_Favorites}"/>
+                    <Button Content="{DynamicResource Str_Mods_InstallBtn}" Width="170" Height="40"
+                            Classes="PlayButton"
+                            IsVisible="{Binding CanInstall}"
+                            Command="{Binding InstallCommand}"/>
+                    <Button Content="{DynamicResource Str_Detail_OpenPage}" Width="170" Height="40"
+                            Classes="DarkButton" Command="{Binding OpenCatalogPageCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Тело: описание + файлы -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,0,10" Spacing="10">
+                <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="15">
+                    <TextBlock Text="{DynamicResource Str_Detail_Description}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="14" FontWeight="Bold"/>
+                </Border>
+
+                <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="15">
+                    <TextBlock Text="{Binding Description}" Foreground="{DynamicResource SecondaryTextBrush}"
+                               FontSize="13" TextWrapping="Wrap" LineHeight="19"/>
+                </Border>
+
+                <Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="15">
+                    <TextBlock Text="{DynamicResource Str_Detail_Files}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="14" FontWeight="Bold"/>
+                </Border>
+
+                <ItemsControl ItemsSource="{Binding Files}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="10" Margin="0,4,0,8" Padding="12,10">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Meta}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1" Width="36" Height="36" Classes="DarkButton"
+                                            Content="⬇" FontSize="15"
+                                            Command="{Binding #Root.DataContext.DownloadFileCommand}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip.Tip="{DynamicResource Str_Mods_InstallBtn}"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Оверлей загрузки -->
+        <Border Grid.Row="0" Grid.RowSpan="2" Background="{DynamicResource PanelBrush}" CornerRadius="15"
+                IsVisible="{Binding IsLoading}">
+            <TextBlock Text="{Binding LoadingText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="16"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+    </Grid>
+</UserControl>

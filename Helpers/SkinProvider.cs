@@ -1,23 +1,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
+using Avalonia.Media.Imaging;
 
 namespace MinecraftLauncher.Helpers
 {
-    /// <summary>
-    /// Полная текстура скина игрока (не лицо-аватарка) для 3D-превью.
-    /// Источники: skinsystem.ely.by — для Ely.by-аккаунтов, mc-heads.net
-    /// (по UUID, если он есть) — для Microsoft; minotar как запасной.
-    /// PNG кэшируется в Cache/Skins и остаётся доступен для «Сохранить скин».
-    /// </summary>
     public static class SkinProvider
     {
         private static readonly HttpClient Http = new();
-        private static readonly ConcurrentDictionary<string, BitmapImage> Cache = new();
+        private static readonly ConcurrentDictionary<string, Bitmap> Cache = new();
         private static readonly string CacheDir =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Cache", "Skins");
 
@@ -38,11 +31,7 @@ namespace MinecraftLauncher.Helpers
         public static string CachePath(bool isElyBy, string nickname) =>
             Path.Combine(CacheDir, $"{(isElyBy ? "ely" : "ms")}_{nickname.ToLowerInvariant()}.png");
 
-        /// <summary>
-        /// Скачивает скин (или берёт из кэша). Возвращает пару «картинка, путь
-        /// локального файла» — путь нужен кнопке сохранения скина в окне.
-        /// </summary>
-        public static async Task<(BitmapImage? Image, string? CachedPath)> GetSkinAsync(
+        public static async Task<(Bitmap? Image, string? CachedPath)> GetSkinAsync(
             bool isElyBy, string nickname, string uuid = "")
         {
             if (string.IsNullOrWhiteSpace(nickname)) return (null, null);
@@ -62,8 +51,7 @@ namespace MinecraftLauncher.Helpers
                 }
             }
 
-            // Порядок источников: свой каталог — главный, чужой — запасной.
-            string? nick = Uri.EscapeDataString(nickname);
+            string nick = Uri.EscapeDataString(nickname);
             string? uid = string.IsNullOrWhiteSpace(uuid) || uuid == "offline" ? null : uuid;
             string[] urls = isElyBy
                 ? new[] { $"https://skinsystem.ely.by/skins/{nick}.png",
@@ -92,17 +80,11 @@ namespace MinecraftLauncher.Helpers
             return (null, localPath);
         }
 
-        private static BitmapImage? LoadFromFile(string path)
+        private static Bitmap? LoadFromFile(string path)
         {
             try
             {
-                var image = new BitmapImage();
-                image.BeginInit();
-                image.CacheOption = BitmapCacheOption.OnLoad;
-                image.UriSource = new Uri(path, UriKind.Absolute);
-                image.EndInit();
-                image.Freeze();
-                return image;
+                return new Bitmap(path);
             }
             catch
             {

@@ -3,8 +3,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Input;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Models;
 using MinecraftLauncher.Services;
 
@@ -16,17 +18,17 @@ namespace MinecraftLauncher.Views.Windows
         private CancellationTokenSource? _downloadCts;
         private string _downloadedFilePath = "";
 
+        public UpdateWindow() : this(new ReleaseInfo()) { }
+
         public UpdateWindow(ReleaseInfo release)
         {
             InitializeComponent();
             Release = release;
-            Loaded += UpdateWindow_Loaded;
+            Opened += UpdateWindow_Opened;
         }
 
-        private void UpdateWindow_Loaded(object sender, RoutedEventArgs e)
+        private void UpdateWindow_Opened(object? sender, EventArgs e)
         {
-            // Строки собираются в коде, поэтому подстановка идёт через
-            // LocalizationService: DynamicResource здесь не работает.
             var loc = LocalizationService.Instance;
 
             VersionBadgeText.Text = $"{UpdateService.CurrentVersion} -> {Release.TagName}";
@@ -43,15 +45,15 @@ namespace MinecraftLauncher.Views.Windows
                 : $"SHA-256: {Release.Sha256}";
         }
 
-        private void Header_MouseDown(object sender, MouseButtonEventArgs e)
+        private void Header_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
-            if (e.ChangedButton == MouseButton.Left)
+            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             {
-                DragMove();
+                BeginMoveDrag(e);
             }
         }
 
-        private void OpenBrowserBtn_Click(object sender, RoutedEventArgs e)
+        private void OpenBrowserBtn_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -61,18 +63,15 @@ namespace MinecraftLauncher.Views.Windows
             catch { }
         }
 
-        private void CloseBtn_Click(object sender, RoutedEventArgs e)
+        private void CloseBtn_Click(object? sender, RoutedEventArgs e)
         {
             CancelDownload();
             Close();
         }
 
-        private void Later_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
-        }
+        private void Later_Click(object? sender, RoutedEventArgs e) => Close();
 
-        private void SkipVersion_Click(object sender, RoutedEventArgs e)
+        private void SkipVersion_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
@@ -87,12 +86,12 @@ namespace MinecraftLauncher.Views.Windows
             Close();
         }
 
-        private void CopyChangelog_Click(object sender, RoutedEventArgs e)
+        private async void CopyChangelog_Click(object? sender, RoutedEventArgs e)
         {
             try
             {
                 string text = $"QLauncher {Release.TagName} Changelog\n{Release.FormattedChangelog}";
-                Clipboard.SetText(text);
+                await UiHelper.SetClipboardTextAsync(text);
                 ToastService.Instance.ShowSuccess(
                     LocalizationService.Instance.GetString("Str_Update_CopiedToast"),
                     LocalizationService.Instance.GetString("Str_Update_TitleSingle"));
@@ -100,11 +99,11 @@ namespace MinecraftLauncher.Views.Windows
             catch { }
         }
 
-        private async void StartUpdate_Click(object sender, RoutedEventArgs e)
+        private async void StartUpdate_Click(object? sender, RoutedEventArgs e)
         {
-            InitialActionsPanel.Visibility = Visibility.Collapsed;
-            DownloadProgressPanel.Visibility = Visibility.Visible;
-            ReadyToRestartPanel.Visibility = Visibility.Collapsed;
+            InitialActionsPanel.IsVisible = false;
+            DownloadProgressPanel.IsVisible = true;
+            ReadyToRestartPanel.IsVisible = false;
 
             _downloadCts = new CancellationTokenSource();
             var loc = LocalizationService.Instance;
@@ -147,12 +146,11 @@ namespace MinecraftLauncher.Views.Windows
                 DownloadStatusText.Text = loc.GetString("Str_Update_DownloadError");
                 DownloadSpeedEtaText.Text = loc.GetString("Str_Update_DownloadErrorHint");
                 await Task.Delay(2500);
-                DownloadProgressPanel.Visibility = Visibility.Collapsed;
-                InitialActionsPanel.Visibility = Visibility.Visible;
+                DownloadProgressPanel.IsVisible = false;
+                InitialActionsPanel.IsVisible = true;
                 return;
             }
 
-            // Проверка целостности SHA-256
             DownloadStatusText.Text = loc.GetString("Str_Update_VerifyingHash");
             bool hashValid = await Task.Run(() => UpdateService.Instance.VerifySha256(_downloadedFilePath, Release.Sha256));
 
@@ -162,20 +160,20 @@ namespace MinecraftLauncher.Views.Windows
                 DownloadSpeedEtaText.Text = loc.GetString("Str_Update_Corrupted");
                 try { File.Delete(_downloadedFilePath); } catch { }
                 await Task.Delay(3000);
-                DownloadProgressPanel.Visibility = Visibility.Collapsed;
-                InitialActionsPanel.Visibility = Visibility.Visible;
+                DownloadProgressPanel.IsVisible = false;
+                InitialActionsPanel.IsVisible = true;
                 return;
             }
 
-            DownloadProgressPanel.Visibility = Visibility.Collapsed;
-            ReadyToRestartPanel.Visibility = Visibility.Visible;
+            DownloadProgressPanel.IsVisible = false;
+            ReadyToRestartPanel.IsVisible = true;
         }
 
-        private void CancelDownload_Click(object sender, RoutedEventArgs e)
+        private void CancelDownload_Click(object? sender, RoutedEventArgs e)
         {
             CancelDownload();
-            DownloadProgressPanel.Visibility = Visibility.Collapsed;
-            InitialActionsPanel.Visibility = Visibility.Visible;
+            DownloadProgressPanel.IsVisible = false;
+            InitialActionsPanel.IsVisible = true;
         }
 
         private void CancelDownload()
@@ -188,7 +186,7 @@ namespace MinecraftLauncher.Views.Windows
             }
         }
 
-        private void Restart_Click(object sender, RoutedEventArgs e)
+        private void Restart_Click(object? sender, RoutedEventArgs e)
         {
             if (!string.IsNullOrEmpty(_downloadedFilePath) && File.Exists(_downloadedFilePath))
             {
@@ -196,29 +194,21 @@ namespace MinecraftLauncher.Views.Windows
             }
         }
 
-        private void Window_KeyDown(object sender, KeyEventArgs e)
+        private void Window_KeyDown(object? sender, KeyEventArgs e)
         {
             if (e.Key == Key.Escape)
             {
-                if (DownloadProgressPanel.Visibility == Visibility.Visible)
-                {
+                if (DownloadProgressPanel.IsVisible)
                     CancelDownload_Click(this, new RoutedEventArgs());
-                }
                 else
-                {
                     Close();
-                }
             }
             else if (e.Key == Key.Enter)
             {
-                if (InitialActionsPanel.Visibility == Visibility.Visible)
-                {
+                if (InitialActionsPanel.IsVisible)
                     StartUpdate_Click(this, new RoutedEventArgs());
-                }
-                else if (ReadyToRestartPanel.Visibility == Visibility.Visible)
-                {
+                else if (ReadyToRestartPanel.IsVisible)
                     Restart_Click(this, new RoutedEventArgs());
-                }
             }
         }
     }

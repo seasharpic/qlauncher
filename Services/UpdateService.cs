@@ -11,7 +11,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Models;
 
@@ -19,7 +18,7 @@ namespace MinecraftLauncher.Services
 {
     public struct DownloadProgressReport
     {
-        public double Percentage; // 0.0 to 1.0
+        public double Percentage;
         public long BytesReceived;
         public long TotalBytes;
         public double SpeedBytesPerSec;
@@ -38,9 +37,6 @@ namespace MinecraftLauncher.Services
     public class UpdateService : IUpdateService
     {
         private static readonly HttpClient HttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-
-        // Локализация для строк, которые собираются в коде: бейджи типа релиза
-        // и заголовки ченджлога раньше были жёстко на русском.
         private static readonly ILocalizationService L = LocalizationService.Instance;
 
         public const string CurrentVersion = LauncherIdentity.CurrentVersion;
@@ -129,14 +125,12 @@ namespace MinecraftLauncher.Services
                     };
                 }
 
-                // Пропуск версии при фоновой проверке
                 if (!isManual && !string.IsNullOrEmpty(settings.SkippedVersion) &&
                     string.Equals(settings.SkippedVersion.Trim(), tagName.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
                     return null;
                 }
 
-                // Поиск исполняемого файла в ассетах
                 string downloadUrl = "";
                 string fileName = "QLauncher.exe";
                 long fileSizeBytes = 0;
@@ -157,18 +151,15 @@ namespace MinecraftLauncher.Services
                     }
                 }
 
-                // Поиск SHA-256 в теле релиза (64 шестнадцатеричных символа)
                 var shaMatch = Regex.Match(rawBody, @"\b[a-fA-F0-9]{64}\b");
                 if (shaMatch.Success)
                 {
                     sha256 = shaMatch.Value;
                 }
 
-                // Формирование ссылки на зеркало SourceForge
                 string cleanTag = tagName.TrimStart('v', 'V');
                 string sfUrl = $"https://downloads.sourceforge.net/project/qlauncher/v{cleanTag}/{fileName}";
 
-                // Выбор активного зеркала
                 string activeMirror = "GitHub";
                 string activeDownloadUrl = downloadUrl;
 
@@ -183,10 +174,7 @@ namespace MinecraftLauncher.Services
                     activeDownloadUrl = sfUrl;
                 }
 
-                // Суммарный список изменений без эмодзи
                 string formattedChangelog = BuildCleanChangelog(missedReleases);
-
-                // Определение типа релиза
                 string releaseType = GetReleaseTypeBadge(tagName, CurrentVersion, isPrerelease);
 
                 return new ReleaseInfo
@@ -221,13 +209,11 @@ namespace MinecraftLauncher.Services
             var settings = SettingsService.Instance.Settings;
             string mirror = (settings.UpdateMirror ?? "auto").ToLowerInvariant();
 
-            // Попытка 1: Активное зеркало
             bool success = await DownloadInternalAsync(release.ActiveDownloadUrl, release.ActiveMirror, destinationPath, settings.BandwidthLimitMbps, progress, ct);
             if (success) return true;
 
             if (ct.IsCancellationRequested) return false;
 
-            // Попытка 2: Если режим Auto и была ошибка на GitHub, пробуем SourceForge
             if (mirror == "auto" && release.ActiveMirror == "GitHub" && !string.IsNullOrEmpty(release.SourceForgeUrl))
             {
                 release.ActiveMirror = "SourceForge";
@@ -292,7 +278,6 @@ namespace MinecraftLauncher.Services
                     totalRead += bytesRead;
                     bytesSinceLastTick += bytesRead;
 
-                    // Ограничение скорости (Bandwidth Limiter)
                     if (limitMbps > 0)
                     {
                         long maxBytesPerSec = limitMbps * 1024L * 1024L;
@@ -374,7 +359,6 @@ namespace MinecraftLauncher.Services
 
             string backupExe = currentExe + ".bak";
 
-            // Сохраняем аргументы командной строки, отфильтровав старый флаг --updated
             var rawArgs = Environment.GetCommandLineArgs().Skip(1);
             var preservedArgs = new List<string>();
             bool skipNext = false;
@@ -389,29 +373,41 @@ namespace MinecraftLauncher.Services
 
             string escapedArgs = string.Join(" ", preservedArgs.Select(a => $"\"{a}\""));
 
-            // PowerShell Handover скрипт
-            string script = $@"
-                $proc = Get-Process -Id {currentPid} -ErrorAction SilentlyContinue
-                if ($proc) {{ $proc.WaitForExit(10000) }}
-                Start-Sleep -Milliseconds 300
-
-                Copy-Item -Path '{currentExe}' -Destination '{backupExe}' -Force -ErrorAction SilentlyContinue
-                Copy-Item -Path '{newBinaryPath}' -Destination '{currentExe}' -Force
-                
-                Start-Process -FilePath '{currentExe}' -ArgumentList '{escapedArgs}'
-                Remove-Item -Path '{newBinaryPath}' -Force -ErrorAction SilentlyContinue
-            ";
-
-            var psi = new ProcessStartInfo
+            if (OperatingSystem.IsWindows())
             {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"{script}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
+                string script = $@"
+                    $proc = Get-Process -Id {currentPid} -ErrorAction SilentlyContinue
+                    if ($proc) {{ $proc.WaitForExit(10000) }}
+                    Start-Sleep -Milliseconds 300
 
-            Process.Start(psi);
-            Application.Current.Dispatcher.Invoke(() => Application.Current.Shutdown());
+                    Copy-Item -Path '{currentExe}' -Destination '{backupExe}' -Force -ErrorAction SilentlyContinue
+                    Copy-Item -Path '{newBinaryPath}' -Destination '{currentExe}' -Force
+                    
+                    Start-Process -FilePath '{currentExe}' -ArgumentList '{escapedArgs}'
+                    Remove-Item -Path '{newBinaryPath}' -Force -ErrorAction SilentlyContinue
+                ";
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command \"{script}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+            }
+            else
+            {
+                string shScript = $"sleep 1 && cp -f \"{currentExe}\" \"{backupExe}\" 2>/dev/null; mv -f \"{newBinaryPath}\" \"{currentExe}\" && chmod +x \"{currentExe}\" && \"{currentExe}\" {escapedArgs} &";
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "/bin/sh",
+                    Arguments = $"-c \"{shScript.Replace("\"", "\\\"")}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+            }
+
+            UiHelper.Shutdown();
         }
 
         private static bool IsNewerVersion(string latestTag, string currentTag)
@@ -460,7 +456,6 @@ namespace MinecraftLauncher.Services
                     sb.AppendLine(L.Format("Str_Release_ChangelogTag", tag));
                 }
 
-                // Очистка от эмодзи и форматирование списков
                 string cleaned = CleanEmojis(body);
                 var lines = cleaned.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -469,7 +464,6 @@ namespace MinecraftLauncher.Services
                     string trimmed = line.Trim();
                     if (string.IsNullOrWhiteSpace(trimmed)) continue;
 
-                    // Форматируем markdown-заголовки
                     if (trimmed.StartsWith("###") || trimmed.StartsWith("##") || trimmed.StartsWith("#"))
                     {
                         string headerText = trimmed.TrimStart('#').Trim();
@@ -494,7 +488,6 @@ namespace MinecraftLauncher.Services
         private static string CleanEmojis(string text)
         {
             if (string.IsNullOrEmpty(text)) return "";
-            // Удаляем суррогатные пары и графические эмодзи
             return Regex.Replace(text, @"\p{Cs}|\p{So}|\p{Cn}", "");
         }
 
@@ -506,4 +499,3 @@ namespace MinecraftLauncher.Services
         }
     }
 }
-

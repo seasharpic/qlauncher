@@ -1,22 +1,19 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Windows;
-using System.Windows.Input;
-using System.Windows.Media.Imaging;
-using System.Windows.Media.Media3D;
-using System.Windows.Threading;
-using Microsoft.Win32;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Services;
 
 namespace MinecraftLauncher.Views.Windows
 {
-    /// <summary>
-    /// 3D-превью скина выбранного аккаунта: Viewport3D с боксовой моделью
-    /// игрока, вращение мышью, зум колесом, автоповорот, переключатель
-    /// slim/classic и кнопки сохранения/открытия PNG-скина.
-    /// </summary>
     public partial class SkinPreviewWindow : Window
     {
         private static readonly ILocalizationService Loc = LocalizationService.Instance;
@@ -25,23 +22,22 @@ namespace MinecraftLauncher.Views.Windows
         private readonly string _nickname;
         private readonly string _uuid;
 
-        private BitmapImage? _skin;
+        private SkinModel3DBuilder.SkinRaster? _raster;
         private string? _cachePath;
         private bool _slim;
 
-        private double _dist = 68;
-        private double _yaw;
-        private double _pitch;
+        private double _yaw = 20;
+        private double _pitch = -10;
+        private double _zoom = 1.0;
 
         private bool _dragging;
         private Point _dragStart;
         private double _dragStartYaw;
         private double _dragStartPitch;
 
-        private RotateTransform3D _yawTransform = null!;
-        private RotateTransform3D _pitchTransform = null!;
-
         private readonly DispatcherTimer _autoRotateTimer;
+
+        public SkinPreviewWindow() : this(false, "Steve") { }
 
         public SkinPreviewWindow(bool isElyBy, string nickname, string uuid = "")
         {
@@ -50,21 +46,21 @@ namespace MinecraftLauncher.Views.Windows
             _nickname = nickname;
             _uuid = uuid;
 
-            _autoRotateTimer = new DispatcherTimer(DispatcherPriority.Render)
+            _autoRotateTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(16)
+                Interval = TimeSpan.FromMilliseconds(33)
             };
-            _autoRotateTimer.Tick += (s, e) =>
+            _autoRotateTimer.Tick += (_, _) =>
             {
-                if (_dragging) return;
-                _yaw += 1.4;
-                ApplyTransforms();
+                if (_dragging || _raster == null) return;
+                _yaw = (_yaw + 2.0) % 360.0;
+                RenderFrame();
             };
 
             _ = LoadSkinAsync();
         }
 
-        private async System.Threading.Tasks.Task LoadSkinAsync()
+        private async Task LoadSkinAsync()
         {
             StatusText.Text = Loc.GetString("Str_Skin3D_Loading", "Loading skin…");
 
@@ -73,21 +69,17 @@ namespace MinecraftLauncher.Views.Windows
 
             if (image == null)
             {
-                Viewport.Visibility = Visibility.Collapsed;
+                SkinImage.IsVisible = false;
                 StatusText.Text = Loc.GetString("Str_Skin3D_NotLoaded", "Failed to load the skin");
                 return;
             }
 
-            _skin = image;
             StatusText.Text = string.Empty;
-
-            // Сначала автоопределение ширины рук, далее пользователь может
-            // переключить вручную: у HD-скинов детект надёжен не всегда.
-            var raster = SkinModel3DBuilder.Rasterize(image);
-            _slim = SkinModel3DBuilder.DetectSlim(raster);
+            _raster = SkinModel3DBuilder.Rasterize(image);
+            _slim = SkinModel3DBuilder.DetectSlim(_raster);
             SlimCheckBox.IsChecked = _slim;
 
-            BuildModel();
+            RenderFrame();
 
             if (AutoRotateCheckBox.IsChecked == true)
             {
@@ -95,98 +87,68 @@ namespace MinecraftLauncher.Views.Windows
             }
         }
 
-        private void BuildModel()
+        private void RenderFrame()
         {
-            if (_skin == null) return;
-
-            var raster = SkinModel3DBuilder.Rasterize(_skin);
-            var model = SkinModel3DBuilder.Build(raster, _slim);
-
-            // Вращение как трекбол: pitch — внутренняя (относительная) ось X,
-            // yaw — внешняя мировая ось Y. Порядок в Transform3DGroup: yaw, pitch.
-            _pitchTransform = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(1, 0, 0), _pitch));
-            _yawTransform = new RotateTransform3D(new AxisAngleRotation3D(new Vector3D(0, 1, 0), _yaw));
-
-            var transform = new Transform3DGroup();
-            transform.Children.Add(_yawTransform);
-            transform.Children.Add(_pitchTransform);
-
-            ModelContent.Content = model;
-            ModelContent.Transform = transform;
+            if (_raster == null) return;
+            var bmp = SkinModel3DBuilder.RenderToBitmap(_raster, _slim, _yaw, _pitch, 280, 360);
+            SkinImage.Source = bmp;
+            SkinImage.Width = 280 * _zoom;
+            SkinImage.Height = 360 * _zoom;
         }
 
-        private void ApplyTransforms()
+        private void Viewport_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
-            if (_yawTransform == null || _pitchTransform == null) return;
-
-            ((AxisAngleRotation3D)_yawTransform.Rotation).Angle = _yaw;
-            ((AxisAngleRotation3D)_pitchTransform.Rotation).Angle = _pitch;
-        }
-
-        // --- Трекбол ---
-
-        private void Viewport_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
+            if (!e.GetCurrentPoint(ViewportHost).Properties.IsLeftButtonPressed) return;
             _dragging = true;
-            _dragStart = e.GetPosition(Viewport);
+            _dragStart = e.GetPosition(ViewportHost);
             _dragStartYaw = _yaw;
             _dragStartPitch = _pitch;
-            Viewport.CaptureMouse();
+            e.Pointer.Capture(ViewportHost);
         }
 
-        private void Viewport_MouseMove(object sender, MouseEventArgs e)
+        private void Viewport_PointerMoved(object? sender, PointerEventArgs e)
         {
             if (!_dragging) return;
-            var pos = e.GetPosition(Viewport);
-            _yaw = _dragStartYaw + (pos.X - _dragStart.X) * 0.5;
-            _pitch = Clamp(_dragStartPitch - (pos.Y - _dragStart.Y) * 0.5, -90, 90);
-            ApplyTransforms();
+            var pos = e.GetPosition(ViewportHost);
+            _yaw = _dragStartYaw + (pos.X - _dragStart.X) * 0.6;
+            _pitch = Math.Clamp(_dragStartPitch - (pos.Y - _dragStart.Y) * 0.5, -80, 80);
+            RenderFrame();
         }
 
-        private void Viewport_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        private void Viewport_PointerReleased(object? sender, PointerReleasedEventArgs e)
         {
             if (!_dragging) return;
             _dragging = false;
-            Viewport.ReleaseMouseCapture();
+            e.Pointer.Capture(null);
         }
 
-        private void Viewport_MouseWheel(object sender, MouseWheelEventArgs e)
+        private void Viewport_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
         {
-            _dist = Clamp(_dist * (e.Delta > 0 ? 0.92 : 1.08), 28, 140);
-            Camera.Position = new Point3D(0, 0, -_dist);
+            _zoom = Math.Clamp(_zoom * (e.Delta.Y > 0 ? 1.08 : 0.92), 0.6, 1.8);
+            RenderFrame();
             e.Handled = true;
         }
 
-        // --- Футер ---
-
-        private void SlimCheckBox_Changed(object sender, RoutedEventArgs e)
+        private void SlimCheckBox_Changed(object? sender, RoutedEventArgs e)
         {
-            // Checked/Unchecked срабатывают и во время InitializeComponent
-            // (положение галочки из XAML) — до присвоения полей конструктором.
             if (_autoRotateTimer == null) return;
-
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
             _slim = SlimCheckBox.IsChecked == true;
-            BuildModel();
+            RenderFrame();
         }
 
-        private void AutoRotateCheckBox_Changed(object sender, RoutedEventArgs e)
+        private void AutoRotateCheckBox_Changed(object? sender, RoutedEventArgs e)
         {
             if (_autoRotateTimer == null) return;
-
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
             bool on = AutoRotateCheckBox.IsChecked == true;
-            if (on && _skin != null && !_dragging)
-            {
+            if (on && _raster != null && !_dragging)
                 _autoRotateTimer.Start();
-            }
             else
-            {
                 _autoRotateTimer.Stop();
-            }
         }
 
-        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        private async void SaveButton_Click(object? sender, RoutedEventArgs e)
         {
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
 
@@ -198,19 +160,19 @@ namespace MinecraftLauncher.Views.Windows
                 return;
             }
 
-            var dialog = new SaveFileDialog
-            {
-                Filter = "PNG|*.png",
-                FileName = $"skin_{_nickname}.png"
-            };
+            var path = await UiHelper.SaveFileAsync(
+                Loc.GetString("Str_Skin3D_Save", "Save skin"),
+                $"skin_{_nickname}.png",
+                "png",
+                new FilePickerFileType("PNG") { Patterns = new[] { "*.png" } });
 
-            if (dialog.ShowDialog(this) != true) return;
+            if (string.IsNullOrEmpty(path)) return;
 
             try
             {
-                File.Copy(_cachePath, dialog.FileName, overwrite: true);
+                File.Copy(_cachePath, path, overwrite: true);
                 ToastService.Instance.ShowInfo(
-                    Loc.Format("Str_Skin3D_Saved", dialog.FileName),
+                    Loc.Format("Str_Skin3D_Saved", path),
                     "Str_Skin3D_Title");
             }
             catch (Exception ex)
@@ -219,7 +181,7 @@ namespace MinecraftLauncher.Views.Windows
             }
         }
 
-        private void OpenButton_Click(object sender, RoutedEventArgs e)
+        private void OpenButton_Click(object? sender, RoutedEventArgs e)
         {
             AudioService.Instance.PlayClickSound(SettingsService.Instance.Settings.EnableUiSounds);
 
@@ -227,30 +189,31 @@ namespace MinecraftLauncher.Views.Windows
 
             try
             {
-                using var _ = Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{_cachePath}\""));
+                string dir = Path.GetDirectoryName(_cachePath) ?? "";
+                if (OperatingSystem.IsWindows())
+                    Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{_cachePath}\""));
+                else if (OperatingSystem.IsMacOS())
+                    Process.Start("open", dir);
+                else
+                    Process.Start("xdg-open", dir);
             }
             catch { }
         }
 
-        // --- Оболочка окна ---
-
-        private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
+        private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
         {
-            if (e.ChangedButton == MouseButton.Left)
+            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             {
-                try { DragMove(); } catch { }
+                try { BeginMoveDrag(e); } catch { }
             }
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
+        private void CloseButton_Click(object? sender, RoutedEventArgs e) => Close();
 
         protected override void OnClosed(EventArgs e)
         {
             base.OnClosed(e);
             _autoRotateTimer.Stop();
         }
-
-        private static double Clamp(double value, double min, double max) =>
-            value < min ? min : (value > max ? max : value);
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Windows;
+using Avalonia.Threading;
 using MinecraftLauncher.Common;
 using MinecraftLauncher.Services;
 
@@ -77,11 +77,11 @@ namespace MinecraftLauncher.ViewModels
                 return;
             }
 
-            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            Dispatcher.UIThread.Post(() =>
             {
                 ProcessStatusText = _loc.Format("Str_Console_Exited", exitCode);
                 LogLineReceived?.Invoke(_loc.Format("Str_Console_GameExited", exitCode), exitCode != 0);
-            }));
+            });
         }
 
         public void DetachProcess()

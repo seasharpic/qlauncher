@@ -1,6 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.IO;
-using System.Media;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace MinecraftLauncher.Services
 {
@@ -20,30 +22,74 @@ namespace MinecraftLauncher.Services
         public void PlayClickSound(bool enabled)
         {
             if (!enabled) return;
-
-            try
-            {
-                _cachedClickWav ??= GenerateClickSoundWav();
-                using var ms = new MemoryStream(_cachedClickWav);
-                using var player = new SoundPlayer(ms);
-                player.Play();
-            }
-            catch { }
+            _cachedClickWav ??= GenerateClickSoundWav();
+            PlayWavAsync(_cachedClickWav, "click.wav");
         }
 
         public void PlayLaunchSound(bool enabled)
         {
             if (!enabled) return;
+            _cachedLaunchWav ??= GenerateLaunchSoundWav();
+            PlayWavAsync(_cachedLaunchWav, "launch.wav");
+        }
 
+        private static void PlayWavAsync(byte[] wavBytes, string fileName)
+        {
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    if (OperatingSystem.IsWindows())
+                    {
+                        PlaySound(wavBytes, IntPtr.Zero, 0x0004 | 0x0001); // SND_MEMORY | SND_ASYNC
+                        return;
+                    }
+
+                    string tempPath = Path.Combine(Path.GetTempPath(), $"qlauncher_{fileName}");
+                    if (!File.Exists(tempPath))
+                    {
+                        File.WriteAllBytes(tempPath, wavBytes);
+                    }
+
+                    if (OperatingSystem.IsMacOS())
+                    {
+                        TrySpawn("afplay", tempPath);
+                    }
+                    else
+                    {
+                        if (!TrySpawn("pw-play", tempPath) && !TrySpawn("paplay", tempPath))
+                        {
+                            TrySpawn("aplay", $"-q \"{tempPath}\"");
+                        }
+                    }
+                }
+                catch { }
+            });
+        }
+
+        private static bool TrySpawn(string cmd, string args)
+        {
             try
             {
-                _cachedLaunchWav ??= GenerateLaunchSoundWav();
-                using var ms = new MemoryStream(_cachedLaunchWav);
-                using var player = new SoundPlayer(ms);
-                player.Play();
+                using var proc = Process.Start(new ProcessStartInfo
+                {
+                    FileName = cmd,
+                    Arguments = args,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                });
+                return proc != null;
             }
-            catch { }
+            catch
+            {
+                return false;
+            }
         }
+
+        [DllImport("winmm.dll", SetLastError = true)]
+        private static extern bool PlaySound(byte[] pszSound, IntPtr hmod, uint fdwSound);
 
         private static byte[] GenerateClickSoundWav()
         {

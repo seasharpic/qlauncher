@@ -4,12 +4,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
-using Microsoft.Win32;
+using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using MinecraftLauncher.Common;
 using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Models;
 using MinecraftLauncher.Services;
+using MinecraftLauncher.Views.Windows;
 
 namespace MinecraftLauncher.ViewModels
 {
@@ -322,7 +323,7 @@ namespace MinecraftLauncher.ViewModels
 
         public string ElyTotpCodeInput { get; set; } = "";
 
-        public Visibility ElyTotpVisibility => ElyNeedsTotp ? Visibility.Visible : Visibility.Collapsed;
+        public bool ElyTotpVisibility => ElyNeedsTotp;
 
         public GpuOptionItem? SelectedGpuOption
         {
@@ -476,10 +477,10 @@ namespace MinecraftLauncher.ViewModels
                     : _loc.Format("Str_Sources_Blocked", blocked);
             }
 
-            _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            Dispatcher.UIThread.Post(() =>
             {
                 SourcesStatusText = text;
-            }));
+            });
         }
 
         public int BandwidthLimitMbps
@@ -629,7 +630,7 @@ namespace MinecraftLauncher.ViewModels
 
         private void OnThemeChanged()
         {
-            Application.Current?.Dispatcher?.Invoke(() =>
+            Dispatcher.UIThread.Post(() =>
             {
                 OnPropertyChanged(nameof(IsDarkTheme));
                 OnPropertyChanged(nameof(IsLightTheme));
@@ -743,11 +744,11 @@ namespace MinecraftLauncher.ViewModels
 
                 if (IsClosed) return;
 
-                _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                Dispatcher.UIThread.Post(() =>
                 {
                     ResolvedJvmArgs = text;
                     JvmArgsWarning = warning ?? "";
-                }));
+                });
             }
             catch (Exception ex)
             {
@@ -765,10 +766,10 @@ namespace MinecraftLauncher.ViewModels
 
                 // Присваивание через "_ =" подавляет предупреждение CS4014:
                 // результат намеренно не ожидается, задача наблюдает свои ошибки сама.
-                _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                Dispatcher.UIThread.Post(() =>
                 {
                     acc.AvatarImage = img;
-                }));
+                });
             }
             catch (Exception ex)
             {
@@ -933,31 +934,27 @@ namespace MinecraftLauncher.ViewModels
 
         private bool IsClosed { get; set; }
 
-        private void ExecuteBrowseJava()
+        private async void ExecuteBrowseJava()
         {
-            var dlg = new OpenFileDialog
-            {
-                Filter = _loc.GetString("Str_Dialog_JavaFilter"),
-                Title = _loc.GetString("Str_Dialog_JavaTitle")
-            };
+            var path = await UiHelper.PickFileAsync(
+                _loc.GetString("Str_Dialog_JavaTitle"),
+                new FilePickerFileType("Java") { Patterns = OperatingSystem.IsWindows() ? new[] { "java.exe", "javaw.exe", "*.exe" } : new[] { "java", "*" } });
 
-            if (dlg.ShowDialog() == true)
+            if (!string.IsNullOrEmpty(path))
             {
-                JavaPath = dlg.FileName;
+                JavaPath = path;
             }
         }
 
-        private void ExecuteBrowseWallpaper()
+        private async void ExecuteBrowseWallpaper()
         {
-            var dlg = new OpenFileDialog
-            {
-                Filter = _loc.GetString("Str_Dialog_ImageFilter"),
-                Title = _loc.GetString("Str_Dialog_WallpaperTitle")
-            };
+            var path = await UiHelper.PickFileAsync(
+                _loc.GetString("Str_Dialog_WallpaperTitle"),
+                new FilePickerFileType("Images") { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp" } });
 
-            if (dlg.ShowDialog() == true)
+            if (!string.IsNullOrEmpty(path))
             {
-                CustomWallpaperPath = dlg.FileName;
+                CustomWallpaperPath = path;
             }
         }
 
@@ -1284,13 +1281,13 @@ namespace MinecraftLauncher.ViewModels
                 var release = await UpdateService.Instance.CheckForUpdatesAsync(isManual: true);
                 if (release != null && release.HasUpdate)
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
+                    await Dispatcher.UIThread.InvokeAsync(async () =>
                     {
-                        var updateWin = new Views.Windows.UpdateWindow(release)
-                        {
-                            Owner = Application.Current.MainWindow
-                        };
-                        updateWin.ShowDialog();
+                        var updateWin = new UpdateWindow(release);
+                        if (UiHelper.MainWindow is { } owner)
+                            await updateWin.ShowDialog(owner);
+                        else
+                            updateWin.Show();
                     });
                 }
                 else
@@ -1312,16 +1309,15 @@ namespace MinecraftLauncher.ViewModels
         {
             try
             {
-                var sfd = new Microsoft.Win32.SaveFileDialog
-                {
-                    Title = _loc.GetString("Str_Dialog_DiagnosticTitle"),
-                    Filter = _loc.GetString("Str_Dialog_ZipFilter"),
-                    FileName = $"qlauncher-report-{DateTime.Now:yyyyMMdd_HHmmss}.zip"
-                };
+                var path = await UiHelper.SaveFileAsync(
+                    _loc.GetString("Str_Dialog_DiagnosticTitle"),
+                    $"qlauncher-report-{DateTime.Now:yyyyMMdd_HHmmss}.zip",
+                    "zip",
+                    new FilePickerFileType("Zip Archive") { Patterns = new[] { "*.zip" } });
 
-                if (sfd.ShowDialog() == true)
+                if (!string.IsNullOrEmpty(path))
                 {
-                    string zipPath = await DiagnosticReportService.Instance.GenerateReportZipAsync(sfd.FileName);
+                    string zipPath = await DiagnosticReportService.Instance.GenerateReportZipAsync(path);
                     _toastService.ShowSuccess(_loc.Format("Str_Diagnostic_SavedPlain", Path.GetFileName(zipPath)), _loc.GetString("Str_T_Diagnostics"));
                 }
             }
@@ -1392,32 +1388,31 @@ namespace MinecraftLauncher.ViewModels
                 // копия для раздачи, снимаем галочку.
                 bool includeGameData = _settingsService.Settings.GamePath.Length > 0;
 
-                var result = System.Windows.MessageBox.Show(
+                var result = await QMessageBoxWindow.ShowAsync(
                     _loc.GetString("Str_Export_QuestionRu"),
                     _loc.GetString("Str_Export_DialogTitleRu"),
-                    includeGameData ? MessageBoxButton.OKCancel : MessageBoxButton.OK,
-                    MessageBoxImage.Question);
+                    includeGameData ? QMessageBoxButton.OKCancel : QMessageBoxButton.OK,
+                    QMessageBoxImage.Question);
 
-                if (result == MessageBoxResult.Cancel)
+                if (result == QMessageBoxResult.Cancel)
                 {
                     includeGameData = false;
                 }
-                else if (result != MessageBoxResult.OK)
+                else if (result != QMessageBoxResult.OK)
                 {
                     return;
                 }
 
-                var sfd = new Microsoft.Win32.SaveFileDialog
-                {
-                    Title = _loc.GetString("Str_SaveFile_Title"),
-                    Filter = _loc.GetString("Str_Dialog_ZipFilter"),
-                    FileName = "QLauncher-Portable.zip"
-                };
+                var savePath = await UiHelper.SaveFileAsync(
+                    _loc.GetString("Str_SaveFile_Title"),
+                    "QLauncher-Portable.zip",
+                    "zip",
+                    new FilePickerFileType("Zip Archive") { Patterns = new[] { "*.zip" } });
 
-                if (sfd.ShowDialog() == true)
+                if (!string.IsNullOrEmpty(savePath))
                 {
                     _toastService.ShowInfo(_loc.GetString("Str_Portable_Exporting"), _loc.GetString("Str_T_PortableTitle"));
-                    string path = await LauncherPathHelper.ExportPortablePackageAsync(sfd.FileName, includeGameData);
+                    string path = await LauncherPathHelper.ExportPortablePackageAsync(savePath, includeGameData);
                     _toastService.ShowSuccess(
                         _loc.Format("Str_Portable_Exported", Path.GetFileName(path)),
                         _loc.GetString("Str_T_PortableTitle"));
@@ -1507,7 +1502,7 @@ namespace MinecraftLauncher.ViewModels
                     UseShellExecute = true
                 });
 
-                Application.Current.Shutdown();
+                UiHelper.Shutdown();
             }
             catch (Exception ex)
             {
@@ -1525,7 +1520,12 @@ namespace MinecraftLauncher.ViewModels
             {
                 string dir = LauncherPathHelper.GetDefaultDataDirectory();
                 Directory.CreateDirectory(dir);
-                Process.Start("explorer.exe", dir);
+                if (OperatingSystem.IsWindows())
+                    Process.Start("explorer.exe", dir);
+                else if (OperatingSystem.IsMacOS())
+                    Process.Start("open", dir);
+                else
+                    Process.Start("xdg-open", dir);
             }
             catch { }
         }

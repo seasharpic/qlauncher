@@ -1,12 +1,16 @@
-using System.Windows;
-using System.Windows.Controls;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.ViewModels;
 
 namespace MinecraftLauncher.Views.Pages
 {
-    public partial class ScreenshotsPage : Page
+    public partial class ScreenshotsPage : UserControl
     {
         public ScreenshotsViewModel ViewModel { get; }
+
+        public ScreenshotsPage() : this("") { }
 
         public ScreenshotsPage(string gamePath)
         {
@@ -15,11 +19,19 @@ namespace MinecraftLauncher.Views.Pages
             DataContext = ViewModel;
         }
 
-        private void BackButton_Click(object sender, RoutedEventArgs e)
+        private void BackButton_Click(object? sender, RoutedEventArgs e)
         {
-            if (Window.GetWindow(this) is MainWindow mainWin)
+            if (UiHelper.MainWindow is MainWindow mainWin)
             {
                 mainWin.CloseSettings();
+            }
+        }
+
+        private void PreviewBackdrop_PointerPressed(object? sender, PointerPressedEventArgs e)
+        {
+            if (e.Source == sender)
+            {
+                ViewModel.ClosePreviewCommand.Execute(null);
             }
         }
     }

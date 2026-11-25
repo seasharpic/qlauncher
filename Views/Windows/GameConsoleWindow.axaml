@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="MinecraftLauncher.Views.Windows.GameConsoleWindow"
+        Title="{DynamicResource Str_Console_WindowTitle}"
+        Height="520" Width="920"
+        SystemDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        WindowStartupLocation="CenterScreen">
+
+    <Border x:Name="OuterBorder" CornerRadius="14" ClipToBounds="True"
+            Background="{DynamicResource ModpackOverlayBgBrush}"
+            BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="3">
+        <Grid RowDefinitions="40,*,50">
+            <!-- Title Bar -->
+            <Border Grid.Row="0" PointerPressed="TitleBar_PointerPressed"
+                    Background="{DynamicResource TitleBarBrush}" CornerRadius="10,10,0,0">
+                <Grid Margin="12,0,0,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Spacing="8">
+                        <TextBlock Text="&gt;_" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource Str_Console_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="—" Classes="CaptionButton" Click="MinimizeButton_Click"/>
+                        <Button Content="□" Classes="CaptionButton" Click="MaximizeButton_Click"/>
+                        <Button x:Name="CloseBtn" Content="✕" Classes="CloseButton" Click="CloseButton_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Console Log Container -->
+            <Border Grid.Row="1" Margin="15,12" Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="8">
+                <Border CornerRadius="8" Background="{DynamicResource InputNicknameBgBrush}" ClipToBounds="True">
+                    <ScrollViewer x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="12">
+                        <StackPanel x:Name="LogLinesPanel" Spacing="2"/>
+                    </ScrollViewer>
+                </Border>
+            </Border>
+
+            <!-- Footer Controls -->
+            <Border Grid.Row="2" Background="{DynamicResource TitleBarBrush}"
+                    BorderBrush="{DynamicResource HoverOverlayBrush}" BorderThickness="0,1,0,0"
+                    CornerRadius="0,0,10,10">
+                <Grid Margin="15,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="20">
+                        <CheckBox Content="{DynamicResource Str_Console_AutoScroll}"
+                                  IsChecked="{Binding AutoScroll, Mode=TwoWay}"
+                                  Classes="CustomCheckBox" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ProcessStatusText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
+                        <Button Content="{DynamicResource Str_Console_CopyAll}" Command="{Binding CopyLogCommand}" Height="32" Width="130" Classes="DarkButton" FontSize="13"/>
+                        <Button Content="{DynamicResource Str_Console_ShareLog}" Command="{Binding ShareLogCommand}" Height="32" Width="150" Classes="DarkButton" FontSize="13"/>
+                        <Button Content="{DynamicResource Str_Console_Clear}" Command="{Binding ClearLogCommand}" Height="32" Width="90" Classes="DarkButton" FontSize="13"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

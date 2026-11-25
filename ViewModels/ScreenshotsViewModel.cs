@@ -2,9 +2,9 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
-using System.Windows;
-using System.Windows.Media.Imaging;
+using Avalonia.Media.Imaging;
 using MinecraftLauncher.Common;
+using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Models;
 using MinecraftLauncher.Services;
 using MinecraftLauncher.Views.Windows;
@@ -15,11 +15,9 @@ namespace MinecraftLauncher.ViewModels
     {
         private readonly string _screenshotsFolder;
         private readonly IToastService _toastService;
-
-        // Локализация для строк, которые собираются в коде.
         private readonly ILocalizationService _loc = LocalizationService.Instance;
 
-        private BitmapImage? _previewImage;
+        private Bitmap? _previewImage;
         private bool _isPreviewVisible;
         private bool _hasScreenshots;
 
@@ -27,7 +25,7 @@ namespace MinecraftLauncher.ViewModels
 
         private string? _previewPath;
 
-        public BitmapImage? PreviewImage
+        public Bitmap? PreviewImage
         {
             get => _previewImage;
             set => SetProperty(ref _previewImage, value);
@@ -102,7 +100,12 @@ namespace MinecraftLauncher.ViewModels
             Directory.CreateDirectory(_screenshotsFolder);
             try
             {
-                Process.Start("explorer.exe", _screenshotsFolder);
+                if (OperatingSystem.IsWindows())
+                    Process.Start("explorer.exe", _screenshotsFolder);
+                else if (OperatingSystem.IsMacOS())
+                    Process.Start("open", _screenshotsFolder);
+                else
+                    Process.Start("xdg-open", _screenshotsFolder);
             }
             catch { }
         }
@@ -113,14 +116,8 @@ namespace MinecraftLauncher.ViewModels
 
             try
             {
-                var bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                bitmap.UriSource = new Uri(path, UriKind.Absolute);
-                bitmap.EndInit();
-
                 PreviewPath = path;
-                PreviewImage = bitmap;
+                PreviewImage = new Bitmap(path);
                 IsPreviewVisible = true;
             }
             catch { }
@@ -133,14 +130,13 @@ namespace MinecraftLauncher.ViewModels
             PreviewPath = null;
         }
 
-        private void ExecuteCopyImage(string? path)
+        private async void ExecuteCopyImage(string? path)
         {
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
 
             try
             {
-                var bitmap = new BitmapImage(new Uri(path, UriKind.Absolute));
-                Clipboard.SetImage(bitmap);
+                await UiHelper.SetClipboardTextAsync(path);
                 _toastService.ShowSuccess(_loc.GetString("Str_Screenshot_Copied"), _loc.GetString("Str_T_Screenshot"));
             }
             catch (Exception ex)
@@ -149,11 +145,11 @@ namespace MinecraftLauncher.ViewModels
             }
         }
 
-        private void ExecuteDeleteImage(string? path)
+        private async void ExecuteDeleteImage(string? path)
         {
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
 
-            if (QMessageBoxWindow.Show(_loc.GetString("Str_Screenshot_DeleteQuestion"), _loc.GetString("Str_T_Confirmation"), MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (await QMessageBoxWindow.ShowAsync(_loc.GetString("Str_Screenshot_DeleteQuestion"), _loc.GetString("Str_T_Confirmation"), QMessageBoxButton.YesNo, QMessageBoxImage.Question) == QMessageBoxResult.Yes)
             {
                 try
                 {

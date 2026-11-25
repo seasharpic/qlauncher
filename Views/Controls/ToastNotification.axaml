@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="MinecraftLauncher.Views.Controls.ToastNotification"
+             Width="320">
+    <Border x:Name="ToastBorder"
+            Background="{DynamicResource PanelBrush}"
+            BorderBrush="{DynamicResource AccentBrush}"
+            BorderThickness="1.5"
+            CornerRadius="10"
+            Margin="5"
+            Padding="12,10"
+            Opacity="0"
+            BoxShadow="0 4 12 0 #66000000">
+        <Border.Transitions>
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.25"/>
+            </Transitions>
+        </Border.Transitions>
+        <Grid ColumnDefinitions="Auto,*">
+            <TextBlock x:Name="IconText" Grid.Column="0" Text="✓"
+                       FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"
+                       Foreground="{DynamicResource AccentBrush}"/>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock x:Name="TitleText" Text="{DynamicResource Str_Toast_PreviewTitle}"
+                           FontWeight="Bold" FontSize="13"
+                           Foreground="{DynamicResource PrimaryTextBrush}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="MessageText" Text="{DynamicResource Str_Toast_PreviewMessage}"
+                           FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"
+                           TextWrapping="Wrap" Margin="0,2,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

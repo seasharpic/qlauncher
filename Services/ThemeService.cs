@@ -1,6 +1,10 @@
 using System;
-using System.Windows;
-using System.Windows.Media;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Markup.Xaml;
+using Avalonia.Media;
+using Avalonia.Styling;
+using Avalonia.Threading;
 
 namespace MinecraftLauncher.Services
 {
@@ -8,13 +12,11 @@ namespace MinecraftLauncher.Services
     {
         bool IsDarkTheme { get; set; }
         event Action? ThemeChanged;
-        /// <summary>Сменился акцентный пресет (нужно перерисовать зависимые вещи, например обои).</summary>
         event Action? AccentChanged;
         void ToggleTheme();
         void SetTheme(bool isDark);
         void ApplyAccentColor(string mainHex, string hoverHex);
         void ApplyAccentPreset(string presetName);
-        /// <summary>Каноническое имя применённого пресета — для обоев и отметки в UI.</summary>
         string CurrentAccentPreset { get; }
     }
 
@@ -33,40 +35,38 @@ namespace MinecraftLauncher.Services
         public void SetTheme(bool isDark)
         {
             IsDarkTheme = isDark;
-            string themeName = IsDarkTheme ? "DarkTheme.xaml" : "LightTheme.xaml";
-            var uri = new Uri($"pack://application:,,,/Themes/{themeName}", UriKind.Absolute);
-            var dict = new ResourceDictionary { Source = uri };
+            string themeName = IsDarkTheme ? "DarkTheme.axaml" : "LightTheme.axaml";
+            var uri = new Uri($"avares://QLauncher/Themes/{themeName}");
 
-            if (Application.Current != null && Application.Current.Resources != null)
+            void Apply()
             {
-                var merged = Application.Current.Resources.MergedDictionaries;
-                ResourceDictionary? existingTheme = null;
-                foreach (var md in merged)
+                try
                 {
-                    if (md.Source != null && (md.Source.OriginalString.EndsWith("DarkTheme.xaml", StringComparison.OrdinalIgnoreCase) ||
-                                              md.Source.OriginalString.EndsWith("LightTheme.xaml", StringComparison.OrdinalIgnoreCase)))
+                    var app = Application.Current;
+                    if (app != null)
                     {
-                        existingTheme = md;
-                        break;
+                        app.RequestedThemeVariant = IsDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
+                        if (AvaloniaXamlLoader.Load(uri) is ResourceDictionary dict)
+                        {
+                            foreach (var kv in dict)
+                            {
+                                app.Resources[kv.Key] = kv.Value;
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(_currentAccentMain) && !string.IsNullOrEmpty(_currentAccentHover))
+                        {
+                            ApplyAccentColor(_currentAccentMain, _currentAccentHover);
+                        }
                     }
                 }
-
-                if (existingTheme != null)
-                {
-                    merged.Remove(existingTheme);
-                }
-                merged.Add(dict);
-
-                foreach (var key in dict.Keys)
-                {
-                    Application.Current.Resources[key] = dict[key];
-                }
-
-                if (!string.IsNullOrEmpty(_currentAccentMain) && !string.IsNullOrEmpty(_currentAccentHover))
-                {
-                    ApplyAccentColor(_currentAccentMain, _currentAccentHover);
-                }
+                catch { }
             }
+
+            if (Dispatcher.UIThread.CheckAccess())
+                Apply();
+            else
+                Dispatcher.UIThread.Post(Apply);
 
             try
             {
@@ -94,12 +94,21 @@ namespace MinecraftLauncher.Services
                 _currentAccentMain = mainHex;
                 _currentAccentHover = hoverHex;
 
-                var mainColor = (Color)ColorConverter.ConvertFromString(mainHex);
-                var hoverColor = (Color)ColorConverter.ConvertFromString(hoverHex);
+                var mainColor = Color.Parse(mainHex);
+                var hoverColor = Color.Parse(hoverHex);
 
-                Application.Current.Resources["AccentBrush"] = new SolidColorBrush(mainColor);
-                Application.Current.Resources["AccentHoverBrush"] = new SolidColorBrush(hoverColor);
-                Application.Current.Resources["AccentClickBrush"] = new SolidColorBrush(mainColor);
+                void Apply()
+                {
+                    if (Application.Current?.Resources == null) return;
+                    Application.Current.Resources["AccentBrush"] = new SolidColorBrush(mainColor);
+                    Application.Current.Resources["AccentHoverBrush"] = new SolidColorBrush(hoverColor);
+                    Application.Current.Resources["AccentClickBrush"] = new SolidColorBrush(mainColor);
+                }
+
+                if (Dispatcher.UIThread.CheckAccess())
+                    Apply();
+                else
+                    Dispatcher.UIThread.Post(Apply);
             }
             catch { }
         }
@@ -123,8 +132,6 @@ namespace MinecraftLauncher.Services
                 case "gold":
                     ApplyAccentColor("#F59E0B", "#FBBF24");
                     break;
-                // Тематические пресеты (ниже каждый несёт свои встроенные обои,
-                // см. MainViewModel.ApplyCustomWallpaper).
                 case "nether":
                     ApplyAccentColor("#D64541", "#FF7A45");
                     break;
@@ -145,15 +152,8 @@ namespace MinecraftLauncher.Services
             AccentChanged?.Invoke();
         }
 
-        /// <summary>
-        /// Запоминает пресет акцента в настройках.
-        /// Выбор акцента жил только в памяти сервиса, поэтому после
-        /// перезапуска лаунчера интерфейс всегда возвращался к синему.
-        /// </summary>
         private void RememberAccentPreset(string presetName)
         {
-            // Псевдонимы приводятся к каноническому имени, иначе в settings.json
-            // попадало бы то, что прислал вызов, а не то, что реально применено.
             string canonical = presetName.ToLowerInvariant() switch
             {
                 "amethyst" => "purple",
@@ -179,17 +179,9 @@ namespace MinecraftLauncher.Services
             catch { }
         }
 
-        /// <summary>
-        /// Восстанавливает сохранённый акцент при запуске.
-        /// Вызывается из App после инициализации настроек.
-        /// </summary>
         public void RestoreAccentFromSettings()
         {
             string savedPreset = SettingsService.Instance.Settings.AccentPreset ?? "sapphire";
-
-            // Имя пресета тоже восстанавливаем, иначе обои тем Nether/End/Sift
-            // после перезапуска возвращались к общей картине: поле пресета
-            // оставалось дефолтным «sapphire», хотя цвета применялись верные.
             RememberAccentPreset(savedPreset);
 
             try
@@ -200,7 +192,6 @@ namespace MinecraftLauncher.Services
             catch { }
         }
 
-        /// <summary>Имя применённого пресета — для отметки выбранного в UI.</summary>
         public string CurrentAccentPreset => _currentAccentPreset;
 
         private static string ResolvePresetMain(string? presetName) =>

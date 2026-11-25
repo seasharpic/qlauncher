@@ -1,6 +1,5 @@
 ﻿using System;
-using System.IO;
-using System.Windows.Media.Imaging;
+using Avalonia.Media.Imaging;
 
 namespace MinecraftLauncher.Models
 {
@@ -11,7 +10,7 @@ namespace MinecraftLauncher.Models
         public string FullPath { get; set; } = "";
         public DateTime LastModified { get; set; }
         public long SizeBytes { get; set; }
-        public BitmapImage? Icon { get; set; }
+        public Bitmap? Icon { get; set; }
 
         public string DisplaySize => SizeBytes >= 1048576 * 1024
             ? Services.LocalizationService.Instance.Format("Str_Size_Gb", $"{(SizeBytes / (1024.0 * 1048576.0)):F1}")

@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:MinecraftLauncher.Helpers"
+             x:Class="MinecraftLauncher.Views.Pages.ScreenshotsPage"
+             x:Name="Root"
+             Background="Transparent">
+
+    <Grid Margin="20">
+        <Border Background="{DynamicResource PanelBrush}" CornerRadius="16" Padding="20">
+            <Grid RowDefinitions="Auto,*">
+                <Grid Grid.Row="0" Margin="0,0,0,15" ColumnDefinitions="Auto,*,Auto">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="15">
+                        <Button Content="←" FontSize="18" Classes="DarkButton" Width="36" Height="36" Click="BackButton_Click" ToolTip.Tip="{DynamicResource Str_Action_Back}"/>
+                        <TextBlock Text="{DynamicResource Str_Screenshots_Header}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="2" Content="{DynamicResource Str_Screenshots_OpenFolder}" Command="{Binding OpenFolderCommand}" Padding="12,6" Classes="DarkButton"/>
+                </Grid>
+
+                <Grid Grid.Row="1">
+                    <TextBlock Text="{DynamicResource Str_Screenshots_Empty}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="16"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               IsVisible="{Binding !HasScreenshots}"/>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Screenshots}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="240" Height="170" Margin="0,0,15,15" Background="#1A1A22" CornerRadius="10" ClipToBounds="True" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1">
+                                        <Grid RowDefinitions="*,35">
+                                            <Button Grid.Row="0" Padding="0" BorderThickness="0" Background="Transparent" Cursor="Hand"
+                                                    Command="{Binding #Root.DataContext.OpenPreviewCommand}"
+                                                    CommandParameter="{Binding FilePath}">
+                                                <Image helpers:ImageLoader.Source="{Binding FilePath}" Stretch="UniformToFill"/>
+                                            </Button>
+
+                                            <Border Grid.Row="1" Background="#22222E" Padding="8,0">
+                                                <Grid VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding FileName}" Foreground="#CCCCCC" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
+                                                        <Button Content="📋" FontSize="12"
+                                                                Command="{Binding #Root.DataContext.CopyImageCommand}"
+                                                                CommandParameter="{Binding FilePath}" Width="26" Height="26" Classes="DarkButton" ToolTip.Tip="{DynamicResource Str_Screenshots_Copy}"/>
+                                                        <Button Content="🗑" FontSize="12"
+                                                                Command="{Binding #Root.DataContext.DeleteImageCommand}"
+                                                                CommandParameter="{Binding FilePath}" Width="26" Height="26" Foreground="#FF5555" Classes="DarkButton" ToolTip.Tip="{DynamicResource Str_Screenshots_DeleteTooltip}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <Grid Background="#EE000000" IsVisible="{Binding IsPreviewVisible}" PointerPressed="PreviewBackdrop_PointerPressed">
+                        <Grid Margin="40" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <Border CornerRadius="12" ClipToBounds="True">
+                                <Image Source="{Binding PreviewImage}" Stretch="Uniform" MaxHeight="600"/>
+                            </Border>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,12,0" Spacing="8">
+                                <Button Content="{DynamicResource Str_Screenshots_Copy}"
+                                        Command="{Binding CopyImageCommand}"
+                                        CommandParameter="{Binding PreviewPath}"
+                                        Classes="DarkButton" Height="34" Padding="14,0" FontSize="12"/>
+                                <Button Content="✕"
+                                        Command="{Binding ClosePreviewCommand}"
+                                        Classes="DarkButton" Width="34" Height="34" FontSize="12" ToolTip.Tip="{DynamicResource Str_Screenshots_CloseTooltip}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,539 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:helpers="clr-namespace:MinecraftLauncher.Helpers"
+        x:Class="MinecraftLauncher.MainWindow"
+        x:Name="RootWindow"
+        Title="QLauncher"
+        Height="700" Width="1100"
+        MinHeight="560" MinWidth="900"
+        SystemDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        WindowStartupLocation="CenterScreen"
+        DragDrop.AllowDrop="True">
+
+    <Window.Resources>
+        <helpers:ComparisonConverter x:Key="ComparisonConverter"/>
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="RadioButton.LoaderCardRadio">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource WindowBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="4"/>
+        </Style>
+        <Style Selector="RadioButton.LoaderCardRadio:pointerover">
+            <Setter Property="Background" Value="{DynamicResource HoverOverlayBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentHoverBrush}"/>
+        </Style>
+        <Style Selector="RadioButton.LoaderCardRadio:checked">
+            <Setter Property="Background" Value="{DynamicResource InputNicknameBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+        </Style>
+    </Window.Styles>
+
+    <Border x:Name="OuterBorder" CornerRadius="14" ClipToBounds="True"
+            Background="{DynamicResource PanelBrush}"
+            BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="3">
+        <Grid>
+            <Border x:Name="BackgroundBorder" Background="{Binding CustomBackgroundBrush}" CornerRadius="0,0,12,12" ClipToBounds="True" Margin="0,40,0,0"/>
+
+            <Grid x:Name="ContentGrid" RowDefinitions="40,42,*">
+                <!-- Title Bar -->
+                <Border x:Name="TitleBorder" Grid.Row="0" PointerPressed="TitleBar_PointerPressed"
+                        Background="{DynamicResource TitleBarBrush}" CornerRadius="10,10,0,0">
+                    <Grid Margin="12,0,0,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Spacing="8">
+                            <Image Source="avares://QLauncher/logo.png" Width="20" Height="20"/>
+                            <TextBlock Text="QLauncher" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <Border x:Name="PortableBadge" Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                <TextBlock Text="PORTABLE" Foreground="Black" FontSize="9" FontWeight="Bold"/>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="ThemeToggleBtn" Content="☀" Classes="CaptionButton" Click="ThemeToggleBtn_Click" ToolTip.Tip="{DynamicResource Str_Tooltip_ToggleTheme}"/>
+                            <Button Content="⚙" Classes="CaptionButton" Click="SettingsButton_Click" ToolTip.Tip="{DynamicResource Str_Tooltip_Settings}"/>
+                            <Button Content="—" Classes="CaptionButton" Click="MinimizeButton_Click"/>
+                            <Button Content="□" Classes="CaptionButton" Click="MaximizeButton_Click"/>
+                            <Button x:Name="CloseBtn" Content="✕" Classes="CloseButton" Click="CloseButton_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Navigation Tab Bar -->
+                <Border Grid.Row="1" Background="{DynamicResource ModpackOverlayBgBrush}" BorderBrush="{DynamicResource HoverOverlayBrush}" BorderThickness="0,0,0,1">
+                    <Grid Margin="10,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
+                            <Button Classes="NavTabButton" Click="NavHome_Click">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                    <TextBlock Text="🏠" FontSize="13" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_Nav_Home}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="NavTabButton" Click="NavModpacks_Click" ToolTip.Tip="{DynamicResource Str_Tooltip_NavModpacks}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                    <TextBlock Text="📦" FontSize="13" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_Nav_Modpacks}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="NavTabButton" Click="NavMods_Click" ToolTip.Tip="{DynamicResource Str_Tooltip_NavMods}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                    <TextBlock Text="🧩" FontSize="13" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_Nav_Mods}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="NavTabButton" Click="NavScreenshots_Click" ToolTip.Tip="{DynamicResource Str_Tooltip_NavScreenshots}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                    <TextBlock Text="🖼" FontSize="13" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_Nav_Screenshots}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="NavTabButton" Click="NavConsole_Click" ToolTip.Tip="{DynamicResource Str_Tooltip_NavConsole}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                    <TextBlock Text="&gt;_" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_Nav_Console}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Grid>
+                                <Button x:Name="QuickFolderBtn" Classes="NavTabButton" Click="QuickFolderButton_Click" ToolTip.Tip="{DynamicResource Str_Tooltip_QuickFolder}">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                                        <TextBlock Text="📁" FontSize="13" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{DynamicResource Str_Nav_QuickFolder}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Popup x:Name="FoldersPopup" PlacementTarget="{Binding #QuickFolderBtn}" Placement="Bottom" IsLightDismissEnabled="True">
+                                    <Border Background="{DynamicResource ModpackOverlayBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1.5" CornerRadius="16" Padding="6" Margin="0,6,0,0" BoxShadow="0 6 20 0 #73000000">
+                                        <StackPanel Width="290">
+                                            <Button Classes="PopupMenuItem" Click="OpenFolder_Mods">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <TextBlock Text="🧩" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_Mods}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Classes="PopupMenuItem" Click="OpenFolder_ResourcePacks">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <TextBlock Text="🎨" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_ResourcePacks}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Classes="PopupMenuItem" Click="OpenFolder_ShaderPacks">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <TextBlock Text="✨" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_ShaderPacks}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Classes="PopupMenuItem" Click="OpenFolder_Saves">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <TextBlock Text="🌍" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_Saves}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Classes="PopupMenuItem" Click="OpenFolder_Screenshots">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <TextBlock Text="🖼" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_Screenshots}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Classes="PopupMenuItem" Click="OpenFolder_Logs">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <TextBlock Text="📄" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_Logs}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+
+                                            <Border Height="1" Background="{DynamicResource WindowBorderBrush}" Margin="8,6"/>
+
+                                            <Button Classes="PopupMenuItem" Click="OpenFolder_Root">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <TextBlock Text="📁" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Folder_Root}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Home View -->
+                <Grid x:Name="HomeView" Grid.Row="2" IsVisible="True" RowDefinitions="*,85">
+                    <Grid Grid.Row="0" Margin="20,15,20,13" ColumnDefinitions="*,260">
+                        <!-- News Panel -->
+                        <Border Grid.Column="0" CornerRadius="20" Margin="0,0,13,0" Background="{DynamicResource PanelBrush}">
+                            <Grid RowDefinitions="Auto,*">
+                                <TextBlock Grid.Row="0" Text="{DynamicResource Str_News_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="24" HorizontalAlignment="Center" Margin="0,15,0,15"/>
+                                <Border Grid.Row="0" BorderBrush="{DynamicResource HoverOverlayBrush}" BorderThickness="0,0,0,1" VerticalAlignment="Bottom"/>
+
+                                <ScrollViewer Grid.Row="1" Margin="15,10,15,15" VerticalScrollBarVisibility="Auto"
+                                              IsVisible="{Binding HasNews}">
+                                    <ItemsControl ItemsSource="{Binding NewsPosts}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="10" Margin="0,0,0,15" Padding="15">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Date}" Foreground="{DynamicResource AccentBrush}" FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
+                                                        <Border CornerRadius="6" Margin="0,0,0,10" IsVisible="{Binding HasImage}" ClipToBounds="True">
+                                                            <Image helpers:ImageLoader.Source="{Binding ImageUrl}" Stretch="UniformToFill" MaxHeight="180"/>
+                                                        </Border>
+                                                        <TextBlock Text="{Binding Text}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="14" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+
+                                <!-- News Empty State -->
+                                <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20"
+                                            IsVisible="{Binding !HasNews}">
+                                    <TextBlock Text="📰" FontSize="36" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" Opacity="0.3" Margin="0,0,0,10"/>
+                                    <TextBlock Text="{DynamicResource Str_News_Empty}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_News_EmptyHint}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0" Opacity="0.7"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Servers Panel -->
+                        <Border Grid.Column="1" Background="{DynamicResource PanelBrush}" CornerRadius="20" ClipToBounds="True">
+                            <Grid RowDefinitions="58,*">
+                                <Grid Grid.Row="0" Margin="20,12,20,0">
+                                    <TextBlock Text="{DynamicResource Str_Servers_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="22" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Bold"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="6">
+                                        <Button Command="{Binding RefreshServersCommand}" Classes="DarkButton" Width="32" Height="32" Padding="0" ToolTip.Tip="{DynamicResource Str_Servers_RefreshStatus}">
+                                            <TextBlock Text="🔄" FontSize="13"/>
+                                        </Button>
+                                        <Button Command="{Binding OpenAddServerOverlayCommand}" Classes="DarkButton" Width="32" Height="32" Padding="0" ToolTip.Tip="{DynamicResource Str_Servers_Join}">
+                                            <TextBlock Text="+" FontSize="16" FontWeight="Bold"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Grid.Row="0" BorderBrush="{DynamicResource HoverOverlayBrush}" BorderThickness="0,0,0,1" VerticalAlignment="Bottom"/>
+
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasServers}">
+                                    <ItemsControl ItemsSource="{Binding Servers}" Margin="16,15,16,20">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="Transparent" CornerRadius="8" Margin="0,0,0,12" Padding="2">
+                                                    <Border.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="{DynamicResource Str_Servers_CopyIp}"
+                                                                      Command="{Binding #RootWindow.DataContext.CopyServerIpCommand}"
+                                                                      CommandParameter="{Binding Ip}"/>
+                                                            <MenuItem Header="{DynamicResource Str_Servers_Connect}"
+                                                                      Command="{Binding #RootWindow.DataContext.ConnectServerCommand}"
+                                                                      CommandParameter="{Binding Ip}"/>
+                                                            <MenuItem Header="{DynamicResource Str_Servers_RefreshStatus}"
+                                                                      Command="{Binding #RootWindow.DataContext.RefreshServersCommand}"/>
+                                                            <Separator/>
+                                                            <MenuItem Header="{DynamicResource Str_Servers_Delete}"
+                                                                      Command="{Binding #RootWindow.DataContext.DeleteServerCommand}"
+                                                                      CommandParameter="{Binding}"/>
+                                                        </ContextMenu>
+                                                    </Border.ContextMenu>
+
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <StackPanel Grid.Column="0">
+                                                            <Grid>
+                                                                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" FontWeight="Bold"/>
+                                                                <TextBlock Text="{Binding OnlineText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Right"/>
+                                                            </Grid>
+
+                                                            <Border Height="6" Background="{DynamicResource HoverOverlayBrush}" CornerRadius="3" Margin="0,4,0,0">
+                                                                <Border Width="{Binding ProgressWidth}" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" CornerRadius="3"/>
+                                                            </Border>
+
+                                                            <Grid Margin="0,4,0,0">
+                                                                <TextBlock Text="{Binding Version}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" HorizontalAlignment="Left"/>
+                                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4">
+                                                                    <Ellipse Width="6" Height="6" Fill="{Binding PingColor}" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding PingText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10"/>
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </StackPanel>
+
+                                                        <Button Grid.Column="1" Content="{DynamicResource Str_Servers_Join}"
+                                                                Command="{Binding #RootWindow.DataContext.ConnectServerCommand}"
+                                                                CommandParameter="{Binding Ip}"
+                                                                Padding="8,4" Margin="8,0,0,0" Classes="DarkButton" FontSize="11" ToolTip.Tip="{DynamicResource Str_Servers_ConnectTooltip}"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+
+                                <!-- Servers Empty State -->
+                                <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20"
+                                            IsVisible="{Binding !HasServers}">
+                                    <TextBlock Text="🌐" FontSize="36" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" Opacity="0.3" Margin="0,0,0,10"/>
+                                    <TextBlock Text="{DynamicResource Str_Servers_Empty}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center"/>
+                                    <TextBlock Text="{DynamicResource Str_Servers_EmptyHint}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0" Opacity="0.7"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <!-- Footer Controls -->
+                    <Border x:Name="FooterBorder" Grid.Row="1" Background="{DynamicResource FooterBrush}" CornerRadius="0,0,12,12">
+                        <Grid Margin="20,0" ColumnDefinitions="240,250,*,180">
+                            <Grid Grid.Column="0" Height="45" Margin="0,0,12,0" ColumnDefinitions="*,6,Auto,6,Auto">
+                                <ComboBox x:Name="NicknameComboBox" Grid.Column="0" Height="45"
+                                          Classes="CustomComboBox" Background="{DynamicResource InputNicknameBgBrush}"
+                                          ItemsSource="{Binding Accounts}" SelectedItem="{Binding SelectedAccount, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                                <Border Width="24" Height="24" CornerRadius="12" ClipToBounds="True">
+                                                    <Image Source="{Binding AvatarImage}" Stretch="UniformToFill"/>
+                                                </Border>
+                                                <Border Width="14" Height="14" CornerRadius="7" Background="#7A6FF0"
+                                                        VerticalAlignment="Center" IsVisible="{Binding IsElyBy}"
+                                                        ToolTip.Tip="{DynamicResource Str_Settings_ElyAccount}">
+                                                    <TextBlock Text="E" FontSize="9" FontWeight="Bold" Foreground="White"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Nickname}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <Button x:Name="Skin3DButton" Grid.Column="2" Width="45" Height="45"
+                                        Content="👤" FontSize="16"
+                                        Click="Skin3DButton_Click"
+                                        Classes="DarkButton"
+                                        ToolTip.Tip="{DynamicResource Str_Skin3D_Title}"/>
+
+                                <Button x:Name="AccountManagerButton" Grid.Column="4" Width="45" Height="45"
+                                        Content="👥" FontSize="16"
+                                        Click="AccountManagerButton_Click"
+                                        Classes="DarkButton"
+                                        ToolTip.Tip="{DynamicResource Str_Action_AccountManager}"/>
+                            </Grid>
+
+                            <ComboBox x:Name="VersionComboBox" SelectionChanged="VersionComboBox_SelectionChanged"
+                                      ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion, Mode=TwoWay}"
+                                      Grid.Column="1" Height="45" Margin="0,0,15,0" Classes="CustomComboBox">
+                                <ComboBox.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{DynamicResource Str_Version_OpenFolder}" Command="{Binding OpenQuickFolderCommand}" CommandParameter=""/>
+                                        <MenuItem Header="{DynamicResource Str_Version_OpenMods}" Command="{Binding OpenQuickFolderCommand}" CommandParameter="mods"/>
+                                        <MenuItem Header="{DynamicResource Str_Version_CreateShortcut}" Command="{Binding OpenShortcutOverlayCommand}"/>
+                                        <Separator/>
+                                        <MenuItem Header="{DynamicResource Str_Version_CreateNew}" Command="{Binding OpenModpackOverlayCommand}"/>
+                                    </ContextMenu>
+                                </ComboBox.ContextMenu>
+                            </ComboBox>
+
+                            <Grid x:Name="ProgressHostGrid" Grid.Column="2" Height="46" Margin="0,0,20,0" ClipToBounds="True">
+                                <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="23"/>
+                                <Border x:Name="ProgressFillBorder" HorizontalAlignment="Left" Width="0" Background="{DynamicResource AccentBrush}" CornerRadius="23" IsVisible="False"/>
+                                <TextBlock Text="{Binding ProgressText}" Foreground="{DynamicResource PrimaryTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14"/>
+                            </Grid>
+
+                            <Button x:Name="PlayButton" Grid.Column="3" Content="{DynamicResource Str_Action_Play}" Height="45"
+                                    Classes="PlayButton" Command="{Binding PlayCommand}" FontSize="22">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{DynamicResource Str_Action_Play}" Command="{Binding PlayCommand}"/>
+                                        <MenuItem Header="{DynamicResource Str_Version_OpenGameFolder}" Command="{Binding OpenQuickFolderCommand}" CommandParameter=""/>
+                                        <MenuItem Header="{DynamicResource Str_Version_CreateShortcut}" Command="{Binding OpenShortcutOverlayCommand}"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- Page Navigation Host -->
+                <ContentControl x:Name="MainFrame" Grid.Row="2" IsVisible="False" Background="Transparent"/>
+
+                <!-- Modpack Create Overlay -->
+                <Grid x:Name="ModpackOverlay" Grid.Row="1" Grid.RowSpan="2" IsVisible="{Binding IsModpackOverlayVisible}" ZIndex="950">
+                    <Border Background="#AA000000" CornerRadius="0,0,11,11" PointerPressed="CloseModpackOverlay_PointerPressed"/>
+                    <Border x:Name="ModpackDialogBorder" Width="510" Height="570" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            CornerRadius="16" Background="{DynamicResource ModpackOverlayBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="2"
+                            BoxShadow="0 4 20 0 #80000000">
+                        <Grid Margin="28,24,28,24">
+                            <TextBlock Text="{DynamicResource Str_Create_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+
+                            <StackPanel Margin="0,42,0,0">
+                                <TextBlock Text="{DynamicResource Str_Create_Name}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding NewModpackName, Mode=TwoWay}" Height="40" Classes="CustomTextBox" Margin="0,0,0,12"/>
+
+                                <Grid Margin="0,0,0,12" ColumnDefinitions="*,*">
+                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                        <TextBlock Text="{DynamicResource Str_Create_GameVersion}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5"/>
+                                        <ComboBox x:Name="ModpackVersionBox" ItemsSource="{Binding VanillaVersions}" SelectedItem="{Binding NewModpackVersion, Mode=TwoWay}" Height="40" Classes="CustomComboBox"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                        <TextBlock Text="{DynamicResource Str_Create_Provider}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5"/>
+                                        <ComboBox Height="40" Classes="CustomComboBox" IsEnabled="False" SelectedIndex="0" ToolTip.Tip="{DynamicResource Str_Provider_Soon}">
+                                            <ComboBoxItem Content="Modrinth"/>
+                                            <ComboBoxItem Content="{DynamicResource Str_Provider_CurseForgeSoon}"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="{DynamicResource Str_Create_Loader}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,6"/>
+
+                                <Grid Margin="0,0,0,8" ColumnDefinitions="*,*">
+                                    <RadioButton Grid.Column="0" Classes="LoaderCardRadio" GroupName="LoaderSelection" Margin="0,0,5,0" Height="50"
+                                                 IsChecked="{Binding NewModpackLoader, Converter={StaticResource ComparisonConverter}, ConverterParameter=Vanilla}">
+                                        <Grid Margin="12,0" VerticalAlignment="Center" ColumnDefinitions="Auto,*">
+                                            <Image Source="avares://QLauncher/Assets/Loaders/vanilla.png" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{DynamicResource Str_Loader_VanillaName}" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13"/>
+                                                <TextBlock Text="{DynamicResource Str_Loader_VanillaDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,1,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </RadioButton>
+
+                                    <RadioButton Grid.Column="1" Classes="LoaderCardRadio" GroupName="LoaderSelection" Margin="5,0,0,0" Height="50"
+                                                 IsChecked="{Binding NewModpackLoader, Converter={StaticResource ComparisonConverter}, ConverterParameter=Fabric}">
+                                        <Grid Margin="12,0" VerticalAlignment="Center" ColumnDefinitions="Auto,*">
+                                            <Image Source="avares://QLauncher/Assets/Loaders/fabric.png" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="Fabric" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13"/>
+                                                <TextBlock Text="{DynamicResource Str_Loader_FabricDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="10" Margin="0,1,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </RadioButton>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,12" ColumnDefinitions="*,*,*">
+                                    <RadioButton Grid.Column="0" Classes="LoaderCardRadio" GroupName="LoaderSelection" Margin="0,0,4,0" Height="46"
+                                                 IsChecked="{Binding NewModpackLoader, Converter={StaticResource ComparisonConverter}, ConverterParameter=Forge}">
+                                        <Grid Margin="8,0" VerticalAlignment="Center" ColumnDefinitions="Auto,*">
+                                            <Image Source="avares://QLauncher/Assets/Loaders/forge.png" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="Forge" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12"/>
+                                                <TextBlock Text="{DynamicResource Str_Loader_Soon}" Foreground="#E8A33D" FontSize="9" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </RadioButton>
+
+                                    <RadioButton Grid.Column="1" Classes="LoaderCardRadio" GroupName="LoaderSelection" Margin="3,0,3,0" Height="46"
+                                                 IsChecked="{Binding NewModpackLoader, Converter={StaticResource ComparisonConverter}, ConverterParameter=NeoForge}">
+                                        <Grid Margin="8,0" VerticalAlignment="Center" ColumnDefinitions="Auto,*">
+                                            <Image Source="avares://QLauncher/Assets/Loaders/neoforge.png" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="NeoForge" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12"/>
+                                                <TextBlock Text="{DynamicResource Str_Loader_Soon}" Foreground="#E8A33D" FontSize="9" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </RadioButton>
+
+                                    <RadioButton Grid.Column="2" Classes="LoaderCardRadio" GroupName="LoaderSelection" Margin="4,0,0,0" Height="46"
+                                                 IsChecked="{Binding NewModpackLoader, Converter={StaticResource ComparisonConverter}, ConverterParameter=Quilt}">
+                                        <Grid Margin="8,0" VerticalAlignment="Center" ColumnDefinitions="Auto,*">
+                                            <Image Source="avares://QLauncher/Assets/Loaders/quilt.png" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="Quilt" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12"/>
+                                                <TextBlock Text="{DynamicResource Str_Loader_QuiltDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="9"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </RadioButton>
+                                </Grid>
+
+                                <StackPanel IsVisible="{Binding IsFabricSelected}">
+                                    <TextBlock Text="{DynamicResource Str_Create_AutoInstall}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,0,0,5" FontWeight="Bold"/>
+                                    <CheckBox Content="{DynamicResource Str_Create_Sodium}" Classes="CustomCheckBox" IsChecked="{Binding InstallSodium, Mode=TwoWay}" Margin="0,0,0,4"/>
+                                    <CheckBox Content="{DynamicResource Str_Create_Iris}" Classes="CustomCheckBox" IsChecked="{Binding InstallIris, Mode=TwoWay}"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Spacing="8">
+                                <Button Content="{DynamicResource Str_Action_Cancel}" Width="100" Height="42" Classes="DarkButton" Command="{Binding CloseModpackOverlayCommand}"/>
+                                <Button Content="{DynamicResource Str_Create_ImportZip}" Width="120" Height="42" Classes="DarkButton" Command="{Binding ImportZipModpackCommand}" ToolTip.Tip="{DynamicResource Str_Create_ImportZipTooltip}"/>
+                                <Button Content="{DynamicResource Str_Create_Submit}" Width="120" Height="42" Classes="PlayButton" Command="{Binding CreateModpackCommand}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- Loading Spinner Action Overlay -->
+            <Border x:Name="ActionOverlay" Background="#CC0F111A" CornerRadius="0,0,11,11"
+                    IsVisible="{Binding IsActionOverlayVisible}" ZIndex="999">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="⏳" Foreground="{DynamicResource AccentBrush}" FontSize="40" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding ActionOverlayText}" Foreground="White" FontSize="18" FontWeight="SemiBold" Margin="0,15,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Shortcut Overlay -->
+            <Grid x:Name="ShortcutOverlay" IsVisible="{Binding IsShortcutOverlayVisible}" ZIndex="900">
+                <Border Background="#AA000000" CornerRadius="0,0,11,11" PointerPressed="CloseShortcutOverlay_PointerPressed"/>
+                <Border Width="400" Height="350" HorizontalAlignment="Center" VerticalAlignment="Center" CornerRadius="16"
+                        Background="{DynamicResource ModpackOverlayBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="2"
+                        BoxShadow="0 4 20 0 #80000000">
+                    <Grid Margin="30">
+                        <TextBlock Text="{DynamicResource Str_Shortcut_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+
+                        <StackPanel Margin="0,50,0,0">
+                            <TextBlock Text="{DynamicResource Str_Shortcut_PickVersion}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5"/>
+                            <ComboBox ItemsSource="{Binding Versions}" SelectedItem="{Binding ShortcutVersion, Mode=TwoWay}" Height="42" Classes="CustomComboBox" Margin="0,0,0,15"/>
+
+                            <TextBlock Text="{DynamicResource Str_Shortcut_IpLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5"/>
+                            <TextBox Text="{Binding ShortcutIp, Mode=TwoWay}" Height="42" Classes="CustomTextBox" Margin="0,0,0,15"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Spacing="10">
+                            <Button Content="{DynamicResource Str_Action_Cancel}" Width="110" Height="42" Classes="DarkButton" Command="{Binding CloseShortcutOverlayCommand}"/>
+                            <Button Content="{DynamicResource Str_Create_Submit}" Width="140" Height="42" Classes="PlayButton" Command="{Binding CreateShortcutCommand}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Add Server Overlay -->
+            <Grid x:Name="AddServerOverlay" IsVisible="{Binding IsAddServerOverlayVisible}" ZIndex="910">
+                <Border Background="#AA000000" CornerRadius="0,0,11,11" PointerPressed="CloseAddServerOverlay_PointerPressed"/>
+                <Border Width="420" Height="340" HorizontalAlignment="Center" VerticalAlignment="Center" CornerRadius="16"
+                        Background="{DynamicResource ModpackOverlayBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="2"
+                        BoxShadow="0 4 20 0 #80000000">
+                    <Grid Margin="30">
+                        <TextBlock Text="{DynamicResource Str_Action_AddServer}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+
+                        <StackPanel Margin="0,46,0,0">
+                            <TextBlock Text="{DynamicResource Str_AddServer_NameLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5"/>
+                            <TextBox Text="{Binding NewServerName, Mode=TwoWay}" Height="40" Classes="CustomTextBox" Margin="0,0,0,14"/>
+
+                            <TextBlock Text="{DynamicResource Str_AddServer_IpLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,0,0,5"/>
+                            <TextBox Text="{Binding NewServerIp, Mode=TwoWay}" Height="40" Classes="CustomTextBox" Margin="0,0,0,14"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Spacing="10">
+                            <Button Content="{DynamicResource Str_Action_Cancel}" Width="110" Height="40" Classes="DarkButton" Command="{Binding CloseAddServerOverlayCommand}"/>
+                            <Button Content="{DynamicResource Str_Action_Save}" Width="140" Height="40" Classes="PlayButton" Command="{Binding AddServerCommand}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Drag & Drop Visual Overlay -->
+            <Grid x:Name="DragDropOverlay" IsVisible="False" ZIndex="998" Background="#DD0E131F" IsHitTestVisible="False">
+                <Border BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2" CornerRadius="12" Margin="24">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="📥" FontSize="52" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,14"/>
+                        <TextBlock Text="{DynamicResource Str_DragDrop_Overlay}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Toast Container -->
+            <StackPanel x:Name="ToastContainer"
+                        VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                        Margin="0,0,24,96" ZIndex="9999" IsHitTestVisible="False"/>
+        </Grid>
+    </Border>
+</Window>

@@ -1,0 +1,121 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:MinecraftLauncher.Helpers"
+             x:Class="MinecraftLauncher.Views.Pages.ModpacksPage"
+             x:Name="Root"
+             Background="Transparent">
+
+    <Grid Margin="20" RowDefinitions="Auto,*">
+        <Border Grid.Row="0" Background="{DynamicResource PanelBrush}" CornerRadius="16" Padding="20,15" Margin="0,0,0,15">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="15">
+                    <Button Content="←" FontSize="18" Width="38" Height="38" Classes="DarkButton" Click="BackButton_Click" ToolTip.Tip="{DynamicResource Str_Action_Back}"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource Str_Modpacks_Header}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="{DynamicResource Str_Modpacks_Subheader}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+                    <Button Height="36" Padding="14,0" Classes="DarkButton" Click="ImportZip_Click" ToolTip.Tip="{DynamicResource Str_Modpacks_ImportTooltip}" FontSize="13">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                            <TextBlock Text="📥" FontSize="13" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Str_Modpacks_ImportBtn}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Height="36" Padding="14,0" Classes="PlayButton" Click="CreatePack_Click" FontSize="13">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                            <TextBlock Text="+" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Str_Modpacks_NewBtn}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" CornerRadius="16" Padding="20">
+            <Grid>
+                <TextBlock Text="{DynamicResource Str_Modpacks_Empty}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="15"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           IsVisible="{Binding !Modpacks.Count}"/>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Modpacks}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="290" Background="{DynamicResource ModpackOverlayBgBrush}"
+                                        BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1.5"
+                                        CornerRadius="14" Margin="0,0,16,16" Padding="16"
+                                        BoxShadow="0 4 10 0 #4D000000"
+                                        helpers:Card3DTiltHelper.Enable3DTilt="True">
+                                    <Border.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_Play}"
+                                                      Command="{Binding #Root.DataContext.SelectPackCommand}"
+                                                      CommandParameter="{Binding Name}"/>
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_Manage}"
+                                                      Command="{Binding #Root.DataContext.ManagePackCommand}"
+                                                      CommandParameter="{Binding Name}"/>
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_OpenFolder}"
+                                                      Command="{Binding #Root.DataContext.OpenPackFolderCommand}"
+                                                      CommandParameter="{Binding Name}"/>
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_OpenMods}"
+                                                      Command="{Binding #Root.DataContext.OpenPackModsCommand}"
+                                                      CommandParameter="{Binding Name}"/>
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_Shortcut}"
+                                                      Command="{Binding #Root.DataContext.CreateShortcutCommand}"
+                                                      CommandParameter="{Binding Name}"/>
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_Clone}"
+                                                      Command="{Binding #Root.DataContext.DuplicatePackCommand}"
+                                                      CommandParameter="{Binding Name}"/>
+                                            <Separator/>
+                                            <MenuItem Header="{DynamicResource Str_Modpacks_Menu_Delete}"
+                                                      Command="{Binding #Root.DataContext.DeletePackCommand}"
+                                                      CommandParameter="{Binding Name}"/>
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
+                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+                                        <Grid Grid.Row="0" Margin="0,0,0,10" ColumnDefinitions="*,Auto">
+                                            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="18" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+                                            <Border Grid.Column="1" Background="{DynamicResource AccentBrush}" CornerRadius="6" Padding="8,3" IsVisible="{Binding IsActive}">
+                                                <TextBlock Text="{DynamicResource Str_Modpacks_ActiveBadge}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                            </Border>
+                                        </Grid>
+
+                                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10" Spacing="6">
+                                            <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="6" Padding="8,4">
+                                                <TextBlock Text="{Binding LoaderTag}" Foreground="{DynamicResource AccentBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                            </Border>
+                                            <Border Background="{DynamicResource HoverOverlayBrush}" CornerRadius="6" Padding="8,4">
+                                                <TextBlock Text="{Binding GameVersionTag}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"/>
+                                            </Border>
+                                        </StackPanel>
+
+                                        <TextBlock Grid.Row="2" Text="{Binding PlaytimeText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,0,0,15"/>
+
+                                        <Grid Grid.Row="3" ColumnDefinitions="*,Auto">
+                                            <Button Grid.Column="0" Height="36" Classes="PlayButton" Tag="{Binding Name}" Click="SelectPack_Click" Margin="0,0,8,0" FontSize="13">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6">
+                                                    <TextBlock Text="▶" FontSize="11" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{DynamicResource Str_Modpacks_SelectBtn}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="1" Width="36" Height="36" Classes="DarkButton" Tag="{Binding Name}" Click="ManagePack_Click" ToolTip.Tip="{DynamicResource Str_Modpacks_CardManageTooltip}">
+                                                <TextBlock Text="⚙" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Button>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

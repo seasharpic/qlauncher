@@ -1,4 +1,4 @@
-﻿using System.Windows.Media;
+﻿using Avalonia.Media;
 using MinecraftLauncher.Common;
 
 namespace MinecraftLauncher.Models
@@ -38,12 +38,11 @@ namespace MinecraftLauncher.Models
         }
 
         public string StatusText => Services.LocalizationService.Instance.GetString(IsEnabled ? "Str_Mod_Enabled" : "Str_Mod_Disabled");
-        public Brush StatusColor => IsEnabled
+        public IBrush StatusColor => IsEnabled
             ? new SolidColorBrush(Color.FromRgb(80, 220, 100))
             : new SolidColorBrush(Color.FromRgb(220, 80, 80));
         public string ActionText => Services.LocalizationService.Instance.GetString(IsEnabled ? "Str_Mod_Disable" : "Str_Mod_Enable");
 
-        /// <summary>Что нашлось при проверке обновлений: «Есть обновление: X» или «Не найден в каталогах».</summary>
         public string UpdateText
         {
             get => _updateText;
@@ -56,7 +55,6 @@ namespace MinecraftLauncher.Models
             }
         }
 
-        /// <summary>Каталог ответил обновлением — активен бейдж и кнопка на карточке.</summary>
         public bool HasUpdate
         {
             get => _hasUpdate;
@@ -70,7 +68,7 @@ namespace MinecraftLauncher.Models
         private string _loaderTag = "";
         private string _gameVersionTag = "";
         private string _playtimeText = "";
-        private System.Windows.Visibility _isActiveVisibility = System.Windows.Visibility.Collapsed;
+        private bool _isActive;
 
         public string Name
         {
@@ -96,10 +94,10 @@ namespace MinecraftLauncher.Models
             set => SetProperty(ref _playtimeText, value);
         }
 
-        public System.Windows.Visibility IsActiveVisibility
+        public bool IsActive
         {
-            get => _isActiveVisibility;
-            set => SetProperty(ref _isActiveVisibility, value);
+            get => _isActive;
+            set => SetProperty(ref _isActive, value);
         }
     }
 }

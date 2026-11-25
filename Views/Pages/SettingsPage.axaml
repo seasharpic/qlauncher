@@ -1,0 +1,426 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="MinecraftLauncher.Views.Pages.SettingsPage"
+             x:Name="Root">
+
+    <UserControl.Styles>
+        <Style Selector="RadioButton.ThemeCardRadio">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="{DynamicResource InputNicknameBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource WindowBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="6"/>
+        </Style>
+        <Style Selector="RadioButton.ThemeCardRadio:checked">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Margin="20" RowDefinitions="Auto,*">
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Button HorizontalAlignment="Left" Content="←" FontSize="18" Width="40" Height="40" Classes="DarkButton" Click="BackButton_Click" ToolTip.Tip="{DynamicResource Str_Action_Back}"/>
+            <TextBlock Text="{DynamicResource Str_Settings_Title}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Grid>
+
+        <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" CornerRadius="15" Padding="25">
+            <ScrollViewer x:Name="MainScrollViewer" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Str_Settings_SectionGeneral}" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_Language}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,8"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15" Spacing="12">
+                        <RadioButton Classes="ThemeCardRadio"
+                                     GroupName="LanguageSelectionGroup"
+                                     IsChecked="{Binding IsRussianLanguage, Mode=OneWay}"
+                                     Command="{Binding ChangeLanguageCommand}"
+                                     CommandParameter="ru"
+                                     Width="140">
+                            <TextBlock Text="{DynamicResource Str_Settings_LanguageRu}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="8"/>
+                        </RadioButton>
+                        <RadioButton Classes="ThemeCardRadio"
+                                     GroupName="LanguageSelectionGroup"
+                                     IsChecked="{Binding IsEnglishLanguage, Mode=OneWay}"
+                                     Command="{Binding ChangeLanguageCommand}"
+                                     CommandParameter="en"
+                                     Width="140">
+                            <TextBlock Text="{DynamicResource Str_Settings_LanguageEn}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="8"/>
+                        </RadioButton>
+                    </StackPanel>
+
+                    <CheckBox Content="{DynamicResource Str_Settings_CloseOnLaunch}" Classes="CustomCheckBox" IsChecked="{Binding CloseOnLaunch, Mode=TwoWay}"/>
+                    <CheckBox Content="{DynamicResource Str_Settings_DiscordRpc}" Classes="CustomCheckBox" IsChecked="{Binding EnableDiscordRpc, Mode=TwoWay}"/>
+                    <CheckBox Content="{DynamicResource Str_Settings_UiSounds}" Classes="CustomCheckBox" IsChecked="{Binding EnableUiSounds, Mode=TwoWay}"/>
+                    <CheckBox Content="{DynamicResource Str_Settings_HideServerIp}" Classes="CustomCheckBox" IsChecked="{Binding HideServerIp, Mode=TwoWay}"/>
+                    <CheckBox Content="{DynamicResource Str_Settings_AutoAddServers}" Classes="CustomCheckBox" IsChecked="{Binding AutoAddServers, Mode=TwoWay}"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_ThemeModeLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,15,0,10"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,20" Spacing="14">
+                        <RadioButton Classes="ThemeCardRadio"
+                                     GroupName="ThemeSelectionGroup"
+                                     IsChecked="{Binding IsLightTheme, Mode=OneWay}"
+                                     Command="{Binding SelectThemeCommand}"
+                                     CommandParameter="light"
+                                     Width="155">
+                            <StackPanel>
+                                <Border CornerRadius="7" Height="92" ClipToBounds="True" Background="#E0E6ED">
+                                    <Grid>
+                                        <Image Source="avares://QLauncher/Assets/theme_light.png" Stretch="UniformToFill"/>
+                                        <Border Width="44" Height="38" CornerRadius="6"
+                                                Background="#FFFFFF" BorderBrush="#E0E0E0" BorderThickness="1"
+                                                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                Margin="0,0,8,8">
+                                            <Border Width="22" Height="8" CornerRadius="3"
+                                                    Background="{DynamicResource AccentBrush}"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                                    Margin="0,0,0,6"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="{DynamicResource Str_Settings_ThemeLight}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" FontWeight="Medium" HorizontalAlignment="Center" Margin="0,7,0,3"/>
+                            </StackPanel>
+                        </RadioButton>
+
+                        <RadioButton Classes="ThemeCardRadio"
+                                     GroupName="ThemeSelectionGroup"
+                                     IsChecked="{Binding IsDarkTheme, Mode=OneWay}"
+                                     Command="{Binding SelectThemeCommand}"
+                                     CommandParameter="dark"
+                                     Width="155">
+                            <StackPanel>
+                                <Border CornerRadius="7" Height="92" ClipToBounds="True" Background="#151A22">
+                                    <Grid>
+                                        <Image Source="avares://QLauncher/Assets/theme_dark.png" Stretch="UniformToFill"/>
+                                        <Border Width="44" Height="38" CornerRadius="6"
+                                                Background="#2B2B2B" BorderBrush="#3A3A3A" BorderThickness="1"
+                                                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                Margin="0,0,8,8">
+                                            <Border Width="22" Height="8" CornerRadius="3"
+                                                    Background="{DynamicResource AccentBrush}"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                                    Margin="0,0,0,6"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="{DynamicResource Str_Settings_ThemeDark}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" FontWeight="Medium" HorizontalAlignment="Center" Margin="0,7,0,3"/>
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_AccentLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,10"/>
+                    <WrapPanel Margin="0,0,0,15">
+                        <Button Classes="DarkButton" Command="{Binding SelectAccentPresetCommand}" CommandParameter="sapphire" Height="36" Padding="14,0" Margin="0,0,8,8">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <Ellipse Width="10" Height="10" Fill="#3B85E6"/>
+                                <TextBlock Text="Sapphire" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="DarkButton" Command="{Binding SelectAccentPresetCommand}" CommandParameter="purple" Height="36" Padding="14,0" Margin="0,0,8,8">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <Ellipse Width="10" Height="10" Fill="#8B5CF6"/>
+                                <TextBlock Text="Amethyst" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="DarkButton" Command="{Binding SelectAccentPresetCommand}" CommandParameter="emerald" Height="36" Padding="14,0" Margin="0,0,8,8">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <Ellipse Width="10" Height="10" Fill="#10B981"/>
+                                <TextBlock Text="Emerald" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="DarkButton" Command="{Binding SelectAccentPresetCommand}" CommandParameter="rose" Height="36" Padding="14,0" Margin="0,0,8,8">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <Ellipse Width="10" Height="10" Fill="#F43F5E"/>
+                                <TextBlock Text="Rose" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="DarkButton" Command="{Binding SelectAccentPresetCommand}" CommandParameter="amber" Height="36" Padding="14,0" Margin="0,0,8,8">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <Ellipse Width="10" Height="10" Fill="#F59E0B"/>
+                                <TextBlock Text="Amber" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="DarkButton" Command="{Binding SelectAccentPresetCommand}" CommandParameter="nether" Height="36" Padding="14,0" Margin="0,0,8,8">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <Ellipse Width="10" Height="10" Fill="#D64541"/>
+                                <TextBlock Text="Nether" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="DarkButton" Command="{Binding SelectAccentPresetCommand}" CommandParameter="end" Height="36" Padding="14,0" Margin="0,0,8,8">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <Ellipse Width="10" Height="10" Fill="#5A2EC9"/>
+                                <TextBlock Text="End" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="DarkButton" Command="{Binding SelectAccentPresetCommand}" CommandParameter="sift" Height="36" Padding="14,0" Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <Ellipse Width="10" Height="10" Fill="#12A5A5"/>
+                                <TextBlock Text="Sift" FontSize="13"/>
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_WallpaperLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <Grid Margin="0,0,0,15" ColumnDefinitions="*,Auto,Auto">
+                        <TextBox Text="{Binding CustomWallpaperPath, Mode=TwoWay}" Classes="CustomTextBox" Height="40" Margin="0,0,10,0" IsReadOnly="True" FontSize="13"/>
+                        <Button Grid.Column="1" Content="{DynamicResource Str_Settings_BrowseWallpaper}" Width="110" Height="40" Classes="DarkButton" Command="{Binding BrowseWallpaperCommand}" Margin="0,0,8,0" FontSize="13"/>
+                        <Button Grid.Column="2" Content="{DynamicResource Str_Settings_ResetWallpaper}" Width="100" Height="40" Classes="DarkButton" Command="{Binding ResetWallpaperCommand}" FontSize="13"/>
+                    </Grid>
+
+                    <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_SourcesTitle}" Foreground="{DynamicResource AccentBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <TextBlock Text="{DynamicResource Str_Settings_SourcesDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_SourcePreference}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <ComboBox Height="40" Classes="CustomComboBox" SelectedValueBinding="{Binding Tag}" SelectedValue="{Binding MirrorPreference, Mode=TwoWay}" Margin="0,0,0,10" FontSize="13">
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Source_Auto}" Tag="Auto"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Source_OfficialFirst}" Tag="OfficialFirst"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Source_MirrorFirst}" Tag="MirrorFirst"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Source_OfficialOnly}" Tag="OfficialOnly"/>
+                    </ComboBox>
+
+                    <TextBlock Text="{Binding SourcesStatusText}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,15"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_BandwidthLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <ComboBox Height="40" Classes="CustomComboBox" SelectedValueBinding="{Binding Tag}" SelectedValue="{Binding BandwidthLimitTag, Mode=TwoWay}" Margin="0,0,0,15" FontSize="13">
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Bandwidth_None}" Tag="0"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Bandwidth_1}" Tag="1"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Bandwidth_3}" Tag="3"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Bandwidth_5}" Tag="5"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Bandwidth_10}" Tag="10"/>
+                    </ComboBox>
+
+                    <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_SectionAccounts}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <Border x:Name="AccountsSection" Background="{DynamicResource HoverOverlayBrush}" CornerRadius="10" Margin="0,0,0,15" Padding="5">
+                        <ItemsControl ItemsSource="{Binding Accounts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="5" ColumnDefinitions="Auto,*,Auto">
+                                        <Border Width="14" Height="14" CornerRadius="7" Background="#7A6FF0"
+                                                Margin="10,0,10,0" VerticalAlignment="Center" IsVisible="{Binding IsElyBy}">
+                                            <TextBlock Text="E" FontSize="9" FontWeight="Bold" Foreground="White"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <TextBlock Grid.Column="1" Text="{Binding Nickname}" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" FontSize="13" Margin="6,0,0,0"/>
+                                        <Button Grid.Column="2" Content="🗑" Width="30" Height="30" Classes="DarkButton" Foreground="#E81123"
+                                                Command="{Binding #Root.DataContext.DeleteAccountCommand}"
+                                                CommandParameter="{Binding}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_OfflineAccount}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <Grid Margin="0,0,0,15" ColumnDefinitions="*,Auto">
+                        <TextBox Text="{Binding OfflineNicknameInput, Mode=TwoWay}" Classes="CustomTextBox" Height="40" Margin="0,0,10,0" FontSize="13"/>
+                        <Button Grid.Column="1" Content="{DynamicResource Str_Settings_AddOffline}" Width="140" Height="40" Classes="DarkButton" Command="{Binding AddOfflineAccountCommand}" FontSize="13"/>
+                    </Grid>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_MsAccount}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <Button Content="{DynamicResource Str_Settings_LoginMicrosoft}" Width="240" Height="40" HorizontalAlignment="Left" Classes="PlayButton" Command="{Binding LoginMicrosoftCommand}" Margin="0,0,0,25" FontSize="13"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_ElyAccount}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <Grid Margin="0,0,0,25" RowDefinitions="Auto,Auto,Auto">
+                        <Grid Grid.Row="0" Margin="0,0,0,8" ColumnDefinitions="*,10,*">
+                            <TextBox Text="{Binding ElyLoginInput, Mode=TwoWay}" Classes="CustomTextBox" Height="40" FontSize="13"/>
+                            <TextBox Grid.Column="2" Text="{Binding ElyPasswordInput, Mode=TwoWay}" PasswordChar="•" Classes="CustomTextBox" Height="40" FontSize="13"/>
+                        </Grid>
+
+                        <TextBox Grid.Row="1" Text="{Binding ElyTotpCodeInput, Mode=TwoWay}"
+                                 Classes="CustomTextBox" Height="40" FontSize="13" Margin="0,0,0,8"
+                                 IsVisible="{Binding ElyTotpVisibility}"/>
+
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" Spacing="10">
+                            <Button Content="{DynamicResource Str_Settings_LoginElyBrowser}" Width="190" Height="40"
+                                    Classes="PlayButton" Command="{Binding LoginElyByBrowserCommand}" FontSize="13"/>
+                            <Button Content="{DynamicResource Str_Settings_LoginEly}" Width="160" Height="40"
+                                    Classes="DarkButton" Command="{Binding LoginElyByCommand}" FontSize="13"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_SectionJava}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,15"/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,6">
+                        <TextBlock Text="{DynamicResource Str_Settings_Memory}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" VerticalAlignment="Center"/>
+                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="10" Padding="8,2">
+                            <TextBlock Text="{Binding RamPill}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                        </Border>
+                    </StackPanel>
+
+                    <Grid Margin="20,4,20,14" RowDefinitions="Auto,Auto">
+                        <Slider x:Name="RamSlider" Grid.Row="0" Minimum="0" Maximum="8" TickFrequency="1" IsSnapToTickEnabled="True"
+                                Value="{Binding RamIndex, Mode=TwoWay}"/>
+                        <Grid Grid.Row="1" IsHitTestVisible="False" ColumnDefinitions="*,*,*,*,*,*,*,*">
+                            <TextBlock Grid.Column="0" Text="1 GB" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Left"/>
+                            <TextBlock Grid.Column="1" Text="4 GB" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Text="8 GB" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="5" Text="12 GB" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="7" Text="16 GB" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" HorizontalAlignment="Right"/>
+                        </Grid>
+                    </Grid>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_JavaPath}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <Grid Margin="0,0,0,15" ColumnDefinitions="*,Auto">
+                        <TextBox Text="{Binding JavaPath, Mode=TwoWay}" Classes="CustomTextBox" Height="40" Margin="0,0,10,0" FontSize="13"/>
+                        <Button Grid.Column="1" Content="{DynamicResource Str_Settings_Browse}" Width="100" Height="40" Classes="DarkButton" Command="{Binding BrowseJavaCommand}" FontSize="13"/>
+                    </Grid>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_JvmPreset}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <ComboBox Height="40" Classes="CustomComboBox" SelectedValueBinding="{Binding Tag}" SelectedValue="{Binding JvmPreset, Mode=TwoWay}" Margin="0,0,0,10" FontSize="13">
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Gc_Auto}" Tag="Auto"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Gc_G1GC}" Tag="G1GC"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Gc_Shenandoah}" Tag="Shenandoah"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Gc_ZGC}" Tag="ZGC"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Gc_None}" Tag="None"/>
+                    </ComboBox>
+
+                    <CheckBox Content="{DynamicResource Str_Settings_OptimizedJvmArgs}" Classes="CustomCheckBox"
+                              IsChecked="{Binding UseOptimizedJvmArgs, Mode=TwoWay}" Margin="0,0,0,10"
+                              ToolTip.Tip="{DynamicResource Str_Settings_OptimizedArgsTip}"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_CustomJvmArgs}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding CustomJvmArgs, Mode=TwoWay}" Classes="CustomTextBox" Height="40" Margin="0,0,0,10" FontSize="13" FontFamily="Consolas, Monospace"/>
+                    <TextBlock Text="{DynamicResource Str_Settings_CustomJvmArgsHint}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_ResolvedArgs}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <Border Background="{DynamicResource InputBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,15">
+                        <TextBlock Text="{Binding ResolvedJvmArgs}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="11" FontFamily="Consolas, Monospace" TextWrapping="Wrap"/>
+                    </Border>
+
+                    <TextBlock Text="{Binding JvmArgsWarning}" Foreground="#E8A33D" FontSize="12" TextWrapping="Wrap"
+                               IsVisible="{Binding JvmArgsWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_Gpu}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <Grid Margin="0,0,0,10" ColumnDefinitions="*,Auto">
+                        <ComboBox Height="40" Classes="CustomComboBox"
+                                  ItemsSource="{Binding GpuOptions}"
+                                  SelectedItem="{Binding SelectedGpuOption, Mode=TwoWay}"
+                                  DisplayMemberBinding="{Binding Title}"
+                                  FontSize="13"/>
+                        <Button Grid.Column="1" Content="🔄"
+                                Width="40" Height="40" Margin="10,0,0,0"
+                                Classes="DarkButton"
+                                Command="{Binding RefreshGpuCommand}"
+                                ToolTip.Tip="{DynamicResource Str_Settings_GpuRefreshTip}" FontSize="14"/>
+                    </Grid>
+
+                    <Border Background="{DynamicResource InputBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,15">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <TextBlock Text="🖥" FontSize="18" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ActiveGpuSummary}" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12"/>
+                                <TextBlock Text="{Binding ActiveGpuDetails}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <CheckBox Content="{DynamicResource Str_Settings_Fullscreen}" Classes="CustomCheckBox" IsChecked="{Binding IsFullScreen, Mode=TwoWay}"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_ResolutionLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,10,0,5"/>
+                    <Grid Margin="0,0,0,15" ColumnDefinitions="*,20,*">
+                        <TextBox Text="{Binding ScreenWidth, Mode=TwoWay}" Classes="CustomTextBox" Height="40" FontSize="13"/>
+                        <TextBlock Grid.Column="1" Text="x" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13"/>
+                        <TextBox Grid.Column="2" Text="{Binding ScreenHeight, Mode=TwoWay}" Classes="CustomTextBox" Height="40" FontSize="13"/>
+                    </Grid>
+
+                    <Button Content="{DynamicResource Str_Settings_AutoTune}"
+                            Command="{Binding AutoTuneHardwareCommand}"
+                            Height="38" Classes="DarkButton"
+                            HorizontalAlignment="Left" Padding="16,0" Margin="0,0,0,15" FontSize="13"
+                            ToolTip.Tip="{DynamicResource Str_Settings_AutoTuneTip}"/>
+
+                    <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_Storage}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                    <Grid Margin="0,0,0,15" ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding CacheInfoText}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13"/>
+                            <TextBlock Text="{DynamicResource Str_Settings_CacheDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="{DynamicResource Str_Settings_CleanCache}" Command="{Binding CleanCacheCommand}" Width="160" Height="40" Classes="DarkButton" FontSize="13"/>
+                    </Grid>
+
+                    <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_PortableMode}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                    <Border Background="{DynamicResource InputBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,0,0,12">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <TextBlock Text="💾" FontSize="22" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding PortableModeStatusText}" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13"/>
+                                <TextBlock Text="{Binding DataDirectoryPath}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10" Spacing="10">
+                        <Button Content="{DynamicResource Str_Settings_ExportPortable}" Command="{Binding ExportPortableCommand}" Height="38" Padding="16,0" Classes="DarkButton" FontSize="13"/>
+                        <Button Content="{DynamicResource Str_Settings_OpenDataFolder}" Command="{Binding OpenDataFolderCommand}" Height="38" Padding="16,0" Classes="DarkButton" FontSize="13"/>
+                        <Button Content="{DynamicResource Str_Settings_EnablePortable}" Command="{Binding EnablePortableModeCommand}" Height="38" Padding="16,0" Classes="DarkButton"
+                                IsVisible="{Binding CanEnablePortableMode}" FontSize="13"
+                                ToolTip.Tip="{DynamicResource Str_Settings_PortableEnableTip}"/>
+                        <Button Content="{DynamicResource Str_Settings_DisablePortable}" Command="{Binding DisablePortableModeCommand}" Height="38" Padding="16,0" Classes="DarkButton"
+                                IsVisible="{Binding CanDisablePortableMode}" FontSize="13"
+                                ToolTip.Tip="{DynamicResource Str_Settings_PortableDisableTip}"/>
+                    </StackPanel>
+                    <Button Content="{DynamicResource Str_Settings_RestartNow}" Command="{Binding RestartToApplyPortableModeCommand}" Height="38" Padding="16,0"
+                            HorizontalAlignment="Left" Classes="DarkButton" Margin="0,0,0,10" FontSize="13"
+                            ToolTip.Tip="{DynamicResource Str_Settings_RestartTip}"/>
+
+                    <Border Height="1" Background="{DynamicResource HoverOverlayBrush}" Margin="0,20"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_SectionUpdatesAndAbout}" Foreground="{DynamicResource AccentBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,15"/>
+
+                    <Border Background="{DynamicResource InputBgBrush}" BorderBrush="{DynamicResource WindowBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16,14" Margin="0,0,0,10">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Image Source="avares://QLauncher/logo.png" Width="48" Height="48" Margin="0,0,16,0" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="QLauncher" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="16" FontWeight="Bold"/>
+                                    <Border Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="6,1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding CurrentVersionText}" Foreground="Black" FontSize="11" FontWeight="Bold"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="{DynamicResource Str_Settings_AboutDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="2" Content="{DynamicResource Str_Settings_CheckNow}" Command="{Binding CheckUpdatesManualCommand}" Width="135" Height="40" Classes="DarkButton" FontSize="13" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                        </Grid>
+                    </Border>
+                    <TextBlock Text="{DynamicResource Str_Settings_UpdatesDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                    <CheckBox Content="{DynamicResource Str_Settings_CheckUpdates}" Classes="CustomCheckBox" IsChecked="{Binding CheckUpdatesOnStartup, Mode=TwoWay}"/>
+                    <CheckBox Content="{DynamicResource Str_Settings_ShowSplash}" Classes="CustomCheckBox" IsChecked="{Binding ShowSplashOnStartup, Mode=TwoWay}"/>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_ChannelLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,10,0,5"/>
+                    <ComboBox Height="40" Classes="CustomComboBox" SelectedValueBinding="{Binding Tag}" SelectedValue="{Binding UpdateChannel, Mode=TwoWay}" Margin="0,0,0,15" FontSize="13">
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Channel_Stable}" Tag="stable"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Channel_Beta}" Tag="beta"/>
+                    </ComboBox>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_UpdateMirrorLabel}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,5"/>
+                    <ComboBox Height="40" Classes="CustomComboBox" SelectedValueBinding="{Binding Tag}" SelectedValue="{Binding UpdateMirror, Mode=TwoWay}" Margin="0,0,0,15" FontSize="13">
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_UpdateMirror_Auto}" Tag="auto"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_UpdateMirror_GitHub}" Tag="github"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_UpdateMirror_SourceForge}" Tag="sourceforge"/>
+                    </ComboBox>
+
+                    <Grid Margin="0,5,0,20" ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Str_Settings_DiagnosticLabel}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13"/>
+                            <TextBlock Text="{DynamicResource Str_Settings_DiagnosticDesc}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="{DynamicResource Str_Settings_DiagnosticBtn}" Command="{Binding ExportDiagnosticReportCommand}" Width="150" Height="40" Classes="DarkButton" FontSize="13"/>
+                    </Grid>
+
+                    <Button Content="{DynamicResource Str_Action_Save}" Width="140" Height="42" HorizontalAlignment="Right" Margin="0,15,0,0" Classes="DarkButton" Click="BackButton_Click" FontSize="13"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

@@ -5,10 +5,11 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Threading;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using MinecraftLauncher.Common;
 using MinecraftLauncher.Helpers;
 using MinecraftLauncher.Models;
@@ -491,11 +492,11 @@ public string ProgressText
             DeleteModpackCommand = new RelayCommand(ExecuteDeleteModpack);
             OpenQuickFolderCommand = new RelayCommand<string>(ExecuteOpenQuickFolder);
 
-            CopyServerIpCommand = new RelayCommand<string>(ip =>
+            CopyServerIpCommand = new RelayCommand<string>(async ip =>
             {
                 if (!string.IsNullOrWhiteSpace(ip))
                 {
-                    Clipboard.SetText(ip);
+                    await UiHelper.SetClipboardTextAsync(ip);
                     _toastService.ShowSuccess(_loc.Format("Str_Server_IpCopied", ip), _loc.GetString("Str_T_Server"));
                 }
             });
@@ -506,11 +507,11 @@ public string ProgressText
                 _toastService.ShowSuccess(_loc.GetString("Str_Server_StatusUpdated"), _loc.GetString("Str_T_Monitoring"));
             });
 
-            DeleteServerCommand = new RelayCommand<ServerItem>(server =>
+            DeleteServerCommand = new RelayCommand<ServerItem>(async server =>
             {
                 if (server == null || string.IsNullOrWhiteSpace(server.Ip)) return;
 
-                if (QMessageBoxWindow.Show(_loc.Format("Str_Server_DeleteQuestion", server.Name), _loc.GetString("Str_T_DeleteConfirm"), MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                if (await QMessageBoxWindow.ShowAsync(_loc.Format("Str_Server_DeleteQuestion", server.Name), _loc.GetString("Str_T_DeleteConfirm"), QMessageBoxButton.YesNo, QMessageBoxImage.Question) == QMessageBoxResult.Yes)
                 {
                     _serverStatusService.RemoveServer(_settingsService.Settings.GamePath, server.Ip);
                     Servers.Remove(server);
@@ -593,13 +594,13 @@ _serverTimer.Start();
                             return;
                         }
 
-                        Application.Current.Dispatcher.Invoke(() =>
+                        await Dispatcher.UIThread.InvokeAsync(async () =>
                         {
-                            var updateWindow = new Views.Windows.UpdateWindow(release)
-                            {
-                                Owner = Application.Current.MainWindow
-                            };
-                            updateWindow.ShowDialog();
+                            var updateWindow = new UpdateWindow(release);
+                            if (UiHelper.MainWindow is { } owner)
+                                await updateWindow.ShowDialog(owner);
+                            else
+                                updateWindow.Show();
                         });
                     }
                 }
@@ -616,27 +617,26 @@ _serverTimer.Start();
             {
                 try
                 {
-                    var bitmap = new BitmapImage(new Uri(settings.CustomWallpaperPath, UriKind.Absolute));
+                    var bitmap = new Bitmap(settings.CustomWallpaperPath);
                     CustomBackgroundBrush = new ImageBrush(bitmap) { Stretch = Stretch.UniformToFill };
                     return;
                 }
                 catch { }
             }
 
-            // Тематические пресеты несут встроенные обои; у остальных — общая bg.png.
-            // Пользовательская картинка (CustomWallpaperPath) всегда сильнее тематики.
             string? presetPack = _themeService.CurrentAccentPreset?.ToLowerInvariant() switch
             {
-                "nether" => "pack://application:,,,/Assets/bg_nether.png",
-                "end" => "pack://application:,,,/Assets/bg_end.png",
-                "sift" => "pack://application:,,,/Assets/bg_sift.jpg",
+                "nether" => "avares://QLauncher/Assets/bg_nether.png",
+                "end" => "avares://QLauncher/Assets/bg_end.png",
+                "sift" => "avares://QLauncher/Assets/bg_sift.jpg",
                 _ => null
             };
 
             try
             {
-                var source = presetPack ?? "pack://application:,,,/bg.png";
-                CustomBackgroundBrush = new ImageBrush(new BitmapImage(new Uri(source, UriKind.Absolute)))
+                var source = presetPack ?? "avares://QLauncher/bg.png";
+                using var stream = AssetLoader.Open(new Uri(source));
+                CustomBackgroundBrush = new ImageBrush(new Bitmap(stream))
                 {
                     Stretch = Stretch.UniformToFill
                 };
@@ -672,10 +672,10 @@ _serverTimer.Start();
 
                 if (img == null || _disposed) return;
 
-                _ = Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                Dispatcher.UIThread.Post(() =>
                 {
                     acc.AvatarImage = img;
-                }));
+                });
             }
             catch (Exception ex)
             {
@@ -741,7 +741,7 @@ _serverTimer.Start();
         public async Task RefreshNewsAsync()
         {
             var posts = await _newsService.FetchTelegramNewsAsync();
-            Application.Current.Dispatcher.Invoke(() =>
+            Dispatcher.UIThread.Post(() =>
             {
                 NewsPosts.Clear();
                 foreach (var p in posts) NewsPosts.Add(p);
@@ -753,7 +753,7 @@ _serverTimer.Start();
         {
             var settings = _settingsService.Settings;
             var list = await _serverStatusService.LoadAndPingServersAsync(settings.GamePath);
-            Application.Current.Dispatcher.Invoke(() =>
+            Dispatcher.UIThread.Post(() =>
             {
                 Servers.Clear();
                 foreach (var s in list) Servers.Add(s);
@@ -763,7 +763,7 @@ _serverTimer.Start();
 
         private void OnFileProgressChanged(int progressed, int total)
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            Dispatcher.UIThread.Post(() =>
             {
                 if (total > 0)
                 {
@@ -778,7 +778,7 @@ _serverTimer.Start();
 
         private void OnByteProgressChanged(long progressed, long total, double ratio, string speed)
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            Dispatcher.UIThread.Post(() =>
             {
                 ProgressFillRatio = ratio;
                 if (IsActionOverlayVisible && !string.IsNullOrEmpty(speed))
@@ -903,13 +903,13 @@ _serverTimer.Start();
             var compat = await JavaCompatibilityService.Instance.CheckCompatibilityAsync(version, settings.JavaPath);
             if (!compat.IsCompatible)
             {
-                var choice = QMessageBoxWindow.Show(
+                var choice = await QMessageBoxWindow.ShowAsync(
                     $"{compat.Message}\n\n{_loc.Format("Str_Launch_JavaMismatchPrompt", compat.RequiredVersion)}",
                     _loc.GetString("Str_T_JavaCheck"),
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
+                    QMessageBoxButton.YesNo,
+                    QMessageBoxImage.Warning);
 
-                if (choice != MessageBoxResult.Yes)
+                if (choice != QMessageBoxResult.Yes)
                 {
                     return;
                 }
@@ -926,7 +926,7 @@ _serverTimer.Start();
                     account,
                     settings,
                     serverIp,
-                    status => Application.Current.Dispatcher.Invoke(() =>
+                    status => Dispatcher.UIThread.Post(() =>
                     {
                         ActionOverlayText = status;
                         _discordService.SetLaunchingState(version, status);
@@ -982,7 +982,7 @@ _serverTimer.Start();
                             // из пула и PropertyChanged улетал не в тот поток.
                             long added = Math.Max(0, minutes);
 
-                            Application.Current.Dispatcher.Invoke(() =>
+                            Dispatcher.UIThread.Post(() =>
                             {
                                 pack.PlaytimeMinutes += added;
                                 pack.LaunchCount += 1;
@@ -994,7 +994,7 @@ _serverTimer.Start();
                         if (exitCode != 0)
                         {
                             var crash = CrashAnalyzer.AnalyzeLatestCrash(effectiveGamePath);
-                            Application.Current.Dispatcher.Invoke(() =>
+                            Dispatcher.UIThread.Post(() =>
                             {
                                 RequestShow?.Invoke();
                                 _toastService.ShowError($"{crash.Summary}\n\n{crash.Recommendation}", crash.Title);
@@ -1116,19 +1116,29 @@ _serverTimer.Start();
             {
                 string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                 string cleanName = ShortcutVersion.Replace("⭐", "").Replace(":", "_").Trim();
-                string shortcutFile = Path.Combine(desktop, $"Minecraft ({cleanName}).lnk");
-
                 string exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "";
-                var shellType = Type.GetTypeFromProgID("WScript.Shell");
-                if (shellType != null)
+
+                if (OperatingSystem.IsWindows())
                 {
-                    dynamic shell = Activator.CreateInstance(shellType)!;
-                    dynamic shortcut = shell.CreateShortcut(shortcutFile);
-                    shortcut.TargetPath = exePath;
-                    shortcut.Arguments = $"-quickplay \"{ShortcutVersion}\" \"{ShortcutIp.Trim()}\"";
-                    shortcut.IconLocation = $"{exePath},0";
-                    shortcut.WorkingDirectory = Path.GetDirectoryName(exePath) ?? "";
-                    shortcut.Save();
+                    string shortcutFile = Path.Combine(desktop, $"Minecraft ({cleanName}).lnk");
+                    var shellType = Type.GetTypeFromProgID("WScript.Shell");
+                    if (shellType != null)
+                    {
+                        dynamic shell = Activator.CreateInstance(shellType)!;
+                        dynamic shortcut = shell.CreateShortcut(shortcutFile);
+                        shortcut.TargetPath = exePath;
+                        shortcut.Arguments = $"-quickplay \"{ShortcutVersion}\" \"{ShortcutIp.Trim()}\"";
+                        shortcut.IconLocation = $"{exePath},0";
+                        shortcut.WorkingDirectory = Path.GetDirectoryName(exePath) ?? "";
+                        shortcut.Save();
+                    }
+                }
+                else if (OperatingSystem.IsLinux())
+                {
+                    string desktopFile = Path.Combine(desktop, $"QLauncher-{cleanName}.desktop");
+                    string content = $"[Desktop Entry]\nType=Application\nName=Minecraft ({cleanName})\nExec=\"{exePath}\" -quickplay \"{ShortcutVersion}\" \"{ShortcutIp.Trim()}\"\nTerminal=false\nCategories=Game;\n";
+                    File.WriteAllText(desktopFile, content);
+                    try { File.SetUnixFileMode(desktopFile, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute); } catch { }
                 }
 
                 IsShortcutOverlayVisible = false;
@@ -1142,21 +1152,18 @@ _serverTimer.Start();
 
         private async void ExecuteImportZipModpack()
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog
-            {
-                Filter = "Modpack files (*.mrpack;*.zip)|*.mrpack;*.zip|Modrinth Pack (*.mrpack)|*.mrpack|Zip Archive (*.zip)|*.zip",
-                Title = _loc.GetString("Str_Dialog_ImportPack")
-            };
+            var filePath = await UiHelper.PickFileAsync(
+                _loc.GetString("Str_Dialog_ImportPack"),
+                new FilePickerFileType("Modpack files") { Patterns = new[] { "*.mrpack", "*.zip" } });
 
-            if (dlg.ShowDialog() == true)
+            if (!string.IsNullOrEmpty(filePath))
             {
                 try
                 {
                     _toastService.ShowInfo(_loc.GetString("Str_Import_Progress"), _loc.GetString("Str_T_ImportTitle"));
 
-                    // Общий сервис импорта вместо второй копии этой же логики.
                     var profile = await ModpackImportService.Instance.ImportAsync(
-                        dlg.FileName,
+                        filePath,
                         _settingsService.Settings.GamePath);
 
                     _settingsService.Settings.Modpacks.Add(profile);
@@ -1169,13 +1176,13 @@ _serverTimer.Start();
                 }
                 catch (Exception ex)
                 {
-                    CrashLogWriter.Write("ModpackImport", $"Failed to import '{dlg.FileName}'", ex);
+                    CrashLogWriter.Write("ModpackImport", $"Failed to import '{filePath}'", ex);
                     _toastService.ShowError(_loc.Format("Str_Import_Error", ex.Message), _loc.GetString("Str_T_Error"));
                 }
             }
         }
 
-        private void ExecuteDeleteModpack()
+        private async void ExecuteDeleteModpack()
         {
             if (string.IsNullOrWhiteSpace(SelectedVersion) || !SelectedVersion.StartsWith("⭐ "))
             {
@@ -1183,15 +1190,12 @@ _serverTimer.Start();
                 return;
             }
 
-            // Раньше вычислялось LastIndexOf('(') - 3 без проверки: при записи вида
-            // "⭐ Сборка" без скобок LastIndexOf возвращает -1, и Substring(2, -4)
-            // бросал ArgumentOutOfRangeException прямо в обработчик кнопки.
             int openParen = SelectedVersion.IndexOf('(');
             string packName = openParen > 2
                 ? SelectedVersion[2..openParen].Trim()
                 : SelectedVersion[2..].Trim();
 
-            if (QMessageBoxWindow.Show(_loc.Format("Str_Pack_DeleteQuestion", packName), _loc.GetString("Str_T_Confirmation"), MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (await QMessageBoxWindow.ShowAsync(_loc.Format("Str_Pack_DeleteQuestion", packName), _loc.GetString("Str_T_Confirmation"), QMessageBoxButton.YesNo, QMessageBoxImage.Warning) == QMessageBoxResult.Yes)
             {
                 var settings = _settingsService.Settings;
                 var pack = settings.Modpacks.Find(p => p.Name == packName);
