@@ -10,9 +10,10 @@ namespace MinecraftLauncher.Helpers
         public static string AppBaseDir => AppDomain.CurrentDomain.BaseDirectory;
 
         public static bool IsPortableMode =>
-            File.Exists(Path.Combine(AppBaseDir, "portable")) ||
-            File.Exists(Path.Combine(AppBaseDir, "portable.txt")) ||
-            Directory.Exists(Path.Combine(AppBaseDir, "data"));
+            !OperatingSystem.IsAndroid() &&
+            (File.Exists(Path.Combine(AppBaseDir, "portable")) ||
+             File.Exists(Path.Combine(AppBaseDir, "portable.txt")) ||
+             Directory.Exists(Path.Combine(AppBaseDir, "data")));
 
         public static string GetDefaultDataDirectory()
         {
@@ -23,7 +24,16 @@ namespace MinecraftLauncher.Helpers
                 return localData;
             }
 
-            string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".qlauncher");
+            string baseFolder = OperatingSystem.IsAndroid()
+                ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+                : Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+
+            if (string.IsNullOrWhiteSpace(baseFolder))
+            {
+                baseFolder = Path.GetTempPath();
+            }
+
+            string appData = Path.Combine(baseFolder, ".qlauncher");
             Directory.CreateDirectory(appData);
             return appData;
         }

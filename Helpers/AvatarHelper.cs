@@ -12,7 +12,7 @@ namespace MinecraftLauncher.Helpers
     {
         private static readonly HttpClient HttpClient = new HttpClient();
         private static readonly ConcurrentDictionary<string, Bitmap> Cache = new ConcurrentDictionary<string, Bitmap>();
-        private static readonly string CacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Cache", "Avatars");
+        private static readonly string CacheDir = Path.Combine(LauncherPathHelper.GetDefaultDataDirectory(), "Cache", "Avatars");
 
         static AvatarHelper()
         {

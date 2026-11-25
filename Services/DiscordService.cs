@@ -77,6 +77,7 @@ namespace MinecraftLauncher.Services
 
         private void EnsureClient()
         {
+            if (OperatingSystem.IsAndroid()) return;
             try
             {
                 var settings = SettingsService.Instance.Settings;

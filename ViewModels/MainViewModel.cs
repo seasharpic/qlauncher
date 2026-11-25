@@ -580,6 +580,7 @@ _serverTimer.Start();
 
             _ = Task.Run(async () =>
             {
+                if (OperatingSystem.IsAndroid()) return;
                 try
                 {
                     var settings = _settingsService.Settings;

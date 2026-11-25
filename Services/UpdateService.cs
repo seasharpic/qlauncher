@@ -57,8 +57,8 @@ namespace MinecraftLauncher.Services
                 string mirror = (settings.UpdateMirror ?? "auto").ToLowerInvariant();
 
                 string apiUrl = channel == "beta"
-                    ? "https://api.github.com/repos/dyagyatis/QLauncher/releases"
-                    : "https://api.github.com/repos/dyagyatis/QLauncher/releases/latest";
+                    ? "https://api.github.com/repos/seasharpic/qlauncher/releases"
+                    : "https://api.github.com/repos/seasharpic/qlauncher/releases/latest";
 
                 using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
                 request.Headers.Accept.ParseAdd("application/vnd.github.v3+json");
@@ -132,7 +132,7 @@ namespace MinecraftLauncher.Services
                 }
 
                 string downloadUrl = "";
-                string fileName = "QLauncher.exe";
+                string fileName = OperatingSystem.IsWindows() ? "QLauncher-win-x64.exe" : "QLauncher-linux-x64";
                 long fileSizeBytes = 0;
                 string sha256 = "";
 
@@ -141,7 +141,13 @@ namespace MinecraftLauncher.Services
                     foreach (var asset in assets.EnumerateArray())
                     {
                         string name = asset.GetProperty("name").GetString() ?? "";
-                        if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                        bool match = OperatingSystem.IsWindows()
+                            ? (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || name.EndsWith("win-x64.zip", StringComparison.OrdinalIgnoreCase))
+                            : OperatingSystem.IsAndroid()
+                                ? name.EndsWith(".apk", StringComparison.OrdinalIgnoreCase)
+                                : (name.Contains("linux", StringComparison.OrdinalIgnoreCase) && !name.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase));
+
+                        if (match)
                         {
                             downloadUrl = asset.GetProperty("browser_download_url").GetString() ?? "";
                             fileSizeBytes = asset.TryGetProperty("size", out var s) ? s.GetInt64() : 0;

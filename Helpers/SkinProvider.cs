@@ -12,7 +12,7 @@ namespace MinecraftLauncher.Helpers
         private static readonly HttpClient Http = new();
         private static readonly ConcurrentDictionary<string, Bitmap> Cache = new();
         private static readonly string CacheDir =
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Cache", "Skins");
+            Path.Combine(LauncherPathHelper.GetDefaultDataDirectory(), "Cache", "Skins");
 
         static SkinProvider()
         {

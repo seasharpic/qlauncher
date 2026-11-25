@@ -30,7 +30,14 @@ namespace MinecraftLauncher.Views
             Loaded += async (_, _) =>
             {
                 ToastService.Instance.RegisterContainer(ToastContainer);
-                await ViewModel.InitializeAsync();
+                try
+                {
+                    await ViewModel.InitializeAsync();
+                }
+                catch (Exception ex)
+                {
+                    ToastService.Instance.ShowError(ex.Message, "Str_T_Error");
+                }
             };
         }
 

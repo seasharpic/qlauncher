@@ -7,6 +7,6 @@ namespace MinecraftLauncher.Services
     /// </summary>
     public static class LauncherIdentity
     {
-        public const string CurrentVersion = "v2.1.0.1";
+        public const string CurrentVersion = "v2.1.0.2";
     }
 }
