@@ -9,7 +9,7 @@ namespace QLauncher.Android
 {
     [Activity(
         Label = "QLauncher",
-        Theme = "@android:style/Theme.Material.NoActionBar",
+        Theme = "@style/MyTheme.NoActionBar",
         MainLauncher = true,
         ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
     public class MainActivity : AvaloniaMainActivity<MinecraftLauncher.AndroidApp>
