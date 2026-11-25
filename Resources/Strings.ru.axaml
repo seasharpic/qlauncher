@@ -37,6 +37,8 @@
     <sys:String x:Key="Str_Settings_TitlebarStyle">Стиль заголовка окна (DE / WM):</sys:String>
     <sys:String x:Key="Str_Settings_Titlebar_Auto">Авто (определить систему / WM)</sys:String>
     <sys:String x:Key="Str_Settings_Titlebar_Tiling">Тайлинг (Niri / Hyprland / Sway / i3)</sys:String>
+    <sys:String x:Key="Str_Android_OpenAmethyst">Открыть в Amethyst</sys:String>
+    <sys:String x:Key="Str_Android_AmethystMissing">Amethyst / PojavLauncher не установлен на устройстве</sys:String>
     <sys:String x:Key="Str_Settings_Theme">Режим темы</sys:String>
     <sys:String x:Key="Str_Settings_ThemeLight">Светлая</sys:String>
     <sys:String x:Key="Str_Settings_ThemeDark">Тёмная</sys:String>

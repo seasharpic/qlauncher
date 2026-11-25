@@ -21,23 +21,15 @@ namespace MinecraftLauncher.Views.Pages
             ViewModel.RequestClose += OnRequestClose;
         }
 
-        private void BackButton_Click(object? sender, RoutedEventArgs e)
-        {
-            if (UiHelper.MainWindow is MainWindow mainWin)
-            {
-                mainWin.AnimateGoBack();
-            }
-        }
+        private void BackButton_Click(object? sender, RoutedEventArgs e) =>
+            UiHelper.Navigator?.AnimateGoBack();
 
         private void SelectPack_Click(object? sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is string packName)
             {
                 ViewModel.SelectPack(packName);
-                if (UiHelper.MainWindow is MainWindow mainWin)
-                {
-                    mainWin.CloseSettings();
-                }
+                UiHelper.Navigator?.CloseSettings();
             }
         }
 
@@ -53,29 +45,15 @@ namespace MinecraftLauncher.Views.Pages
 
         private void ImportZip_Click(object? sender, RoutedEventArgs e) => ViewModel.ImportZip();
 
-        private void OnRequestManageModpack(ModpackProfile pack)
-        {
-            if (UiHelper.MainWindow is MainWindow mainWin)
-            {
-                mainWin.AnimateNavigate(new ProfileManagerPage(pack));
-            }
-        }
+        private void OnRequestManageModpack(ModpackProfile pack) =>
+            UiHelper.Navigator?.AnimateNavigate(new ProfileManagerPage(pack));
 
         private void OnRequestCreateModpack()
         {
-            if (UiHelper.MainWindow is MainWindow mainWin)
-            {
-                mainWin.CloseSettings();
-                mainWin.OpenModpackOverlay();
-            }
+            UiHelper.Navigator?.CloseSettings();
+            UiHelper.Navigator?.OpenModpackOverlay();
         }
 
-        private void OnRequestClose()
-        {
-            if (UiHelper.MainWindow is MainWindow mainWin)
-            {
-                mainWin.CloseSettings();
-            }
-        }
+        private void OnRequestClose() => UiHelper.Navigator?.CloseSettings();
     }
 }

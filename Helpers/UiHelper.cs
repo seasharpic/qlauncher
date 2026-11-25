@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -10,10 +9,35 @@ using Avalonia.Threading;
 
 namespace MinecraftLauncher.Helpers
 {
+    public interface ILauncherNavigator
+    {
+        void AnimateNavigate(UserControl page);
+        void AnimateGoBack();
+        void CloseSettings();
+        void OpenModpackOverlay();
+        void OpenShortcutOverlay();
+        void ReloadLauncher();
+    }
+
     public static class UiHelper
     {
+        public static ILauncherNavigator? Navigator { get; set; }
+
         public static Window? MainWindow =>
             (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+
+        public static TopLevel? CurrentTopLevel
+        {
+            get
+            {
+                if (MainWindow is { } win) return TopLevel.GetTopLevel(win);
+                if (Application.Current?.ApplicationLifetime is ISingleViewApplicationLifetime single && single.MainView != null)
+                {
+                    return TopLevel.GetTopLevel(single.MainView);
+                }
+                return null;
+            }
+        }
 
         public static void RunOnUi(Action action)
         {
@@ -46,7 +70,7 @@ namespace MinecraftLauncher.Helpers
 
         public static async Task<string?> PickFileAsync(string title, params FilePickerFileType[] filters)
         {
-            var topLevel = TopLevel.GetTopLevel(MainWindow);
+            var topLevel = CurrentTopLevel;
             if (topLevel?.StorageProvider == null) return null;
 
             var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
@@ -61,7 +85,7 @@ namespace MinecraftLauncher.Helpers
 
         public static async Task<string?> SaveFileAsync(string title, string suggestedFileName, string? defaultExtension = null, params FilePickerFileType[] filters)
         {
-            var topLevel = TopLevel.GetTopLevel(MainWindow);
+            var topLevel = CurrentTopLevel;
             if (topLevel?.StorageProvider == null) return null;
 
             var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -77,7 +101,7 @@ namespace MinecraftLauncher.Helpers
 
         public static async Task<string?> PickFolderAsync(string title)
         {
-            var topLevel = TopLevel.GetTopLevel(MainWindow);
+            var topLevel = CurrentTopLevel;
             if (topLevel?.StorageProvider == null) return null;
 
             var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
@@ -91,7 +115,7 @@ namespace MinecraftLauncher.Helpers
 
         public static async Task SetClipboardTextAsync(string text)
         {
-            var topLevel = TopLevel.GetTopLevel(MainWindow);
+            var topLevel = CurrentTopLevel;
             if (topLevel?.Clipboard != null)
             {
                 await topLevel.Clipboard.SetTextAsync(text);

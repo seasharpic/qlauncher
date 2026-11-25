@@ -30,13 +30,8 @@ namespace MinecraftLauncher.Views.Pages
             AccountsSection?.BringIntoView();
         }
 
-        private void BackButton_Click(object? sender, RoutedEventArgs e)
-        {
-            if (UiHelper.MainWindow is MainWindow mainWindow)
-            {
-                mainWindow.CloseSettings();
-            }
-        }
+        private void BackButton_Click(object? sender, RoutedEventArgs e) =>
+            UiHelper.Navigator?.CloseSettings();
 
         private async void ExportSettings_Click(object? sender, RoutedEventArgs e)
         {

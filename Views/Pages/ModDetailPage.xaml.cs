@@ -21,10 +21,7 @@ namespace MinecraftLauncher.Views.Pages
 
         private void BackButton_Click(object? sender, RoutedEventArgs e)
         {
-            if (UiHelper.MainWindow is MainWindow mainWindow)
-            {
-                mainWindow.AnimateGoBack();
-            }
+            UiHelper.Navigator?.AnimateGoBack();
         }
     }
 }

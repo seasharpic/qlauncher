@@ -1,0 +1,40 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="MinecraftLauncher.AndroidApp"
+             RequestedThemeVariant="Dark">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://QLauncher/Themes/DarkTheme.axaml" />
+                <ResourceInclude Source="avares://QLauncher/Resources/Strings.ru.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+    <Application.Styles>
+        <FluentTheme />
+        <Style Selector="Button.PlayButton">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="Button.DarkButton">
+            <Setter Property="Background" Value="{DynamicResource InputNicknameBgBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="TextBox.CustomTextBox">
+            <Setter Property="Background" Value="{DynamicResource InputNicknameBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="ComboBox.CustomComboBox">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="CheckBox.CustomCheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+        </Style>
+    </Application.Styles>
+</Application>

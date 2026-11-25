@@ -47,7 +47,8 @@ namespace MinecraftLauncher.Models
             ModCategoryKind.ResourcePack,
             ModCategoryKind.Shader,
             ModCategoryKind.DataPack,
-            ModCategoryKind.Plugin
+            ModCategoryKind.Plugin,
+            ModCategoryKind.Modpack
         };
 
         public static bool IsModrinthSupported(ModCategoryKind kind) =>

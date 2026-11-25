@@ -19,7 +19,7 @@ using MinecraftLauncher.Views.Windows;
 
 namespace MinecraftLauncher
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, ILauncherNavigator
     {
         private static readonly ILocalizationService _loc = LocalizationService.Instance;
 
@@ -33,6 +33,7 @@ namespace MinecraftLauncher
         public MainWindow()
         {
             InitializeComponent();
+            UiHelper.Navigator = this;
             ViewModel = new MainViewModel();
             DataContext = ViewModel;
 

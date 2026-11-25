@@ -25,13 +25,8 @@ namespace MinecraftLauncher.Views.Pages
             DataContext = ViewModel;
         }
 
-        private void BackButton_Click(object? sender, RoutedEventArgs e)
-        {
-            if (UiHelper.MainWindow is MainWindow mainWin)
-            {
-                mainWin.AnimateGoBack();
-            }
-        }
+        private void BackButton_Click(object? sender, RoutedEventArgs e) =>
+            UiHelper.Navigator?.AnimateGoBack();
 
         private void Tab_Checked(object? sender, RoutedEventArgs e)
         {
@@ -43,20 +38,12 @@ namespace MinecraftLauncher.Views.Pages
 
         private void CreatePack_Click(object? sender, RoutedEventArgs e)
         {
-            if (UiHelper.MainWindow is MainWindow mainWin)
-            {
-                mainWin.CloseSettings();
-                mainWin.OpenModpackOverlay();
-            }
+            UiHelper.Navigator?.CloseSettings();
+            UiHelper.Navigator?.OpenModpackOverlay();
         }
 
-        private void CreateShortcut_Click(object? sender, RoutedEventArgs e)
-        {
-            if (UiHelper.MainWindow is MainWindow mainWin)
-            {
-                mainWin.OpenShortcutOverlay();
-            }
-        }
+        private void CreateShortcut_Click(object? sender, RoutedEventArgs e) =>
+            UiHelper.Navigator?.OpenShortcutOverlay();
 
         private async void DeletePack_Click(object? sender, RoutedEventArgs e)
         {
@@ -78,11 +65,8 @@ namespace MinecraftLauncher.Views.Pages
                     settings.Modpacks.Remove(modpack);
                     SettingsService.Instance.Save(settings);
 
-                    if (UiHelper.MainWindow is MainWindow mainWin)
-                    {
-                        mainWin.ReloadLauncher();
-                        mainWin.CloseSettings();
-                    }
+                    UiHelper.Navigator?.ReloadLauncher();
+                    UiHelper.Navigator?.CloseSettings();
                     ToastService.Instance.ShowSuccess(_loc.GetString("Str_Profile_DeletedPlain"), _loc.GetString("Str_T_Success"));
                 }
             }

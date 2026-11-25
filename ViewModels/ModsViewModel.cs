@@ -653,13 +653,14 @@ namespace MinecraftLauncher.ViewModels
 
             var (targetFolder, gameVersion, loader) = ResolveInstallContext();
             var kind = ModCategoryKinds.FromKey(item.ProjectType);
+            bool isModpack = kind == ModCategoryKind.Modpack;
             string? installFolder = ModCategoryKinds.InstallFolder(kind);
-            if (installFolder == null)
+            if (!isModpack && installFolder == null)
             {
                 _toastService.ShowInfo(_loc.GetString("Str_Mods_NoInstall"), _loc.GetString("Str_T_Error"));
                 return;
             }
-            string destDir = Path.Combine(targetFolder, installFolder);
+            string destDir = isModpack ? Path.Combine(Path.GetTempPath(), "qlauncher_dl_packs") : Path.Combine(targetFolder, installFolder!);
 
             IsLoading = true;
             LoadingText = _loc.Format("Str_Mods_SearchingTitle", item.Title);
@@ -668,7 +669,7 @@ namespace MinecraftLauncher.ViewModels
             {
                 Directory.CreateDirectory(destDir);
 
-                var file = await _browser.ResolveFileAsync(source, ToEntry(item), gameVersion, loader).ConfigureAwait(true);
+                var file = await _browser.ResolveFileAsync(source, ToEntry(item), isModpack ? "" : gameVersion, isModpack ? "" : loader).ConfigureAwait(true);
                 if (file == null)
                 {
                     _toastService.ShowWarning(gameVersion.Length > 0
@@ -680,6 +681,25 @@ namespace MinecraftLauncher.ViewModels
                 int installed = 0;
                 string? firstSavedName = await DownloadAndSaveAsync(file, destDir).ConfigureAwait(true);
                 if (firstSavedName != null) installed++;
+
+                if (isModpack && firstSavedName != null)
+                {
+                    string downloadedFile = Path.Combine(destDir, firstSavedName);
+                    try
+                    {
+                        var profile = await ModpackImportService.Instance.ImportAsync(
+                            downloadedFile,
+                            _settingsService.Settings.GamePath).ConfigureAwait(true);
+                        _settingsService.Settings.Modpacks.Add(profile);
+                        _settingsService.Save();
+                        _toastService.ShowSuccess(_loc.Format("Str_Import_DoneWithLoader", profile.Name, profile.Loader), _loc.GetString("Str_T_ImportTitle"));
+                    }
+                    finally
+                    {
+                        try { if (File.Exists(downloadedFile)) File.Delete(downloadedFile); } catch { }
+                    }
+                    return;
+                }
 
                 // Зависимости: несколько файлов, каждый — тот же resolve/download/save.
                 // Лимит защищает от кольца зависимостей и разорванной сети.

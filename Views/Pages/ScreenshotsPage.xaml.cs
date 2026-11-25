@@ -19,13 +19,8 @@ namespace MinecraftLauncher.Views.Pages
             DataContext = ViewModel;
         }
 
-        private void BackButton_Click(object? sender, RoutedEventArgs e)
-        {
-            if (UiHelper.MainWindow is MainWindow mainWin)
-            {
-                mainWin.CloseSettings();
-            }
-        }
+        private void BackButton_Click(object? sender, RoutedEventArgs e) =>
+            UiHelper.Navigator?.CloseSettings();
 
         private void PreviewBackdrop_PointerPressed(object? sender, PointerPressedEventArgs e)
         {

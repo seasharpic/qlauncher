@@ -5,19 +5,54 @@
     <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>QLauncher</AssemblyName>
+    <RootNamespace>MinecraftLauncher</RootNamespace>
     <ApplicationId>com.qlauncher.android</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>2.0.0</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <PublishTrimmed>false</PublishTrimmed>
+    <AndroidLinkMode>None</AndroidLinkMode>
+    <RunAOTCompilation>false</RunAOTCompilation>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Using Remove="Android.App" />
+    <Using Remove="Android.Widget" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\QLauncher.Core\QLauncher.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia.Android" Version="11.2.5" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.5" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.5" />
+    <PackageReference Include="Avalonia.Android" Version="11.3.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.0" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.0" />
+    <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
+    <PackageReference Include="fNbt" Version="1.0.0" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
+  </ItemGroup>
+
+  <!-- Shared UI code and resources from desktop project -->
+  <ItemGroup>
+    <Compile Include="..\Common\*.cs" Link="Common\%(Filename)%(Extension)" />
+    <Compile Include="..\Helpers\*.cs" Link="Helpers\%(Filename)%(Extension)" />
+    <Compile Include="..\Models\*.cs" Link="Models\%(Filename)%(Extension)" />
+    <Compile Include="..\Services\*.cs" Link="Services\%(Filename)%(Extension)" />
+    <Compile Include="..\ViewModels\*.cs" Link="ViewModels\%(Filename)%(Extension)" />
+    <Compile Include="..\Views\Controls\*.cs" Link="Views\Controls\%(Filename)%(Extension)" />
+    <Compile Include="..\Views\Pages\*.cs" Link="Views\Pages\%(Filename)%(Extension)" />
+
+    <AvaloniaXaml Include="..\Themes\*.axaml" Link="Themes\%(Filename)%(Extension)" />
+    <AvaloniaXaml Include="..\Resources\*.axaml" Link="Resources\%(Filename)%(Extension)" />
+    <AvaloniaXaml Include="..\Views\Controls\*.axaml" Link="Views\Controls\%(Filename)%(Extension)" />
+    <AvaloniaXaml Include="..\Views\Pages\*.axaml" Link="Views\Pages\%(Filename)%(Extension)" />
+
+    <AvaloniaResource Include="..\bg.png" Link="bg.png" />
+    <AvaloniaResource Include="..\logo.png" Link="logo.png" />
+    <AvaloniaResource Include="..\Assets\**\*.png" Link="Assets\%(RecursiveDir)%(Filename)%(Extension)" />
+    <AvaloniaResource Include="..\Assets\**\*.jpg" Link="Assets\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

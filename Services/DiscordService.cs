@@ -49,10 +49,10 @@ namespace MinecraftLauncher.Services
         public bool IsGameRunning => _gameStartTime != null;
         public bool IsInMenu => _currentPageDetails == LocalizationService.Instance.GetString("Str_Discord_PageHomeDetails");
 
-        private static Button[] CreateDefaultButtons() => new[]
+        private static DiscordRPC.Button[] CreateDefaultButtons() => new[]
         {
-            new Button { Label = LocalizationService.Instance.GetString("Str_Discord_ButtonDownload"), Url = "https://github.com/dyagyatis/QLauncher" },
-            new Button { Label = LocalizationService.Instance.GetString("Str_Discord_ButtonTelegram"), Url = "https://t.me/QLauncher_MC" }
+            new DiscordRPC.Button { Label = LocalizationService.Instance.GetString("Str_Discord_ButtonDownload"), Url = "https://github.com/dyagyatis/QLauncher" },
+            new DiscordRPC.Button { Label = LocalizationService.Instance.GetString("Str_Discord_ButtonTelegram"), Url = "https://t.me/QLauncher_MC" }
         };
 
         public static DiscordService Instance { get; } = new DiscordService();

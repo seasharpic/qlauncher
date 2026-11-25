@@ -19,10 +19,7 @@ namespace MinecraftLauncher.Views.Pages
 
         private void BackButton_Click(object? sender, RoutedEventArgs e)
         {
-            if (UiHelper.MainWindow is MainWindow mainWindow)
-            {
-                mainWindow.CloseSettings();
-            }
+            UiHelper.Navigator?.CloseSettings();
         }
 
         private void SearchBox_KeyDown(object? sender, KeyEventArgs e)
@@ -36,11 +33,10 @@ namespace MinecraftLauncher.Views.Pages
         private void ModCard_PointerReleased(object? sender, PointerReleasedEventArgs e)
         {
             if (e.InitialPressMouseButton == MouseButton.Left &&
-                sender is Control element && element.DataContext is Models.ModItem item &&
-                UiHelper.MainWindow is MainWindow mainWindow)
+                sender is Control element && element.DataContext is Models.ModItem item)
             {
                 var kind = Models.ModCategoryKinds.FromKey(item.ProjectType);
-                mainWindow.AnimateNavigate(new ModDetailPage(item, kind));
+                UiHelper.Navigator?.AnimateNavigate(new ModDetailPage(item, kind));
             }
         }
     }

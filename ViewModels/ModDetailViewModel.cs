@@ -265,8 +265,9 @@ namespace MinecraftLauncher.ViewModels
         {
             if (row == null) return;
 
+            bool isModpack = _kind == ModCategoryKind.Modpack;
             string? installFolder = ModCategoryKinds.InstallFolder(_kind);
-            if (installFolder == null)
+            if (!isModpack && installFolder == null)
             {
                 ShowToast(_loc.GetString("Str_Mods_NoInstall"), error: true);
                 return;
@@ -279,14 +280,40 @@ namespace MinecraftLauncher.ViewModels
 
             try
             {
-                string? savedName = await SaveFileAsync(row.File, targetFolder, installFolder).ConfigureAwait(true);
-                if (savedName == null)
+                if (isModpack)
+                {
+                    string tempRoot = Path.Combine(Path.GetTempPath(), "qlauncher_dl_packs");
+                    string? savedName = await SaveFileAsync(row.File, tempRoot, "tmp").ConfigureAwait(true);
+                    if (savedName == null)
+                    {
+                        ShowToast(_loc.GetString("Str_Mods_NothingSaved"), error: true);
+                        return;
+                    }
+                    string downloadedFile = Path.Combine(tempRoot, "tmp", savedName);
+                    try
+                    {
+                        var profile = await ModpackImportService.Instance.ImportAsync(
+                            downloadedFile,
+                            SettingsService.Instance.Settings.GamePath).ConfigureAwait(true);
+                        SettingsService.Instance.Settings.Modpacks.Add(profile);
+                        SettingsService.Instance.Save();
+                        ShowToast(_loc.Format("Str_Import_DoneWithLoader", profile.Name, profile.Loader));
+                    }
+                    finally
+                    {
+                        try { if (File.Exists(downloadedFile)) File.Delete(downloadedFile); } catch { }
+                    }
+                    return;
+                }
+
+                string? saved = await SaveFileAsync(row.File, targetFolder, installFolder!).ConfigureAwait(true);
+                if (saved == null)
                 {
                     ShowToast(_loc.GetString("Str_Mods_NothingSaved"), error: true);
                     return;
                 }
 
-                ShowToast(_loc.Format("Str_Mods_Installed", savedName, installFolder));
+                ShowToast(_loc.Format("Str_Mods_Installed", saved, installFolder!));
             }
             catch (Exception ex)
             {
@@ -305,8 +332,9 @@ namespace MinecraftLauncher.ViewModels
         /// </summary>
         private async Task ExecuteInstallAsync()
         {
+            bool isModpack = _kind == ModCategoryKind.Modpack;
             string? installFolder = ModCategoryKinds.InstallFolder(_kind);
-            if (installFolder == null)
+            if (!isModpack && installFolder == null)
             {
                 ShowToast(_loc.GetString("Str_Mods_NoInstall"), error: true);
                 return;
@@ -327,7 +355,7 @@ namespace MinecraftLauncher.ViewModels
 
             try
             {
-                var file = await _browser.ResolveFileAsync(entry.Source, entry, gameVersion, loader).ConfigureAwait(true);
+                var file = await _browser.ResolveFileAsync(entry.Source, entry, isModpack ? "" : gameVersion, isModpack ? "" : loader).ConfigureAwait(true);
                 if (file == null)
                 {
                     ShowToast(gameVersion.Length > 0
@@ -338,14 +366,40 @@ namespace MinecraftLauncher.ViewModels
 
                 LoadingText = _loc.Format("Str_Mods_DownloadTitle", file.FileName);
 
-                string? savedName = await SaveFileAsync(file, targetFolder, installFolder).ConfigureAwait(true);
+                if (isModpack)
+                {
+                    string tempRoot = Path.Combine(Path.GetTempPath(), "qlauncher_dl_packs");
+                    string? savedPack = await SaveFileAsync(file, tempRoot, "tmp").ConfigureAwait(true);
+                    if (savedPack == null)
+                    {
+                        ShowToast(_loc.GetString("Str_Mods_NothingSaved"), error: true);
+                        return;
+                    }
+                    string downloadedFile = Path.Combine(tempRoot, "tmp", savedPack);
+                    try
+                    {
+                        var profile = await ModpackImportService.Instance.ImportAsync(
+                            downloadedFile,
+                            SettingsService.Instance.Settings.GamePath).ConfigureAwait(true);
+                        SettingsService.Instance.Settings.Modpacks.Add(profile);
+                        SettingsService.Instance.Save();
+                        ShowToast(_loc.Format("Str_Import_DoneWithLoader", profile.Name, profile.Loader));
+                    }
+                    finally
+                    {
+                        try { if (File.Exists(downloadedFile)) File.Delete(downloadedFile); } catch { }
+                    }
+                    return;
+                }
+
+                string? savedName = await SaveFileAsync(file, targetFolder, installFolder!).ConfigureAwait(true);
                 if (savedName == null)
                 {
                     ShowToast(_loc.GetString("Str_Mods_NothingSaved"), error: true);
                     return;
                 }
 
-                ShowToast(_loc.Format("Str_Mods_Installed", savedName, installFolder));
+                ShowToast(_loc.Format("Str_Mods_Installed", savedName, installFolder!));
             }
             catch (CurseForgeApiKeyException)
             {
