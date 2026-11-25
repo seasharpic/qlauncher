@@ -30,24 +30,39 @@
                     <TextBlock Text="{DynamicResource Str_Settings_SectionGeneral}" Foreground="{DynamicResource AccentBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"/>
 
                     <TextBlock Text="{DynamicResource Str_Settings_Language}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,8"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15" Spacing="12">
-                        <RadioButton Classes="ThemeCardRadio"
-                                     GroupName="LanguageSelectionGroup"
-                                     IsChecked="{Binding IsRussianLanguage, Mode=OneWay}"
-                                     Command="{Binding ChangeLanguageCommand}"
-                                     CommandParameter="ru"
-                                     Width="140">
-                            <TextBlock Text="{DynamicResource Str_Settings_LanguageRu}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="8"/>
-                        </RadioButton>
-                        <RadioButton Classes="ThemeCardRadio"
-                                     GroupName="LanguageSelectionGroup"
-                                     IsChecked="{Binding IsEnglishLanguage, Mode=OneWay}"
-                                     Command="{Binding ChangeLanguageCommand}"
-                                     CommandParameter="en"
-                                     Width="140">
-                            <TextBlock Text="{DynamicResource Str_Settings_LanguageEn}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="8"/>
-                        </RadioButton>
-                    </StackPanel>
+                    <ListBox ItemsSource="{Binding LanguageOptions}"
+                             SelectedItem="{Binding SelectedLanguageOption, Mode=TwoWay}"
+                             Background="{DynamicResource InputNicknameBgBrush}"
+                             BorderBrush="{DynamicResource WindowBorderBrush}"
+                             BorderThickness="1"
+                             CornerRadius="10"
+                             Padding="4"
+                             MaxWidth="340"
+                             HorizontalAlignment="Left"
+                             Margin="0,0,0,15">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="*,Auto" Margin="6,4">
+                                    <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource PrimaryTextBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding NativeSubtitle}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="16,0,0,0" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <TextBlock Text="{DynamicResource Str_Settings_TitlebarStyle}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,0,0,6"/>
+                    <ComboBox Height="40" MaxWidth="340" HorizontalAlignment="Left"
+                              Classes="CustomComboBox"
+                              SelectedValueBinding="{Binding Tag}"
+                              SelectedValue="{Binding TitlebarStyle, Mode=TwoWay}"
+                              Margin="0,0,0,15" FontSize="13">
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Titlebar_Auto}" Tag="Auto"/>
+                        <ComboBoxItem Content="Windows 11" Tag="Windows11"/>
+                        <ComboBoxItem Content="macOS (Traffic Lights)" Tag="MacOS"/>
+                        <ComboBoxItem Content="GNOME (Adwaita)" Tag="Gnome"/>
+                        <ComboBoxItem Content="KDE Plasma (Breeze)" Tag="Kde"/>
+                        <ComboBoxItem Content="{DynamicResource Str_Settings_Titlebar_Tiling}" Tag="Tiling"/>
+                    </ComboBox>
 
                     <CheckBox Content="{DynamicResource Str_Settings_CloseOnLaunch}" Classes="CustomCheckBox" IsChecked="{Binding CloseOnLaunch, Mode=TwoWay}"/>
                     <CheckBox Content="{DynamicResource Str_Settings_DiscordRpc}" Classes="CustomCheckBox" IsChecked="{Binding EnableDiscordRpc, Mode=TwoWay}"/>

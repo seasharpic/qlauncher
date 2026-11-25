@@ -309,7 +309,8 @@ namespace MinecraftLauncher.Services.LaunchEngine
                 {
                     if (osEl.TryGetProperty("name", out var osName))
                     {
-                        if (osName.GetString() != "windows")
+                        string currentOs = OperatingSystem.IsWindows() ? "windows" : (OperatingSystem.IsMacOS() ? "osx" : "linux");
+                        if (osName.GetString() != currentOs)
                         {
                             matches = false;
                         }

@@ -23,6 +23,10 @@
     <EmbeddedResource Remove="QLauncher.Core\**" />
     <None Remove="QLauncher.Core\**" />
     <AvaloniaResource Remove="QLauncher.Core\**" />
+    <Compile Remove="QLauncher.Android\**" />
+    <EmbeddedResource Remove="QLauncher.Android\**" />
+    <None Remove="QLauncher.Android\**" />
+    <AvaloniaResource Remove="QLauncher.Android\**" />
   </ItemGroup>
 
   <ItemGroup>

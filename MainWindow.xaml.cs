@@ -49,8 +49,10 @@ namespace MinecraftLauncher
 
             _themeChangedHandler = () => Dispatcher.UIThread.Post(UpdateThemeUi);
             ThemeService.Instance.ThemeChanged += _themeChangedHandler;
+            TitlebarHelper.TitlebarStyleChanged += OnTitlebarStyleChanged;
 
             UpdateThemeUi();
+            ApplyTitlebarStyle();
 
             AddHandler(DragDrop.DragEnterEvent, Window_DragEnter);
             AddHandler(DragDrop.DragLeaveEvent, Window_DragLeave);
@@ -96,6 +98,7 @@ namespace MinecraftLauncher
                 ThemeService.Instance.ThemeChanged -= _themeChangedHandler;
                 _themeChangedHandler = null;
             }
+            TitlebarHelper.TitlebarStyleChanged -= OnTitlebarStyleChanged;
 
             if (_trayIcon != null)
             {
@@ -288,11 +291,77 @@ namespace MinecraftLauncher
             }
         }
 
+        private void OnTitlebarStyleChanged() => Dispatcher.UIThread.Post(ApplyTitlebarStyle);
+
+        private void ApplyTitlebarStyle()
+        {
+            var kind = TitlebarHelper.Resolve(SettingsService.Instance.Settings.TitlebarStyle);
+
+            // Reset common defaults
+            MacTrafficPanel.IsVisible = false;
+            RightWindowButtonsPanel.IsVisible = true;
+            MinBtn.IsVisible = true;
+            MaxBtn.IsVisible = true;
+            CloseBtn.IsVisible = true;
+            OuterBorder.CornerRadius = new CornerRadius(14);
+            OuterBorder.BorderThickness = new Thickness(3);
+            TitleBorder.CornerRadius = new CornerRadius(10, 10, 0, 0);
+
+            MinBtn.Classes.Clear();
+            MaxBtn.Classes.Clear();
+            CloseBtn.Classes.Clear();
+
+            switch (kind)
+            {
+                case ResolvedTitlebarKind.MacOS:
+                    MacTrafficPanel.IsVisible = true;
+                    RightWindowButtonsPanel.IsVisible = false;
+                    break;
+
+                case ResolvedTitlebarKind.Gnome:
+                    MinBtn.Classes.Add("GnomeCaptionButton");
+                    MaxBtn.Classes.Add("GnomeCaptionButton");
+                    CloseBtn.Classes.Add("GnomeCaptionButton");
+                    MinBtn.Content = "–";
+                    MaxBtn.Content = "□";
+                    CloseBtn.Content = "✕";
+                    break;
+
+                case ResolvedTitlebarKind.Kde:
+                    MinBtn.Classes.Add("KdeCaptionButton");
+                    MaxBtn.Classes.Add("KdeCaptionButton");
+                    CloseBtn.Classes.Add("KdeCaptionButton");
+                    MinBtn.Content = "⌄";
+                    MaxBtn.Content = "⌃";
+                    CloseBtn.Content = "✕";
+                    break;
+
+                case ResolvedTitlebarKind.Tiling:
+                    OuterBorder.CornerRadius = new CornerRadius(0);
+                    OuterBorder.BorderThickness = new Thickness(0);
+                    TitleBorder.CornerRadius = new CornerRadius(0);
+                    MinBtn.IsVisible = false;
+                    MaxBtn.IsVisible = false;
+                    CloseBtn.Classes.Add("KdeCaptionButton");
+                    CloseBtn.Content = "✕";
+                    break;
+
+                case ResolvedTitlebarKind.Windows11:
+                default:
+                    MinBtn.Classes.Add("CaptionButton");
+                    MaxBtn.Classes.Add("CaptionButton");
+                    CloseBtn.Classes.Add("CloseButton");
+                    MinBtn.Content = "—";
+                    MaxBtn.Content = "□";
+                    CloseBtn.Content = "✕";
+                    break;
+            }
+        }
+
         private void UpdateThemeUi()
         {
             if (ThemeToggleBtn != null)
             {
-                ThemeToggleBtn.Content = ThemeService.Instance.IsDarkTheme ? "☀" : "🌙";
                 ToolTip.SetTip(ThemeToggleBtn, ThemeService.Instance.IsDarkTheme
                     ? _loc.GetString("Str_Theme_ToggleToLight")
                     : _loc.GetString("Str_Theme_ToggleToDark"));

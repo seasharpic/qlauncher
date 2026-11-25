@@ -50,6 +50,8 @@ namespace MinecraftLauncher.Models
         /// </summary>
         public string AccentPreset { get; set; } = "sapphire";
 
+        public string TitlebarStyle { get; set; } = "Auto";
+
         public string Language { get; set; } = "ru";
 
         public bool CheckUpdatesOnStartup { get; set; } = true;

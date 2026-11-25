@@ -536,6 +536,43 @@ namespace MinecraftLauncher.ViewModels
         public string CurrentLanguage => LocalizationService.Instance.CurrentLanguage;
         public bool IsRussianLanguage => CurrentLanguage == "ru";
         public bool IsEnglishLanguage => CurrentLanguage == "en";
+
+        public sealed record LanguageOption(string Code, string DisplayName, string NativeSubtitle);
+
+        public ObservableCollection<LanguageOption> LanguageOptions { get; } = new()
+        {
+            new LanguageOption("ru", "Русский", "Russian (RU)"),
+            new LanguageOption("en", "English", "English (EN)")
+        };
+
+        public LanguageOption? SelectedLanguageOption
+        {
+            get => LanguageOptions.FirstOrDefault(l => l.Code.Equals(CurrentLanguage, StringComparison.OrdinalIgnoreCase))
+                   ?? LanguageOptions[0];
+            set
+            {
+                if (value != null && !string.Equals(value.Code, CurrentLanguage, StringComparison.OrdinalIgnoreCase))
+                {
+                    ExecuteChangeLanguage(value.Code);
+                }
+            }
+        }
+
+        public string TitlebarStyle
+        {
+            get => _settingsService.Settings.TitlebarStyle ?? "Auto";
+            set
+            {
+                if (!string.Equals(_settingsService.Settings.TitlebarStyle, value, StringComparison.OrdinalIgnoreCase))
+                {
+                    _settingsService.Settings.TitlebarStyle = value;
+                    _settingsService.Save();
+                    OnPropertyChanged();
+                    TitlebarHelper.NotifyStyleChanged();
+                }
+            }
+        }
+
         public string DataDirectoryPath => LauncherPathHelper.GetDefaultDataDirectory();
 
         public RelayCommand BrowseJavaCommand { get; }
@@ -1541,6 +1578,7 @@ namespace MinecraftLauncher.ViewModels
                 OnPropertyChanged(nameof(CurrentLanguage));
                 OnPropertyChanged(nameof(IsRussianLanguage));
                 OnPropertyChanged(nameof(IsEnglishLanguage));
+                OnPropertyChanged(nameof(SelectedLanguageOption));
                 OnPropertyChanged(nameof(PortableModeStatusText));
                 OnPropertyChanged(nameof(CurrentVersionText));
                 // Ключ выбирается по новому языку, а не по текущему: к моменту показа

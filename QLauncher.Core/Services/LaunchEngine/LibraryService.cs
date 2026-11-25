@@ -139,7 +139,8 @@ namespace MinecraftLauncher.Services.LaunchEngine
                     }
                 }
 
-                if (lib.Natives != null && lib.Natives.TryGetValue("windows", out var classifierKey) && lib.Downloads?.Classifiers != null)
+                string osName = GetMojangOsName();
+                if (lib.Natives != null && lib.Natives.TryGetValue(osName, out var classifierKey) && lib.Downloads?.Classifiers != null)
                 {
                     classifierKey = classifierKey.Replace("${arch}", Environment.Is64BitOperatingSystem ? "64" : "32");
                     if (lib.Downloads.Classifiers.TryGetValue(classifierKey, out var nativeArtifact))
@@ -256,23 +257,27 @@ namespace MinecraftLauncher.Services.LaunchEngine
             return validClasspath;
         }
 
+        private static string GetMojangOsName() =>
+            OperatingSystem.IsWindows() ? "windows" : (OperatingSystem.IsMacOS() ? "osx" : "linux");
+
         private static bool IsRuleAllowed(List<RuleInfo>? rules)
         {
             if (rules == null || rules.Count == 0) return true;
 
+            string currentOs = GetMojangOsName();
             bool allowed = false;
             foreach (var rule in rules)
             {
                 if (rule.Action == "allow")
                 {
-                    if (rule.Os == null || rule.Os.Name == "windows")
+                    if (rule.Os == null || rule.Os.Name == currentOs)
                     {
                         allowed = true;
                     }
                 }
                 else if (rule.Action == "disallow")
                 {
-                    if (rule.Os != null && rule.Os.Name == "windows")
+                    if (rule.Os != null && rule.Os.Name == currentOs)
                     {
                         allowed = false;
                     }

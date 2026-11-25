@@ -34,6 +34,9 @@
     <!-- Settings -->
     <sys:String x:Key="Str_Settings_Title">Settings</sys:String>
     <sys:String x:Key="Str_Settings_Language">Interface Language / Язык</sys:String>
+    <sys:String x:Key="Str_Settings_TitlebarStyle">Window titlebar style (DE / WM):</sys:String>
+    <sys:String x:Key="Str_Settings_Titlebar_Auto">Auto (detect OS / DE / WM)</sys:String>
+    <sys:String x:Key="Str_Settings_Titlebar_Tiling">Tiling WM (Niri / Hyprland / Sway / i3)</sys:String>
     <sys:String x:Key="Str_Settings_Theme">Theme Mode</sys:String>
     <sys:String x:Key="Str_Settings_ThemeLight">Light</sys:String>
     <sys:String x:Key="Str_Settings_ThemeDark">Dark</sys:String>

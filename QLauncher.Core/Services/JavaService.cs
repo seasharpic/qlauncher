@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Formats.Tar;
 using System.IO;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -104,19 +106,18 @@ namespace MinecraftLauncher.Services
                     LocalizationService.Instance.Format("Str_Java_NotConfigured", configuredVer, requiredVer));
             }
 
+            string javaExeName = OperatingSystem.IsWindows() ? "javaw.exe" : "java";
             string runtimeFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtime", $"java-{requiredVer}");
-            string localJavaw = Path.Combine(runtimeFolder, "bin", "javaw.exe");
+            string localJavaw = Path.Combine(runtimeFolder, "bin", javaExeName);
 
             if (File.Exists(localJavaw))
             {
                 return localJavaw;
             }
 
-            // Раньше здесь возвращался первый найденный javaw.exe без проверки версии.
-            // Теперь проверяем мажор и пропускаем несовпадающие вложенные папки.
             if (Directory.Exists(runtimeFolder))
             {
-                var files = Directory.GetFiles(runtimeFolder, "javaw.exe", SearchOption.AllDirectories);
+                var files = Directory.GetFiles(runtimeFolder, javaExeName, SearchOption.AllDirectories);
 
                 foreach (var file in files)
                 {
@@ -130,10 +131,21 @@ namespace MinecraftLauncher.Services
             string? javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
             if (!string.IsNullOrEmpty(javaHome))
             {
-                string sysJavaw = Path.Combine(javaHome, "bin", "javaw.exe");
+                string sysJavaw = Path.Combine(javaHome, "bin", javaExeName);
                 if (File.Exists(sysJavaw) && DetectJavaMajorVersion(sysJavaw) == requiredVer)
                 {
                     return sysJavaw;
+                }
+            }
+
+            if (OperatingSystem.IsLinux())
+            {
+                foreach (var candidate in new[] { "/usr/bin/java", "/usr/local/bin/java" })
+                {
+                    if (File.Exists(candidate) && DetectJavaMajorVersion(candidate) == requiredVer)
+                    {
+                        return candidate;
+                    }
                 }
             }
 
@@ -156,7 +168,7 @@ namespace MinecraftLauncher.Services
                 statusCallback?.Invoke(LocalizationService.Instance.Format("Str_Java_ModsFallback", versionRequired));
 
                 string fallbackFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtime", $"java-{versionRequired}");
-                string fallbackJavaw = Path.Combine(fallbackFolder, "bin", "javaw.exe");
+                string fallbackJavaw = Path.Combine(fallbackFolder, "bin", javaExeName);
 
                 if (File.Exists(fallbackJavaw))
                 {
@@ -582,59 +594,71 @@ namespace MinecraftLauncher.Services
         {
             Directory.CreateDirectory(destinationFolder);
 
-            // Adoptium отдаёт редирект на актуальную сборку, Zulu прибит к конкретной версии.
-            // Порядок задаёт MirrorService: если api.adoptium.net из этой сети
-            // недоступен, лаунчер не тратит пятиминутный таймаут, а идёт на CDN Azul.
+            string os = OperatingSystem.IsWindows() ? "windows" : (OperatingSystem.IsMacOS() ? "mac" : "linux");
+            string arch = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "aarch64" : "x64";
+            string javaExeName = OperatingSystem.IsWindows() ? "javaw.exe" : "java";
+
             string adoptiumUrl =
-                $"https://api.adoptium.net/v3/binary/latest/{version}/ga/windows/x64/jre/hotspot/normal/eclipse";
+                $"https://api.adoptium.net/v3/binary/latest/{version}/ga/{os}/{arch}/jre/hotspot/normal/eclipse";
 
-            string? azulUrl = version switch
-            {
-                8 => "https://cdn.azul.com/zulu/bin/zulu8.74.0.17-ca-jre8.0.392-win_x64.zip",
-                17 => "https://cdn.azul.com/zulu/bin/zulu17.46.19-ca-jre17.0.9-win_x64.zip",
-                21 => "https://cdn.azul.com/zulu/bin/zulu21.38.21-ca-jre21.0.5-win_x64.zip",
-                // Раньше здесь стоял zulu21...zip, то есть для версии 25 устанавливалась
-                // Java 21 в папку runtime\java-25. Пустой fallback: лучше явная ошибка,
-                // чем запуск игры на несовместимой версии JVM.
-                _ => null
-            };
+            string? azulUrl = (OperatingSystem.IsWindows() && arch == "x64")
+                ? version switch
+                {
+                    8 => "https://cdn.azul.com/zulu/bin/zulu8.74.0.17-ca-jre8.0.392-win_x64.zip",
+                    17 => "https://cdn.azul.com/zulu/bin/zulu17.46.19-ca-jre17.0.9-win_x64.zip",
+                    21 => "https://cdn.azul.com/zulu/bin/zulu21.38.21-ca-jre21.0.5-win_x64.zip",
+                    _ => null
+                }
+                : null;
 
-            string zipPath = Path.Combine(Path.GetTempPath(), $"java_{version}.zip");
+            string ext = OperatingSystem.IsWindows() ? ".zip" : ".tar.gz";
+            string archivePath = Path.Combine(Path.GetTempPath(), $"java_{version}{ext}");
 
             try
             {
                 statusCallback?.Invoke(LocalizationService.Instance.Format("Str_Java_DownloadingOpenJdk", version));
-                byte[]? fileBytes = null;
 
-                // TLS-валидация включена. Этот архив распаковывается, и найденный
-                // в нём javaw.exe потом запускается как процесс, поэтому подмена
-                // сертификата здесь означала бы выполнение чужого кода от имени пользователя.
                 byte[]? downloaded = await SecureHttp.TryDownloadBytesAsync(
                     MirrorService.Instance.BuildCandidates(adoptiumUrl, azulUrl),
                     TimeSpan.FromMinutes(5));
 
-                if (downloaded != null)
+                if (downloaded == null || downloaded.Length == 0)
                 {
-                    fileBytes = downloaded;
-                }
-
-                if (fileBytes == null || fileBytes.Length == 0)
-                {
-                    // Типизированное исключение: раньше здесь был безликий new Exception,
-                    // поэтому сетевая ошибка, битый архив и пустой ответ были
-                    // неразличимы для пользователя.
                     throw new IOException(
                         LocalizationService.Instance.Format("Str_Java_ArchiveFailed", version));
                 }
 
-                await File.WriteAllBytesAsync(zipPath, fileBytes);
+                await File.WriteAllBytesAsync(archivePath, downloaded);
 
                 statusCallback?.Invoke(LocalizationService.Instance.Format("Str_Java_Unpacking", version));
-                ZipFile.ExtractToDirectory(zipPath, destinationFolder, true);
+                if (OperatingSystem.IsWindows())
+                {
+                    ZipFile.ExtractToDirectory(archivePath, destinationFolder, true);
+                }
+                else
+                {
+                    await using var fs = File.OpenRead(archivePath);
+                    await using var gz = new GZipStream(fs, CompressionMode.Decompress);
+                    await TarFile.ExtractToDirectoryAsync(gz, destinationFolder, overwriteFiles: true);
+                }
 
-                var javaws = Directory.GetFiles(destinationFolder, "javaw.exe", SearchOption.AllDirectories);
+                var javaws = Directory.GetFiles(destinationFolder, javaExeName, SearchOption.AllDirectories);
                 if (javaws.Length > 0)
                 {
+                    if (!OperatingSystem.IsWindows())
+                    {
+                        foreach (var j in javaws)
+                        {
+                            try
+                            {
+                                File.SetUnixFileMode(j,
+                                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                                    UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                                    UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+                            }
+                            catch { }
+                        }
+                    }
                     return javaws[0];
                 }
 
@@ -642,9 +666,9 @@ namespace MinecraftLauncher.Services
             }
             finally
             {
-                if (File.Exists(zipPath))
+                if (File.Exists(archivePath))
                 {
-                    try { File.Delete(zipPath); } catch { }
+                    try { File.Delete(archivePath); } catch { }
                 }
             }
         }
